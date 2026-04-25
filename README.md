@@ -27,38 +27,42 @@
 
 ## アーキテクチャ
 
-```
-                ┌────────────────────────────┐
-                │ Route 53  (iigtn.com)      │
-                │  - A (Alias) → CloudFront  │
-                │  - MX/TXT/DKIM → SES       │
-                └──────────────┬─────────────┘
-                               ▼
-                ┌────────────────────────────┐
-                │ CloudFront (TLS終端 + CDN) │ ◀── ACM (us-east-1)
-                │ ・OAC で S3 を非公開維持   │ ◀── (将来) AWS WAF
-                │ ・/api/* は API GW へ      │
-                └──────┬─────────────┬───────┘
-                       │ /*           │ /api/*
-                       ▼              ▼
-              ┌──────────────┐  ┌────────────────┐
-              │ S3 (静的)    │  │ API Gateway    │
-              │ Bucket非公開 │  │ (HTTP API)     │
-              └──────────────┘  └───────┬────────┘
-                                        ▼
-                                ┌────────────────┐
-                                │ Lambda         │
-                                │ contact 関数   │
-                                └──┬──────────┬──┘
-                                   ▼          ▼
-                            ┌──────────┐  ┌────────┐
-                            │DynamoDB  │  │  SES   │
-                            └──────────┘  └────────┘
+```mermaid
+flowchart TD
+    User["🌐 訪問者"]
+    DNS["Squarespace DNS"]
+    ACM["ACM 証明書<br/>us-east-1"]
+    CF["CloudFront<br/>CDN + TLS終端"]
+    S3[("S3<br/>静的ファイル")]
+    APIGW["API Gateway<br/>HTTP API"]
+    Lambda["Lambda<br/>Node.js 20"]
+    DDB[("DynamoDB")]
+    SES["SES"]
+    CW["CloudWatch<br/>Logs + Alarms"]
+    SNS["SNS<br/>通知"]
 
-   観測:    CloudWatch Logs / Metrics / Alarms ── SNS ──▶ メール通知
-   CI/CD:   GitHub ── OIDC ──▶ GitHub Actions ──▶ AWS
-   IaC:     Terraform (S3 backend + DynamoDB Lock)
+    Dev["👨‍💻 git push"]
+    GHA["GitHub Actions"]
+    OIDC["OIDC + IAM Role"]
+
+    User --> DNS
+    DNS --> CF
+    ACM -.-> CF
+    CF -->|"/*"| S3
+    CF -->|"/api/*"| APIGW
+    APIGW --> Lambda
+    Lambda --> DDB
+    Lambda -.-> SES
+    Lambda --> CW
+    CW --> SNS
+
+    Dev --> GHA
+    GHA -.->|"OIDC AssumeRole"| OIDC
+    OIDC -.-> S3
+    OIDC -.-> CF
 ```
+
+> 詳細は [docs/iigtn/README.md](./docs/iigtn/README.md)（設計書 v5）参照。実運用解説は [https://lab.iigtn.com/learn.html](https://lab.iigtn.com/learn.html)。
 
 ---
 

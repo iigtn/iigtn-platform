@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>iigtn-platform 解説書 — AWS サーバレス構築ガイド</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'default',
+    flowchart: { curve: 'basis', useMaxWidth: true, htmlLabels: true }
+  });
+</script>
 <style>
   :root {
     --c-text: #222;
@@ -133,6 +141,16 @@
     z-index: 10;
   }
   nav.top a { margin-right: 1rem; font-size: 0.9rem; }
+  .mermaid {
+    background: #fff;
+    border: 1px solid var(--c-border);
+    border-radius: 5px;
+    padding: 1rem;
+    margin: 1rem 0 1.5rem;
+    text-align: center;
+    overflow-x: auto;
+  }
+  .mermaid svg { max-width: 100%; height: auto; }
 </style>
 </head>
 <body>
@@ -295,68 +313,67 @@
 <p>このサイトは大きく分けて <strong>3 つの流れ</strong> で構成されています。</p>
 
 <h3>① 訪問者がページを見る流れ</h3>
-<div class="ascii">[ブラウザ]
-   │ https://lab.iigtn.com/
-   ▼
-[Squarespace DNS] (lab.iigtn.com → CloudFront ドメインに CNAME)
-   │
-   ▼
-[Route53] (使ってない、Squarespace 側で完結)
-   │
-   ▼
-[CloudFront Distribution]  ◀── ACM 証明書 (us-east-1)
-   │  - HTTPS 終端
-   │  - 世界中の Edge にキャッシュ
-   │  - /*    → S3 へ
-   │  - /api/* → API Gateway へ
-   ▼
-[S3 バケット (非公開)]
-   - index.html / learn.html / *.css / *.js
-   - OAC で CloudFront だけがアクセス可</div>
+<pre class="mermaid">
+flowchart TD
+    Browser["🌐 ブラウザ<br/>https://lab.iigtn.com/"]
+    DNS["Squarespace DNS<br/>CNAME: lab → *.cloudfront.net"]
+    ACM["ACM 証明書<br/>us-east-1"]
+    CF["CloudFront Distribution<br/>HTTPS終端 + CDN<br/>Edge: 東京 NRT"]
+    S3[("S3 Bucket<br/>非公開<br/>OAC 限定アクセス")]
+
+    Browser -->|"① DNS 解決"| DNS
+    DNS -->|"② CDN へ"| CF
+    ACM -.->|"TLS 証明書"| CF
+    CF -->|"③ OAC SigV4 で認証"| S3
+    S3 -.->|"index.html / *.css / *.js"| CF
+    CF -.->|"④ Edge から HTTPS 配信"| Browser
+</pre>
 
 <h3>② 訪問者がフォームを送る流れ</h3>
-<div class="ascii">[ブラウザ]
-   │ POST https://lab.iigtn.com/api/contact
-   ▼
-[CloudFront] (/api/* behavior でルーティング)
-   │
-   ▼
-[API Gateway HTTP API]
-   │ Lambda Proxy 統合
-   ▼
-[Lambda 関数 (Node.js 20 / arm64)]
-   │ ① 入力バリデーション
-   │ ② DynamoDB に保存
-   │ ③ SES でメール送信 (環境変数があれば)
-   ▼
-[DynamoDB] + [SES (オプション)]
-   │
-   ▼
-[ブラウザ] HTTP 200 {"ok":true}</div>
+<pre class="mermaid">
+flowchart TD
+    Browser["🌐 ブラウザ<br/>POST /api/contact"]
+    CF["CloudFront<br/>/api/* behavior"]
+    APIGW["API Gateway HTTP API<br/>POST /api/contact"]
+    Lambda["Lambda<br/>Node.js 20 / arm64<br/>contact handler"]
+    DDB[("DynamoDB<br/>iigtn-lab-prod-contacts<br/>PK: id (UUID)")]
+    SES["SES<br/>メール送信<br/>(オプション)"]
+    CW["CloudWatch Logs<br/>14日 retention"]
+
+    Browser -->|"① POST"| CF
+    CF -->|"② Origin 振り分け<br/>AllViewerExceptHostHeader"| APIGW
+    APIGW -->|"③ Lambda Proxy 統合"| Lambda
+    Lambda -->|"④ PutItem"| DDB
+    Lambda -.->|"⑤ SendEmail<br/>(env vars 設定時)"| SES
+    Lambda -->|"ログ"| CW
+    Lambda -->|"200 ok:true"| Browser
+</pre>
 
 <h3>③ コードを更新してサイトに反映する流れ</h3>
-<div class="ascii">[開発者] git push origin main
-   │
-   ▼
-[GitHub]
-   │
-   ▼
-[GitHub Actions Workflow]
-   │ ① OIDC で短期トークン要求
-   ▼
-[GitHub OIDC IdP] → JWT 発行
-   │
-   ▼ ② JWT で AssumeRole
-[AWS STS] (Trust Policy で repo+branch 検証)
-   │
-   ▼ ③ 1h 有効の認証
-[GitHub Actions Runner]
-   │ ④ aws s3 sync ./frontend/
-   ▼
-[S3] (新ファイル)
-   │
-   ▼ ⑤ aws cloudfront create-invalidation
-[CloudFront] (Edge キャッシュ更新)</div>
+<pre class="mermaid">
+flowchart TD
+    Dev["👨‍💻 開発者"]
+    GH["GitHub Repo<br/>iigtn/iigtn-platform"]
+    GHA["GitHub Actions<br/>frontend-deploy.yml<br/>(Ubuntu Runner)"]
+    OIDC["GitHub OIDC IdP<br/>token.actions.githubusercontent.com"]
+    STS["AWS STS<br/>AssumeRoleWithWebIdentity"]
+    Role["IAM Role<br/>iigtn-github-actions-deploy<br/>Trust: repo+branch 限定"]
+    S3[("S3<br/>iigtn-lab-web-prod-***")]
+    CF["CloudFront<br/>create-invalidation"]
+    Site["🌐 lab.iigtn.com<br/>反映完了"]
+
+    Dev -->|"git push origin main"| GH
+    GH -->|"on: push"| GHA
+    GHA -->|"① JWT 要求<br/>(id-token: write)"| OIDC
+    OIDC -->|"② JWT 発行<br/>sub: repo:iigtn/iigtn-platform:ref:refs/heads/main"| GHA
+    GHA -->|"③ JWT で AssumeRole"| STS
+    STS -.->|"Trust Policy 検証"| Role
+    Role -->|"④ 一時認証 1h 有効"| GHA
+    GHA -->|"⑤ aws s3 sync --delete"| S3
+    GHA -->|"⑥ create-invalidation /index.html"| CF
+    S3 --> Site
+    CF --> Site
+</pre>
 
 <hr>
 
