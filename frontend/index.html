@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>lab.iigtn.com — Deployed via GitHub Actions</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", system-ui, sans-serif;
+      padding: 4rem 2rem;
+      max-width: 720px;
+      margin: auto;
+      line-height: 1.7;
+      color: #222;
+    }
+    h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+    .ok { color: #2a8a2a; }
+    code {
+      background: #f0f0f0;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 0.9em;
+    }
+    .meta { color: #666; font-size: 0.85em; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #eee; }
+    ul li { margin: 0.4rem 0; }
+  </style>
+</head>
+<body>
+  <h1>🚀 <span class="ok">Deployed via GitHub Actions</span></h1>
+  <p>このページは <strong>git push → GitHub Actions OIDC → AWS deploy</strong> の自動化で配信されました。</p>
+
+  <h2>構成</h2>
+  <ul>
+    <li>静的ホスティング: <code>S3 (private bucket)</code></li>
+    <li>CDN + TLS 終端: <code>CloudFront</code> + <code>ACM</code></li>
+    <li>S3 アクセス制御: <code>OAC (Origin Access Control)</code></li>
+    <li>DNS: <code>Squarespace</code> + <code>CNAME</code> 委譲</li>
+    <li>IaC: <code>Terraform</code> with S3 backend + DynamoDB Lock</li>
+    <li>CI/CD: <code>GitHub Actions</code> + <code>OIDC AssumeRole</code>（静的キーレス）</li>
+  </ul>
+
+  <h2>採用されている設計判断</h2>
+  <ul>
+    <li>OIDC でアクセスキーを排除 → Secrets 漏洩リスクが構造的に存在しない</li>
+    <li>IAM Role の Trust Policy で <code>iigtn/iigtn-platform</code> の <code>main</code> ブランチのみ AssumeRole 許可</li>
+    <li>Permissions Policy はデプロイ先バケット 1 個 + Distribution 1 個に限定</li>
+    <li>S3 は Public Access Block 全 ON、暗号化 (AES256)、バージョニング ON</li>
+    <li>CloudFront は HTTP→HTTPS 強制、TLS 1.2 以上、SecurityHeaders 自動付与</li>
+  </ul>
+
+  <p class="meta">
+    Built with Terraform &amp; GitHub Actions — <a href="https://github.com/iigtn/iigtn-platform">github.com/iigtn/iigtn-platform</a>
+  </p>
+</body>
+</html>

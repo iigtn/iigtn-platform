@@ -1,0 +1,95 @@
+name: frontend-deploy
+
+# ==============================================================================
+# 起動条件
+#   - main への push で frontend/** が変わった時
+#   - このワークフロー自身が変わった時
+#   - 手動実行（workflow_dispatch）も可能
+# ==============================================================================
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-deploy.yml'
+  workflow_dispatch: {}
+
+# ==============================================================================
+# OIDC 必須権限
+#   id-token: write   ← OIDC token 発行に必須
+#   contents: read    ← actions/checkout がコードを clone するのに必要
+# それ以外（issues, pull-requests 等）は明示的に与えない（最小権限）
+# ==============================================================================
+permissions:
+  id-token: write
+  contents: read
+
+# 同じブランチの実行が走っている時、新しいのが来たら古いのをキャンセル
+concurrency:
+  group: frontend-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  AWS_REGION: ap-northeast-1
+  AWS_ROLE_TO_ASSUME: arn:aws:iam::211374268447:role/iigtn-github-actions-deploy
+  S3_BUCKET: iigtn-lab-web-prod-211374268447
+  CF_DISTRIBUTION_ID: E2NCZ0L5WWRWU1
+  SITE_DIR: frontend  # S3 sync 元のディレクトリ
+
+jobs:
+  deploy:
+    name: Deploy to S3 + invalidate CloudFront
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      # ── Step 1: ソースコードを Runner に clone ─────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Step 2: OIDC で AWS の一時クレデンシャルを取得 ──────────────────
+      # 静的アクセスキーを Secrets に置く必要がない。
+      # 1h 有効の credentials が後続 step の env に注入される。
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
+          role-session-name: gha-frontend-deploy-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # ── Step 3: 自分が誰として動いているか確認（デバッグログ）──────────
+      - name: Verify caller identity
+        run: aws sts get-caller-identity
+
+      # ── Step 4: S3 へ完全ミラー sync ──────────────────────────────────
+      # --delete: ローカルに無いファイルを S3 側から削除
+      # メタデータ系ファイル (.git, README) は除外
+      - name: Deploy to S3
+        run: |
+          aws s3 sync ./${{ env.SITE_DIR }}/ s3://${{ env.S3_BUCKET }}/ \
+            --delete \
+            --exclude ".git/*" \
+            --exclude "*.md" \
+            --exclude ".gitignore" \
+            --exclude ".gitkeep"
+
+      # ── Step 5: CloudFront のキャッシュを無効化 ────────────────────────
+      # HTML だけ毎リリースで更新するので index.html を invalidate。
+      # JS/CSS はビルド時にハッシュ付きファイル名にして Long TTL 前提。
+      - name: Invalidate CloudFront
+        run: |
+          INV_ID=$(aws cloudfront create-invalidation \
+            --distribution-id ${{ env.CF_DISTRIBUTION_ID }} \
+            --paths "/index.html" "/" \
+            --query 'Invalidation.Id' --output text)
+          echo "Invalidation ID: $INV_ID"
+          aws cloudfront wait invalidation-completed \
+            --distribution-id ${{ env.CF_DISTRIBUTION_ID }} \
+            --id "$INV_ID"
+          echo "✅ Invalidation $INV_ID completed"
+
+      # ── Step 6: 動作確認 ──────────────────────────────────────────────
+      - name: Verify deployment
+        run: |
+          curl -sI https://lab.iigtn.com/ | head -10

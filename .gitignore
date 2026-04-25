@@ -1,0 +1,69 @@
+# ── Node / Frontend ────────────────────────────
+node_modules/
+.next/
+out/
+dist/
+build/
+.cache/
+.parcel-cache/
+.turbo/
+*.tsbuildinfo
+.npm/
+.pnpm-store/
+
+# ── Backend / Lambda build artifacts ───────────
+*.zip
+*.tar.gz
+backend/**/dist/
+backend/**/.build/
+
+# ── Terraform ──────────────────────────────────
+# state は S3 に置く前提だが、ローカルの誤コミットを防ぐ
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl.bak
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+# tfvars には機密値が含まれる可能性 — 環境別は別管理
+terraform/envs/*/*.auto.tfvars
+terraform/envs/*/secret.tfvars
+
+# ── Secrets / 環境変数 ─────────────────────────
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.crt
+.aws/
+
+# ── OS / Editor ────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# ── Logs / Reports ─────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+coverage/
+.nyc_output/
+junit.xml
+
+# ── Misc ───────────────────────────────────────
+tmp/
+.tmp/
