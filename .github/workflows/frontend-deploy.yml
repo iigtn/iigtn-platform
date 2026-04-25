@@ -36,6 +36,8 @@ env:
   S3_BUCKET: iigtn-lab-web-prod-211374268447
   CF_DISTRIBUTION_ID: E2NCZ0L5WWRWU1
   SITE_DIR: frontend  # S3 sync 元のディレクトリ
+  # Node.js 20 deprecation 対策: 24 へオプトイン (2026-06 から自動切替)
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
   deploy:

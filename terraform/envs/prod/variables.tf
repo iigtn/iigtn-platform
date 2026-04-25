@@ -41,3 +41,16 @@ variable "ses_to" {
   type        = string
   default     = ""
 }
+
+# ─── Observability ───────────────────────────────────────────────────────────
+variable "alarm_email" {
+  description = "CloudWatch アラート + AWS Budgets 通知先メアド"
+  type        = string
+  default     = ""
+}
+
+variable "monthly_budget_usd" {
+  description = "月額予算 (USD)"
+  type        = number
+  default     = 10
+}

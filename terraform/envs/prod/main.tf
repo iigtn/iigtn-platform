@@ -76,6 +76,64 @@ module "backend_api" {
 }
 
 # ==============================================================================
+# Module: observability
+# ------------------------------------------------------------------------------
+# CloudWatch Alarms + SNS + AWS Budgets
+# ==============================================================================
+module "observability" {
+  source = "../../modules/observability"
+
+  name_prefix                = "iigtn-lab-prod"
+  alarm_email                = var.alarm_email
+  lambda_function_name       = module.backend_api.lambda_function_name
+  api_id                     = module.backend_api.api_id
+  cloudfront_distribution_id = module.frontend_cdn.distribution_id
+  monthly_budget_usd         = var.monthly_budget_usd
+}
+
+# ==============================================================================
+# CloudFront アラームは us-east-1 専用なので envs root で provider 明示
+# (モジュールへの provider alias 渡しが効かないケースがあるための退避策)
+# ==============================================================================
+# CloudFront アラームは us-east-1 必須。alarm_actions に指定する SNS トピックも
+# 同一 region に置く必要があるため、us-east-1 用の SNS トピックも別途作成する。
+resource "aws_sns_topic" "alarms_us_east_1" {
+  provider = aws.us_east_1
+  name     = "iigtn-lab-prod-alarms-use1"
+}
+
+resource "aws_sns_topic_subscription" "alarms_us_east_1_email" {
+  count    = var.alarm_email == "" ? 0 : 1
+  provider = aws.us_east_1
+
+  topic_arn = aws_sns_topic.alarms_us_east_1.arn
+  protocol  = "email"
+  endpoint  = var.alarm_email
+}
+
+resource "aws_cloudwatch_metric_alarm" "cf_4xx_rate" {
+  provider = aws.us_east_1
+
+  alarm_name          = "iigtn-lab-prod-cf-4xx-rate"
+  alarm_description   = "CloudFront 4xx rate > 5% over 10 min"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 2
+  threshold           = 5
+  period              = 300
+  statistic           = "Average"
+  metric_name         = "4xxErrorRate"
+  namespace           = "AWS/CloudFront"
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    DistributionId = module.frontend_cdn.distribution_id
+    Region         = "Global"
+  }
+
+  alarm_actions = [aws_sns_topic.alarms_us_east_1.arn]
+}
+
+# ==============================================================================
 # Module: ci_oidc
 # ------------------------------------------------------------------------------
 # GitHub Actions が静的キーなしで AWS にデプロイできるようにする。
