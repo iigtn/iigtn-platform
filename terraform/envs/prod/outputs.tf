@@ -51,3 +51,24 @@ output "oidc_provider_arn" {
   description = "GitHub OIDC Provider ARN"
   value       = module.ci_oidc.oidc_provider_arn
 }
+
+# ─── backend_api モジュール由来 ─────────────────────────────────────────────
+output "api_endpoint" {
+  description = "API Gateway HTTP API のデフォルトエンドポイント（CloudFront 経由なので通常使わない）"
+  value       = module.backend_api.api_endpoint
+}
+
+output "api_endpoint_host" {
+  description = "API Gateway のホスト名のみ"
+  value       = module.backend_api.api_endpoint_host
+}
+
+output "lambda_function_name" {
+  description = "Contact form Lambda 関数名（CloudWatch Logs 確認等に使う）"
+  value       = module.backend_api.lambda_function_name
+}
+
+output "table_name" {
+  description = "問い合わせ保存用 DynamoDB テーブル名"
+  value       = module.backend_api.table_name
+}

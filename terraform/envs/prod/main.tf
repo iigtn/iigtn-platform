@@ -48,10 +48,31 @@ module "frontend_cdn" {
   certificate_arn = module.network_dns.certificate_arn
   bucket_name     = local.web_bucket_name
 
+  # /api/* を API Gateway に向けるための origin 情報を渡す
+  api_origin_domain_name = module.backend_api.api_endpoint_host
+
   providers = {
     aws           = aws
     aws.us_east_1 = aws.us_east_1
   }
+}
+
+# ==============================================================================
+# Module: backend_api
+# ------------------------------------------------------------------------------
+# 問い合わせフォーム機能 (API Gateway + Lambda + DynamoDB + SES)。
+# Lambda コード本体は ../../../backend/functions/contact/ にある。
+# ==============================================================================
+module "backend_api" {
+  source = "../../modules/backend_api"
+
+  name_prefix       = "iigtn-lab-prod"
+  lambda_source_dir = "${path.root}/../../../backend/functions/contact"
+  allowed_origin    = "https://${var.domain_name}"
+
+  # SES 連携 (sandbox 中なので、検証済みのアドレスのみ送信可)
+  ses_from = var.ses_from
+  ses_to   = var.ses_to
 }
 
 # ==============================================================================

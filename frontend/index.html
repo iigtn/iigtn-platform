@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>lab.iigtn.com — Deployed via GitHub Actions</title>
+  <title>lab.iigtn.com — Serverless Portfolio Lab</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", system-ui, sans-serif;
@@ -23,17 +23,47 @@
     }
     .meta { color: #666; font-size: 0.85em; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #eee; }
     ul li { margin: 0.4rem 0; }
+
+    form { display: grid; gap: 0.75rem; margin: 1rem 0; }
+    label { font-weight: 600; }
+    input, textarea {
+      width: 100%;
+      padding: 0.6rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      box-sizing: border-box;
+    }
+    textarea { min-height: 8rem; resize: vertical; }
+    button {
+      background: #2a6acc;
+      color: #fff;
+      border: 0;
+      padding: 0.7rem 1.5rem;
+      border-radius: 4px;
+      font-size: 1rem;
+      cursor: pointer;
+      width: max-content;
+    }
+    button:disabled { background: #aaa; cursor: not-allowed; }
+    .status { padding: 0.6rem 0.9rem; border-radius: 4px; }
+    .status.ok { background: #e6f5e6; color: #1d6b1d; border: 1px solid #b6e0b6; }
+    .status.err { background: #fde8e8; color: #8c1f1f; border: 1px solid #f1b8b8; }
   </style>
 </head>
 <body>
-  <h1>🚀 <span class="ok">Deployed via GitHub Actions</span></h1>
-  <p>このページは <strong>git push → GitHub Actions OIDC → AWS deploy</strong> の自動化で配信されました。</p>
+  <h1>🚀 <span class="ok">Serverless Portfolio Lab</span></h1>
+  <p>このサイトは AWS サーバレス + IaC + CI/CD で運用される、フリーランス・インフラエンジニアのポートフォリオ基盤です。</p>
 
   <h2>構成</h2>
   <ul>
     <li>静的ホスティング: <code>S3 (private bucket)</code></li>
     <li>CDN + TLS 終端: <code>CloudFront</code> + <code>ACM</code></li>
     <li>S3 アクセス制御: <code>OAC (Origin Access Control)</code></li>
+    <li>API: <code>API Gateway HTTP API</code> + <code>Lambda (Node.js 20 / arm64)</code></li>
+    <li>データ: <code>DynamoDB (On-demand)</code></li>
+    <li>メール: <code>SES</code></li>
     <li>DNS: <code>Squarespace</code> + <code>CNAME</code> 委譲</li>
     <li>IaC: <code>Terraform</code> with S3 backend + DynamoDB Lock</li>
     <li>CI/CD: <code>GitHub Actions</code> + <code>OIDC AssumeRole</code>（静的キーレス）</li>
@@ -46,10 +76,73 @@
     <li>Permissions Policy はデプロイ先バケット 1 個 + Distribution 1 個に限定</li>
     <li>S3 は Public Access Block 全 ON、暗号化 (AES256)、バージョニング ON</li>
     <li>CloudFront は HTTP→HTTPS 強制、TLS 1.2 以上、SecurityHeaders 自動付与</li>
+    <li>DynamoDB の PK は UUID、PII (email) を主キーにしない</li>
+    <li>Lambda は arm64 + 256MB + ハンドラ外でクライアント初期化 (cold start 短縮)</li>
   </ul>
+
+  <h2>Contact</h2>
+  <p>問い合わせフォームのテストです。送信内容は DynamoDB に保存され、SES でメール通知されます。</p>
+
+  <form id="contact-form">
+    <div>
+      <label for="name">お名前</label>
+      <input id="name" name="name" required maxlength="100">
+    </div>
+    <div>
+      <label for="email">メールアドレス</label>
+      <input id="email" name="email" type="email" required maxlength="254">
+    </div>
+    <div>
+      <label for="message">メッセージ</label>
+      <textarea id="message" name="message" required minlength="10" maxlength="5000"></textarea>
+    </div>
+    <button type="submit" id="submit-btn">送信</button>
+    <div id="status" hidden></div>
+  </form>
 
   <p class="meta">
     Built with Terraform &amp; GitHub Actions — <a href="https://github.com/iigtn/iigtn-platform">github.com/iigtn/iigtn-platform</a>
   </p>
+
+  <script>
+    const form = document.getElementById('contact-form');
+    const btn  = document.getElementById('submit-btn');
+    const stat = document.getElementById('status');
+
+    form.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      btn.disabled = true;
+      stat.hidden = true;
+
+      const payload = {
+        name:    form.name.value.trim(),
+        email:   form.email.value.trim(),
+        message: form.message.value.trim(),
+      };
+
+      try {
+        const res = await fetch('/api/contact', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify(payload),
+        });
+        if (res.ok) {
+          stat.className = 'status ok';
+          stat.textContent = '✅ 送信完了。ありがとうございました。';
+          form.reset();
+        } else {
+          const err = await res.json().catch(() => ({}));
+          stat.className = 'status err';
+          stat.textContent = '❌ 送信失敗: ' + (err.error || res.status);
+        }
+      } catch (e) {
+        stat.className = 'status err';
+        stat.textContent = '❌ ネットワークエラー: ' + e.message;
+      } finally {
+        stat.hidden = false;
+        btn.disabled = false;
+      }
+    });
+  </script>
 </body>
 </html>

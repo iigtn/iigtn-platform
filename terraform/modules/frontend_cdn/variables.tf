@@ -33,3 +33,19 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+# ─── API 後段 (任意) ─────────────────────────────────────────────────────────
+variable "api_origin_domain_name" {
+  description = <<-EOT
+    /api/* を委譲する API Gateway のホスト名 (例: "abc123.execute-api.ap-northeast-1.amazonaws.com")。
+    空文字なら API behavior を作らない（静的サイトのみ）。
+  EOT
+  type        = string
+  default     = ""
+}
+
+variable "api_path_pattern" {
+  description = "API behavior にマッチさせるパスパターン"
+  type        = string
+  default     = "/api/*"
+}

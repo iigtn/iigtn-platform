@@ -105,11 +105,29 @@ resource "aws_cloudfront_distribution" "this" {
   # --- ルートに何も付けないアクセスでの既定ファイル ---
   default_root_object = "index.html"
 
-  # --- Origin: CloudFront がオリジナルを取りに行く先 ---
+  # --- Origin (1): S3 バケット ---
   origin {
     domain_name              = aws_s3_bucket.this.bucket_regional_domain_name
     origin_id                = "s3-${var.bucket_name}"
     origin_access_control_id = aws_cloudfront_origin_access_control.this.id
+  }
+
+  # --- Origin (2): API Gateway (api_origin_domain_name が空でない時だけ追加) ---
+  # dynamic ブロックで条件付き定義する Terraform のイディオム。
+  # for_each に空リストを渡せば 0 個、1 要素を渡せば 1 個生成される。
+  dynamic "origin" {
+    for_each = var.api_origin_domain_name == "" ? [] : [1]
+    content {
+      domain_name = var.api_origin_domain_name
+      origin_id   = "apigw-origin"
+
+      custom_origin_config {
+        http_port              = 80
+        https_port             = 443
+        origin_protocol_policy = "https-only" # API GW は HTTPS のみ
+        origin_ssl_protocols   = ["TLSv1.2"]
+      }
+    }
   }
 
   # --- デフォルトキャッシュ動作 ---
@@ -128,6 +146,26 @@ resource "aws_cloudfront_distribution" "this" {
     # AWS マネージド Response Headers Policy "SecurityHeadersPolicy"
     # X-Frame-Options / X-Content-Type-Options / Referrer-Policy 等を自動で付ける
     response_headers_policy_id = "67f7725c-6f97-4210-82d7-5512b31e9d03" # SecurityHeadersPolicy
+  }
+
+  # --- /api/* Behavior: API Gateway へ転送 ---
+  # default_cache_behavior が S3 用なので、API は別 behavior で扱う。
+  # dynamic は origin と同様に api_origin_domain_name の有無で生成切替。
+  dynamic "ordered_cache_behavior" {
+    for_each = var.api_origin_domain_name == "" ? [] : [1]
+    content {
+      path_pattern           = var.api_path_pattern
+      target_origin_id       = "apigw-origin"
+      viewer_protocol_policy = "redirect-to-https"
+      allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+      cached_methods         = ["GET", "HEAD"]
+      compress               = true
+
+      # API レスポンスはキャッシュしない (CachingDisabled マネージドポリシー)
+      cache_policy_id = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+      # Host 以外のヘッダ・クエリ・cookie をオリジンに転送 (AllViewerExceptHostHeader)
+      origin_request_policy_id = "b689b0a8-53d0-40ab-baf2-68738e2966ac"
+    }
   }
 
   # --- カスタムエラーレスポンス ---

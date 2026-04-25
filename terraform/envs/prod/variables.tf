@@ -26,3 +26,18 @@ variable "github_allowed_branches" {
   type        = list(string)
   default     = ["main"]
 }
+
+# ─── SES ─────────────────────────────────────────────────────────────────────
+# 注意: sandbox では from/to 両方が AWS で verify 済みである必要がある。
+# 空にすれば SES 連携を無効化（DDB だけに保存される）
+variable "ses_from" {
+  description = "SES 送信元アドレス (検証済必須)。例: noreply@iigtn.com / 空なら無効"
+  type        = string
+  default     = ""
+}
+
+variable "ses_to" {
+  description = "SES 送信先アドレス (sandbox では検証済必須)。例: aws-dev@iigtn.com / 空なら無効"
+  type        = string
+  default     = ""
+}
