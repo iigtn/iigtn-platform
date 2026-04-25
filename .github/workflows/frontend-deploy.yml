@@ -77,13 +77,13 @@ jobs:
             --exclude ".gitkeep"
 
       # ── Step 5: CloudFront のキャッシュを無効化 ────────────────────────
-      # HTML だけ毎リリースで更新するので index.html を invalidate。
-      # JS/CSS はビルド時にハッシュ付きファイル名にして Long TTL 前提。
+      # /* は wildcard で 1 path カウント。全ページ確実に更新される。
+      # 月 1,000 paths 無料枠内（リリース 1,000 回まで実質無料）。
       - name: Invalidate CloudFront
         run: |
           INV_ID=$(aws cloudfront create-invalidation \
             --distribution-id ${{ env.CF_DISTRIBUTION_ID }} \
-            --paths "/index.html" "/" \
+            --paths "/*" \
             --query 'Invalidation.Id' --output text)
           echo "Invalidation ID: $INV_ID"
           aws cloudfront wait invalidation-completed \
