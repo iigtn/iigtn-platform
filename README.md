@@ -64,6 +64,19 @@ flowchart TD
 
 > 詳細は [docs/iigtn/README.md](./docs/iigtn/README.md)（設計書 v5）参照。実運用解説は [https://lab.iigtn.com/learn.html](https://lab.iigtn.com/learn.html)。
 
+### AWS 公式アイコン版
+
+GitHub では Mermaid が直接描画されるため上図は Mermaid のみですが、**AWS 公式アイコン (aws4) を使った drawio 版** も用意してあります。
+
+| 図 | drawio ファイル |
+|---|---|
+| ① 訪問者がページを見る流れ | [frontend/diagrams/01-visitor-static.drawio](./frontend/diagrams/01-visitor-static.drawio) |
+| ② 問い合わせフォーム送信の流れ | [frontend/diagrams/02-form-flow.drawio](./frontend/diagrams/02-form-flow.drawio) |
+| ③ CI/CD デプロイの流れ | [frontend/diagrams/03-deploy-flow.drawio](./frontend/diagrams/03-deploy-flow.drawio) |
+| ④ 全体アーキテクチャ | [frontend/diagrams/04-overall-architecture.drawio](./frontend/diagrams/04-overall-architecture.drawio) |
+
+GitHub は `.drawio` ファイルをクリックすると自動で描画します。ローカル編集は [app.diagrams.net](https://app.diagrams.net/) で開けます。実運用の解説書 [https://lab.iigtn.com/learn.html](https://lab.iigtn.com/learn.html) では同じ図がインラインで表示されます（AWS 公式アイコン使用）。
+
 ---
 
 ## サービスの役割と採用理由
