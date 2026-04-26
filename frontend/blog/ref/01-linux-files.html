@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#ref-01 Linux ファイル操作徹底解説 | 現場コマンドリファレンス | iigtn</title>
+<meta name="description" content="ls / cp / mv / rm / find / tar / chmod / chown / ln / stat / du / df ほか、Linux ファイル操作で日常的に使う 70+ コマンドを 11 カテゴリに分けて、主要オプション・使用例・落とし穴つきで深掘り解説します。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/ref/01-linux-files.html">
+<meta property="og:title" content="#ref-01 Linux ファイル操作徹底解説">
+<meta property="og:description" content="ls / cp / mv / rm / find / tar / chmod / chown / ln / stat / du / df ほか 70+ コマンドを 11 カテゴリで深掘り。主要オプション・使用例・落とし穴つき。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/ref/01-linux-files.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="#ref-01 Linux ファイル操作徹底解説">
+<meta name="twitter:description" content="ls / cp / mv / rm / find / tar / chmod / chown / ln / stat / du / df ほか 70+ コマンドを 11 カテゴリで深掘り。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="stylesheet" href="/blog/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "#ref-01 Linux ファイル操作徹底解説",
+  "description": "ls / cp / mv / rm / find / tar / chmod / chown / ln / stat / du / df ほか 70+ コマンドを 11 カテゴリで深掘り。",
+  "datePublished": "2026-04-26",
+  "author": { "@type": "Person", "name": "iigtn", "url": "https://lab.iigtn.com/" },
+  "publisher": { "@type": "Person", "name": "iigtn" },
+  "url": "https://lab.iigtn.com/blog/ref/01-linux-files.html",
+  "mainEntityOfPage": "https://lab.iigtn.com/blog/ref/01-linux-files.html",
+  "image": "https://lab.iigtn.com/assets/icon.svg",
+  "inLanguage": "ja",
+  "isPartOf": { "@id": "https://lab.iigtn.com/blog/ref/#blog" }
+}
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="/" class="logo" aria-label="iigtn">
+      <img src="/assets/logo.svg" alt="iigtn" height="32">
+    </a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/" class="active">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+      <li><a href="/learn.html">解説書</a></li>
+    </ul>
+  </nav>
+</header>
+
+<article class="post">
+
+  <header class="post-header">
+    <p class="post-meta">2026-04-26 · 現場コマンドリファレンス · #ref-01</p>
+    <h1>Linux ファイル操作徹底解説 — 70+ コマンドを 11 カテゴリで</h1>
+  </header>
+
+  <div class="post-body">
+
+    <p>
+      Linux のファイル操作は、サーバ案件・コンテナ案件・CI/CD 構築のすべてで土台になります。
+      AWS マネージドだけで完結する仕事であっても、Lambda 関数のローカル検証、CloudWatch Logs から落としたログの加工、
+      Terraform プロジェクトの整理で「結局ターミナルで <code>find</code> や <code>tar</code> を叩く瞬間」は必ず来ます。
+    </p>
+    <p>
+      本記事は私（iigtn）が普段使うコマンドを 11 カテゴリ・70+ 個に整理し、各コマンドに <strong>主要オプション・使用例・落とし穴</strong>
+      を併記したリファレンスです。記事末尾に用語集を載せました。最初は通読、以降はブックマーク参照を想定しています。
+    </p>
+
+    <div class="callout info">
+      <strong>動作環境:</strong> 本稿は GNU coreutils を前提にしています（一般的な Linux ディストリビューション）。
+      macOS の BSD 系は一部オプション仕様が異なります（特に <code>sed -i</code>, <code>tar</code>, <code>find -printf</code> など）。
+      その場合は <code>brew install coreutils gnu-sed gnu-tar findutils</code> を入れて <code>g</code> プレフィックスのコマンドを使うのが楽です。
+    </div>
+
+    <h2>目次</h2>
+    <ol>
+      <li><a href="#sec-1">ディレクトリ移動と一覧表示</a></li>
+      <li><a href="#sec-2">ファイルの中身を見る・作る</a></li>
+      <li><a href="#sec-3">コピー・移動・削除</a></li>
+      <li><a href="#sec-4">ファイル検索 (find / locate / which)</a></li>
+      <li><a href="#sec-5">圧縮・展開 (tar / gzip / zip)</a></li>
+      <li><a href="#sec-6">リンク (ln / readlink)</a></li>
+      <li><a href="#sec-7">権限・所有者 (chmod / chown / umask)</a></li>
+      <li><a href="#sec-8">ファイル情報 (stat / file / du / df)</a></li>
+      <li><a href="#sec-9">マウント・デバイス (mount / lsblk)</a></li>
+      <li><a href="#sec-10">ファイル比較・ハッシュ (diff / sha256sum)</a></li>
+      <li><a href="#sec-11">ファイル属性応用 (touch / xattr / lsattr)</a></li>
+      <li><a href="#glossary">用語集</a></li>
+    </ol>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-1">1. ディレクトリ移動と一覧表示</h2>
+
+    <h3>ls — ディレクトリ内容の一覧</h3>
+    <p>あらゆる作業の起点。最頻出。素の <code>ls</code> ではなく <code>ls -lah</code> で叩く癖をつけると情報量が一気に増えます。</p>
+    <table>
+      <tr><th>オプション</th><th>意味</th></tr>
+      <tr><td><code>-l</code></td><td>詳細表示（権限・サイズ・更新時刻）</td></tr>
+      <tr><td><code>-a</code></td><td>ドットファイル含めて全表示</td></tr>
+      <tr><td><code>-h</code></td><td>サイズを K/M/G で表示</td></tr>
+      <tr><td><code>-S</code></td><td>サイズで降順ソート</td></tr>
+      <tr><td><code>-t</code></td><td>更新時刻で降順ソート</td></tr>
+      <tr><td><code>-r</code></td><td>ソート順を逆転</td></tr>
+      <tr><td><code>-R</code></td><td>サブディレクトリも再帰</td></tr>
+      <tr><td><code>--color=auto</code></td><td>種別で色分け（多くのディストリでデフォルト）</td></tr>
+    </table>
+<pre><code># 詳細 + 隠しファイル + 人間可読サイズ（黄金パターン）
+ls -lah
+
+# サイズ大きい順 トップ 10
+ls -lahS | head -n 11
+
+# 更新が新しい順
+ls -lahtr   # tr で逆順 → 一番下が最新
+
+# 拡張子ごとのファイル数
+ls *.log | wc -l</code></pre>
+    <div class="callout warn">
+      ファイルが大量にある場合、シェル glob が展開途中で <strong>argument list too long</strong> になります。
+      対処は <code>ls | wc -l</code> ではなく <code>find . -maxdepth 1 -type f | wc -l</code>。詳しくは <a href="#sec-4">find 節</a>。
+    </div>
+
+    <h3>tree — ディレクトリ構造を視覚化</h3>
+<pre><code># 2 階層まで、ファイル数表示付き
+tree -L 2 --du -h
+
+# .git や node_modules を除外
+tree -I 'node_modules|.git|.terraform' -L 3</code></pre>
+
+    <h3>cd / pwd / pushd / popd / dirs — ディレクトリスタック</h3>
+    <p><code>pushd</code> でスタックに積み、<code>popd</code> で戻る。複数ディレクトリを行き来する時に強力です。</p>
+<pre><code>cd /etc/nginx        # 普通の移動
+cd -                 # 直前のディレクトリへ戻る
+pushd /var/log       # スタックに積みつつ移動
+pushd /tmp           # さらに積む
+dirs -v              # スタックの中身を確認
+popd                 # スタック先頭を pop して戻る</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-2">2. ファイルの中身を見る・作る</h2>
+
+    <h3>cat / tac — ファイル連結出力</h3>
+<pre><code>cat /etc/os-release            # 中身表示
+cat -n script.sh               # 行番号付き
+cat file1 file2 > merged.txt   # 連結して保存
+tac access.log                 # 行を逆順に出力</code></pre>
+    <div class="callout warn">
+      巨大ファイルに <code>cat</code> は厳禁。ターミナルが固まります。<code>less</code> を使うこと。
+    </div>
+
+    <h3>less / more — ページャ</h3>
+    <p><code>less</code> は <code>man</code> の本体でもある必修ツール。<code>vim</code> ライクなキー操作。</p>
+    <table>
+      <tr><th>キー</th><th>動作</th></tr>
+      <tr><td><code>/word</code></td><td>前方検索</td></tr>
+      <tr><td><code>?word</code></td><td>後方検索</td></tr>
+      <tr><td><code>n</code> / <code>N</code></td><td>次 / 前のマッチ</td></tr>
+      <tr><td><code>g</code> / <code>G</code></td><td>先頭 / 末尾へ</td></tr>
+      <tr><td><code>F</code></td><td>tail -f モード（追記をリアルタイム追跡）</td></tr>
+      <tr><td><code>q</code></td><td>終了</td></tr>
+    </table>
+<pre><code>less /var/log/syslog
+less +F /var/log/nginx/access.log     # 起動と同時にライブ追跡
+less -S huge.csv                      # 折り返さず横スクロール
+zcat archive.gz | less                # gz 圧縮ログを直接</code></pre>
+
+    <h3>head / tail — 先頭・末尾</h3>
+<pre><code>head -n 20 file.txt         # 先頭 20 行
+tail -n 50 access.log       # 末尾 50 行
+tail -f /var/log/messages   # 追記をリアルタイム表示（運用では超頻出）
+tail -F app.log             # F は再オープン対応 (ログローテ耐性)
+tail -n +100 huge.log       # 100 行目から末尾まで（先頭スキップ）</code></pre>
+    <div class="callout info">
+      <code>tail -f</code> はファイル inode を握り続けるので、ログローテで「ローテ後の新ファイルを追えなくなる」事故があります。
+      長時間追跡するなら <code>tail -F</code>（大文字）を使うのが安全。
+    </div>
+
+    <h3>touch — 空ファイル作成 / 更新時刻書き換え</h3>
+<pre><code>touch new.txt              # 空ファイル作成 / 既存なら mtime を現在時刻に
+touch -d '2026-01-01' f    # mtime を任意時刻に
+touch -t 202604261200 f    # 同上 (フォーマット yyyymmddHHMM)
+touch -a -m -r ref.txt t   # ref.txt の mtime/atime を t にコピー</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-3">3. コピー・移動・削除</h2>
+
+    <h3>cp — コピー</h3>
+    <table>
+      <tr><th>オプション</th><th>意味</th></tr>
+      <tr><td><code>-r</code> / <code>-R</code></td><td>ディレクトリを再帰コピー</td></tr>
+      <tr><td><code>-a</code></td><td>属性も完全保持（権限・所有者・タイムスタンプ・シンボリックリンク）</td></tr>
+      <tr><td><code>-i</code></td><td>上書き前に確認</td></tr>
+      <tr><td><code>-n</code></td><td>既存ファイルは上書きしない</td></tr>
+      <tr><td><code>-u</code></td><td>更新時刻が新しい時のみ上書き</td></tr>
+      <tr><td><code>-v</code></td><td>進捗を表示</td></tr>
+      <tr><td><code>--reflink=auto</code></td><td>CoW (Copy-on-Write) で瞬時にコピー (xfs/btrfs)</td></tr>
+    </table>
+<pre><code>cp -av src/ dst/                 # 属性保持で再帰コピー（バックアップ用途の定番）
+cp -r --reflink=auto big/ copy/  # CoW 対応 FS なら一瞬でコピー
+cp file{,.bak}                   # ブレース展開で file → file.bak</code></pre>
+
+    <h3>mv — 移動・リネーム</h3>
+<pre><code>mv old.txt new.txt              # リネーム
+mv *.log archive/               # まとめて移動
+mv -i file dst/                 # 上書き確認あり
+mv -n file dst/                 # 既存は上書きしない（事故防止）
+mv -t /tmp/ a b c               # ターゲット先指定（複数ソースの時に明示的）</code></pre>
+
+    <h3>rm — 削除</h3>
+    <div class="callout warn">
+      Linux に「ゴミ箱」はありません。<code>rm</code> したら復旧は基本不可能と思ってください。
+      <code>alias rm='rm -i'</code> を CI 用シェルに仕込まないと、<code>rm -rf $UNDEFINED/</code> で <code>/</code> が消えます（実例多数）。
+    </div>
+    <table>
+      <tr><th>オプション</th><th>意味</th></tr>
+      <tr><td><code>-r</code></td><td>再帰</td></tr>
+      <tr><td><code>-f</code></td><td>確認しない、存在しなくてもエラーにしない</td></tr>
+      <tr><td><code>-i</code></td><td>1 件ずつ確認</td></tr>
+      <tr><td><code>-I</code></td><td>3 件以上 or -r 時のみ確認（実用バランス）</td></tr>
+      <tr><td><code>-v</code></td><td>削除されたファイルを表示</td></tr>
+      <tr><td><code>--one-file-system</code></td><td>マウント境界を超えない（重要な事故防止）</td></tr>
+    </table>
+<pre><code>rm file.txt                       # 単一ファイル
+rm -rf node_modules/              # 高速削除（CIで頻出）
+rm -ri dir/                       # 1 件ずつ確認
+rm --one-file-system -rf /mnt/x   # マウント境界を超えない安全削除
+find . -name '*.tmp' -delete      # find 経由の削除（rm -rf より安全）</code></pre>
+
+    <h3>shred — 安全削除（上書きしてから削除）</h3>
+<pre><code>shred -uvz secret.key             # 3 回上書き + ゼロクリア + 削除</code></pre>
+    <div class="callout info">
+      <code>shred</code> は伝統的な HDD 想定で、SSD / フラッシュ / ext4 ジャーナル / btrfs CoW では完全な抹消にはなりません。
+      機密情報の本物の抹消が必要な場合はディスク自体を破壊するか、ATA Secure Erase / NVMe Format。
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-4">4. ファイル検索 (find / locate / which)</h2>
+
+    <h3>find — 万能ファイル検索</h3>
+    <p>コマンドの中で最もパワフル、かつ最もハマる。下記の組み合わせを覚えると現場で 8 割対応できます。</p>
+    <table>
+      <tr><th>条件</th><th>意味</th></tr>
+      <tr><td><code>-name '*.log'</code></td><td>ファイル名（glob）</td></tr>
+      <tr><td><code>-iname</code></td><td>大小無視</td></tr>
+      <tr><td><code>-type f</code> / <code>d</code> / <code>l</code></td><td>ファイル / ディレクトリ / シンボリックリンク</td></tr>
+      <tr><td><code>-size +100M</code></td><td>100MB 超 (k/M/G)</td></tr>
+      <tr><td><code>-mtime -7</code></td><td>7 日以内に更新</td></tr>
+      <tr><td><code>-mtime +30</code></td><td>30 日より古い</td></tr>
+      <tr><td><code>-mmin -10</code></td><td>10 分以内に更新</td></tr>
+      <tr><td><code>-perm 644</code></td><td>パーミッション一致</td></tr>
+      <tr><td><code>-user iigtn</code></td><td>所有者一致</td></tr>
+      <tr><td><code>-empty</code></td><td>空ファイル / 空ディレクトリ</td></tr>
+      <tr><td><code>-maxdepth N</code></td><td>N 階層まで</td></tr>
+      <tr><td><code>-not</code> / <code>!</code></td><td>否定</td></tr>
+    </table>
+<pre><code># 大きいファイル トップ 10
+find . -type f -size +100M -exec ls -lh {} \; | sort -k5 -h | tail -n 10
+
+# 30 日より古いログを圧縮
+find /var/log -name '*.log' -mtime +30 -exec gzip {} \;
+
+# ディレクトリだけリスト（ git/.terraform 除外）
+find . -type d \( -name .git -o -name .terraform \) -prune -o -type d -print
+
+# .DS_Store を一括削除（macOS との混在で発生）
+find . -name '.DS_Store' -delete
+
+# 7 日以内に更新された .tf ファイル
+find . -name '*.tf' -mtime -7
+
+# 結果を null 区切りで xargs に渡す（空白入りファイル名対応）
+find . -name '*.tmp' -print0 | xargs -0 rm -v</code></pre>
+    <div class="callout warn">
+      <code>-exec ... {} \;</code> はファイル 1 個ずつ別プロセス起動で遅いです。<code>{} +</code> でまとめて 1 プロセスにできます:
+      <code>find . -name '*.log' -exec rm {} +</code>
+    </div>
+
+    <h3>locate / updatedb — 高速検索（事前インデックス）</h3>
+<pre><code>updatedb               # インデックス更新（root 権限）
+locate nginx.conf      # 高速検索
+locate -i Readme       # 大小無視</code></pre>
+    <p>クラウド環境ではインデックスの維持コストが見合わないので、<code>find</code> で済ませることが多いです。</p>
+
+    <h3>which / whereis / type / command -v — コマンドのパス探索</h3>
+<pre><code>which terraform           # コマンドのフルパス
+which -a python           # 同名コマンドを全て表示（PATH 順）
+whereis ssh               # バイナリ + man の場所
+type ls                   # alias / function / builtin / file かを判定
+command -v aws            # スクリプトで存在確認に使う ($? で判定可能)
+type -a cd                # cd は builtin と判明する</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-5">5. 圧縮・展開 (tar / gzip / zip)</h2>
+
+    <h3>tar — アーカイブ作成・展開</h3>
+    <p>「<code>tar xvf</code> って覚えとけば 9 割困らない」が口コミで伝わるが、現場では下のオプションを正しく使い分けると速度が桁違い。</p>
+    <table>
+      <tr><th>オプション</th><th>意味</th></tr>
+      <tr><td><code>c</code></td><td>create</td></tr>
+      <tr><td><code>x</code></td><td>extract</td></tr>
+      <tr><td><code>t</code></td><td>list（中身一覧）</td></tr>
+      <tr><td><code>f file</code></td><td>アーカイブファイル指定</td></tr>
+      <tr><td><code>z</code></td><td>gzip 圧縮</td></tr>
+      <tr><td><code>j</code></td><td>bzip2 圧縮</td></tr>
+      <tr><td><code>J</code></td><td>xz 圧縮</td></tr>
+      <tr><td><code>v</code></td><td>verbose（展開状況表示）</td></tr>
+      <tr><td><code>-C dir</code></td><td>展開先 / 元ディレクトリ指定</td></tr>
+      <tr><td><code>--strip-components=N</code></td><td>展開時に N 階層スキップ</td></tr>
+      <tr><td><code>--exclude='pattern'</code></td><td>除外パターン</td></tr>
+    </table>
+<pre><code># アーカイブ作成（gzip 圧縮）
+tar czvf backup.tar.gz src/
+
+# 展開
+tar xzvf backup.tar.gz
+
+# 展開先を指定
+tar xzvf backup.tar.gz -C /tmp/
+
+# 中身だけ確認
+tar tzvf backup.tar.gz | less
+
+# 上位 1 階層をスキップして展開（GitHub release でよく使う）
+tar xzvf release.tar.gz --strip-components=1
+
+# 特定ファイルだけ取り出す
+tar xzvf backup.tar.gz path/to/file
+
+# 除外しながら作成
+tar czvf src.tar.gz --exclude='node_modules' --exclude='.git' src/</code></pre>
+
+    <h3>gzip / gunzip / zcat — gzip 単体</h3>
+<pre><code>gzip access.log              # access.log.gz になる（元ファイルは消える）
+gzip -k file.txt             # -k で元ファイルを残す
+gunzip access.log.gz         # 展開
+zcat access.log.gz | less    # 展開せず内容を見る
+zcat *.gz | grep ERROR       # 圧縮ログ全体を一気に検索</code></pre>
+
+    <h3>zip / unzip — zip 形式</h3>
+<pre><code>zip -r archive.zip src/      # 再帰で zip 化
+unzip archive.zip            # 展開
+unzip -l archive.zip         # 中身リスト
+unzip -d /tmp/ archive.zip   # 展開先指定
+unzip -o archive.zip         # 既存を強制上書き</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-6">6. リンク (ln / readlink)</h2>
+
+    <h3>ln — リンク作成</h3>
+    <p>ハードリンクとシンボリックリンクは別物。日常で使うのは 99% シンボリックリンク (<code>-s</code>)。</p>
+<pre><code>ln -s /opt/app/current /opt/app/v1.2.3   # シンボリックリンク（typical: blue/green デプロイ）
+ln -sf /new/path link                    # 既存リンクを強制更新
+ln -snf /new/path linkdir                # ディレクトリリンクを上書き（-n が大事）
+ln source hardlink                       # ハードリンク (同 inode を共有)</code></pre>
+    <div class="callout warn">
+      シンボリックリンクの上書きで <code>-f</code> だけ付けて <code>-n</code> を忘れると、ターゲットがディレクトリの場合に
+      リンク内に新リンクが作られて二重ネストする事故が頻発します。<code>ln -snf</code> をセットで覚えること。
+    </div>
+
+    <h3>readlink — リンクの実体を取る</h3>
+<pre><code>readlink link                  # リンクが指す先
+readlink -f /path/to/file      # シンボリックリンクを再帰的に解決して絶対パス化（スクリプトで頻出）
+realpath path                  # 同等</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-7">7. 権限・所有者 (chmod / chown / umask)</h2>
+
+    <h3>chmod — パーミッション変更</h3>
+    <p>数値表記とシンボル表記がある。スクリプト・IaC では数値が読みやすい。</p>
+    <table>
+      <tr><th>数値</th><th>シンボル</th><th>意味</th></tr>
+      <tr><td>4</td><td>r</td><td>読み</td></tr>
+      <tr><td>2</td><td>w</td><td>書き</td></tr>
+      <tr><td>1</td><td>x</td><td>実行</td></tr>
+    </table>
+    <p>3 桁で <code>所有者・グループ・その他</code>。<code>755</code> = 所有者全権限・他は読み実行。</p>
+<pre><code>chmod 755 script.sh          # 実行可
+chmod 600 ~/.ssh/id_ed25519  # 鍵は本人のみ読み書き（必須）
+chmod -R 644 docs/           # 再帰
+chmod u+x script.sh          # 所有者に実行権を追加（シンボル）
+chmod g-w file               # グループから書き権限を外す
+chmod o= file                # その他から全権限を外す
+chmod +t /tmp                # スティッキービット（自分のファイルしか消せない）</code></pre>
+    <div class="callout warn">
+      SSH の秘密鍵が <code>chmod 644</code> 以上で公開されていると、ssh が <strong>WARNING: UNPROTECTED PRIVATE KEY</strong> を出して接続拒否します。<code>600</code> 必須。
+    </div>
+
+    <h3>chown / chgrp — 所有者変更</h3>
+<pre><code>chown iigtn file              # 所有者変更
+chown iigtn:devs file         # 所有者+グループ
+chown -R www-data: /var/www   # Web 配信ディレクトリ用（所有者のみ変更）
+chgrp -R devs project/        # グループのみ</code></pre>
+
+    <h3>umask — 新規作成時のデフォルト権限マスク</h3>
+<pre><code>umask              # 現在の値を表示 (典型: 0022)
+umask 0027         # その他からの読み権限も外す（厳しめ）
+# umask 0022 → ファイル 644, ディレクトリ 755
+# umask 0077 → ファイル 600, ディレクトリ 700 (1 ユーザマシン向け)</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-8">8. ファイル情報 (stat / file / du / df)</h2>
+
+    <h3>stat — メタ情報</h3>
+<pre><code>stat file.txt               # 詳細メタ情報
+stat -c '%s %n' *           # サイズと名前だけ
+stat -c '%y %n' *           # mtime と名前
+stat -f /                   # ファイルシステム情報</code></pre>
+
+    <h3>file — ファイルタイプ判定</h3>
+<pre><code>file mystery.bin            # 中身を覗いて判定
+file -i image.png           # MIME タイプ
+file -b *                   # ファイル名なしで結果のみ</code></pre>
+
+    <h3>du — ディスク使用量（ディレクトリ単位）</h3>
+<pre><code>du -sh .                    # カレントの合計を人間可読で
+du -sh */                   # サブディレクトリごとの合計
+du -ah . | sort -hr | head  # 大きい順 トップ
+du --max-depth=1 -h /var    # /var の直下 1 階層だけ
+du -sh --exclude='node_modules' .</code></pre>
+    <div class="callout info">
+      <code>du -sh</code> がいつまでも返ってこない時は、巨大ディレクトリを探索中。別ターミナルで <code>du --max-depth=1</code> で目星をつける。
+    </div>
+
+    <h3>df — ファイルシステム使用量</h3>
+<pre><code>df -h                       # ディスク使用率（人間可読）
+df -i                       # inode 使用率（小ファイル大量で枯れる）
+df -hT                      # ファイルシステム種別も表示
+df -h /var/lib/docker       # 特定パスを含む FS のみ</code></pre>
+    <div class="callout warn">
+      <code>df</code> でディスク容量に余裕があるのに <code>No space left on device</code> が出たら inode 枯渇を疑う。
+      <code>df -i</code> で確認、犯人は大抵 <code>node_modules</code> や CI キャッシュ。
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-9">9. マウント・デバイス (mount / lsblk)</h2>
+
+    <h3>lsblk — ブロックデバイス一覧</h3>
+<pre><code>lsblk                              # ツリー形式でディスク・パーティション
+lsblk -f                           # ファイルシステム種別・UUID 付き
+lsblk -o NAME,SIZE,FSTYPE,MOUNTPOINT</code></pre>
+
+    <h3>blkid / findmnt — UUID とマウント状況</h3>
+<pre><code>sudo blkid                         # 全パーティションの UUID
+findmnt /                          # ルートのマウント詳細
+findmnt -t ext4                    # ext4 のみ</code></pre>
+
+    <h3>mount / umount — マウント操作</h3>
+<pre><code>mount                              # 現在のマウント状況
+sudo mount /dev/sdb1 /mnt          # 手動マウント
+sudo mount -t nfs nfs.example.com:/share /mnt/share
+sudo mount -o remount,rw /         # ルートを RW で再マウント（緊急時）
+sudo umount /mnt                   # アンマウント
+sudo umount -l /mnt                # 強制 lazy アンマウント（プロセス使用中時）</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-10">10. ファイル比較・ハッシュ (diff / sha256sum)</h2>
+
+    <h3>diff / cmp — ファイル比較</h3>
+<pre><code>diff a.txt b.txt              # 行差分
+diff -u a.txt b.txt           # unified 形式（git diff と同じ見た目）
+diff -r dir1/ dir2/           # ディレクトリ再帰比較
+diff -q -r dir1/ dir2/        # 差分の有無だけ表示
+cmp file1 file2               # バイナリ比較（先頭からの差異オフセットを表示）</code></pre>
+
+    <h3>md5sum / sha256sum — ハッシュ</h3>
+<pre><code>sha256sum file.iso                          # ハッシュ計算
+sha256sum -c checksums.txt                  # checksums.txt の内容と照合
+echo 'abc...  file.iso' | sha256sum -c -    # パイプで照合</code></pre>
+    <div class="callout info">
+      ダウンロードしたインストーラの完全性確認は <code>sha256sum -c</code> が安全。リリース提供の SHA256 と
+      一致しなければ転送破損 or 改ざん。MD5 は衝突が見つかっているのでセキュリティ用途には NG。
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-11">11. ファイル属性応用 (touch / xattr / lsattr)</h2>
+
+    <h3>chattr / lsattr — ext4 拡張属性</h3>
+<pre><code>sudo chattr +i /etc/resolv.conf       # 不変属性 (root でも書き換え不可) — DNS 上書き防止に
+sudo chattr -i /etc/resolv.conf       # 解除
+lsattr /etc/                          # 属性確認</code></pre>
+
+    <h3>setfacl / getfacl — POSIX ACL</h3>
+    <p>chmod だけでは表現できない「特定ユーザに追加権限」を与える時に使用。</p>
+<pre><code># 特定ユーザだけに read 追加
+setfacl -m u:alice:r-- shared/file.txt
+getfacl shared/file.txt
+setfacl -x u:alice shared/file.txt    # 削除</code></pre>
+
+    <h3>truncate — ファイルサイズ変更</h3>
+<pre><code>truncate -s 0 access.log       # 中身を空に（tail -F 中でもログを切り詰められる）
+truncate -s 100M dummy.dat     # 100MB の sparse file を一瞬で作成（テスト用）</code></pre>
+
+    <hr>
+
+    <!-- ========================================================== -->
+    <h2>コマンド早見表（チートシート）</h2>
+<pre><code># 一覧
+ls -lah                          # 詳細 + 隠し + 人間可読
+ls -lahS | head -n 11            # サイズ大きい順 トップ 10
+
+# 検索
+find . -name '*.log' -mtime +30 -delete
+find . -type f -size +100M
+
+# 圧縮
+tar czvf out.tar.gz src/
+tar xzvf in.tar.gz -C /tmp/
+
+# 権限
+chmod 600 ~/.ssh/id_*
+chown -R www-data: /var/www
+
+# 容量
+du -sh */
+df -hi
+
+# ハッシュ
+sha256sum -c checksums.txt
+
+# 安全 rm
+find . -name '*.tmp' -delete</code></pre>
+
+    <!-- ========================================================== -->
+    <section class="post-glossary" id="glossary">
+      <h2>用語集</h2>
+      <dl>
+        <dt>inode</dt>
+        <dd>Linux ファイルシステム上で 1 ファイルにつき 1 個割り当てられるメタ情報の単位。ファイル本体（データブロック）とは別。<code>df -i</code> で使用率を確認できる。</dd>
+
+        <dt>ハードリンク</dt>
+        <dd>同じ inode を指す別名。ファイル本体を共有するので消費容量は変わらない。ファイルシステムをまたげない。</dd>
+
+        <dt>シンボリックリンク (symlink)</dt>
+        <dd>「別パスを指す文字列」が入った特殊ファイル。<code>ln -s</code> で作る。ファイルシステムをまたげる。リンク先が消えると壊れる (dangling)。</dd>
+
+        <dt>パーミッション (rwx)</dt>
+        <dd>読み (r=4) / 書き (w=2) / 実行 (x=1) の組合せ。所有者・グループ・その他の 3 軸 × 3 ビット = 3 桁の 8 進数で表す（例: 755）。</dd>
+
+        <dt>umask</dt>
+        <dd>新規ファイル / ディレクトリ作成時に「外したい権限ビット」のマスク。0022 が一般的、ファイル 644 / ディレクトリ 755 になる。</dd>
+
+        <dt>スティッキービット</dt>
+        <dd>ディレクトリに付けると「ファイルを消せるのは所有者のみ」になる特殊フラグ。<code>/tmp</code> がこの状態で、誰でも書き込めるが他人のファイルは消せない仕組みを実現している。</dd>
+
+        <dt>POSIX ACL</dt>
+        <dd>chmod の 3×3 ビットだけでは表現できない「特定ユーザに権限追加」を可能にする拡張アクセス制御。<code>setfacl/getfacl</code> で操作。</dd>
+
+        <dt>chattr 不変属性 (i)</dt>
+        <dd>ext4 で「root でも書き換え・削除不可」にする属性。誤上書き対策で <code>/etc/resolv.conf</code> に付ける運用がある。</dd>
+
+        <dt>CoW (Copy-on-Write)</dt>
+        <dd>btrfs / xfs で「コピー時はデータ実体を共有し、書き換え時に初めて分離」する仕組み。<code>cp --reflink=auto</code> でこの恩恵を受けられる。</dd>
+
+        <dt>sparse file</dt>
+        <dd>ファイルサイズだけ大きく見えて実際にはディスクをほぼ消費しないファイル。<code>truncate -s</code> で簡単に作れる。テスト用ダミーに便利。</dd>
+
+        <dt>マウントポイント</dt>
+        <dd>ブロックデバイスやネットワーク共有を Linux ファイルシステムツリー上の特定パスに「貼り付ける」場所。<code>mount /dev/sdb1 /mnt</code> なら <code>/mnt</code> がマウントポイント。</dd>
+
+        <dt>argument list too long</dt>
+        <dd>シェル glob (<code>rm *</code> など) が大量のファイルに展開されてプロセスの引数長制限を超えたときに出るエラー。<code>find ... -delete</code> や <code>xargs</code> で回避。</dd>
+
+        <dt>tail -f vs -F</dt>
+        <dd><code>-f</code> は inode を握り続けるためログローテで追跡が止まる。<code>-F</code> はファイル名で再オープンするのでローテに耐える。</dd>
+
+        <dt>ATA Secure Erase / NVMe Format</dt>
+        <dd>ディスクのファームウェア機能で全領域をハードウェア的に消去するコマンド。<code>shred</code> よりも完全な抹消手段。</dd>
+
+        <dt>GNU coreutils vs BSD</dt>
+        <dd>Linux 標準の coreutils (GNU 系) と macOS 標準 (BSD 系) では同じ <code>tar</code>, <code>sed</code>, <code>find</code> でもオプションが微妙に異なる。クロスプラットフォームスクリプトを書く時に詰まりやすい。</dd>
+      </dl>
+    </section>
+
+    <footer class="post-footer">
+      <a href="/blog/ref/">← シリーズ目次</a>
+      <a href="/blog/ref/">次の記事 →</a>
+    </footer>
+
+  </div>
+</article>
+
+</body>
+</html>

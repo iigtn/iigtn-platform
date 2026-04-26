@@ -54,8 +54,26 @@
 </header>
 
 <div class="blog-index">
-  <h1>iigtn 構築日誌</h1>
+  <h1>iigtn Blog</h1>
   <p class="lead">
+    フリーランス・インフラエンジニア iigtn のブログ。現在 2 シリーズを公開中です。
+  </p>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem;margin:1.5rem 0 2.5rem;">
+    <a href="/blog/" style="display:block;background:var(--c-surface);border:2px solid var(--c-accent);border-radius:8px;padding:1.2rem 1.4rem;text-decoration:none;color:inherit;">
+      <strong style="color:var(--c-accent);font-size:0.82rem;letter-spacing:0.05em;text-transform:uppercase;">▶ 表示中</strong>
+      <h3 style="margin:0.3rem 0 0.4rem;color:var(--c-text);">📝 構築日誌（全 21 記事）</h3>
+      <p style="margin:0;color:var(--c-muted);font-size:0.9rem;">AWS サーバレス + Terraform で iigtn-platform を 0 から構築するまでの記録</p>
+    </a>
+    <a href="/blog/ref/" style="display:block;background:var(--c-surface);border:1px solid var(--c-border);border-radius:8px;padding:1.2rem 1.4rem;text-decoration:none;color:inherit;transition:border-color 0.2s;">
+      <strong style="color:var(--c-muted);font-size:0.82rem;letter-spacing:0.05em;text-transform:uppercase;">↗ 別シリーズへ</strong>
+      <h3 style="margin:0.3rem 0 0.4rem;color:var(--c-text);">📚 現場コマンドリファレンス（全 19 記事予定）</h3>
+      <p style="margin:0;color:var(--c-muted);font-size:0.9rem;">Linux / AWS CLI / Terraform / Docker / Kubernetes ほか 800+ コマンドを深掘り</p>
+    </a>
+  </div>
+
+  <h2 style="font-size:1.2rem;margin:2rem 0 0.5rem;">構築日誌 — 全 21 記事</h2>
+  <p class="lead" style="margin:0 0 1.5rem;">
     AWS サーバレス + Terraform + GitHub Actions OIDC で、フリーランス・インフラエンジニアが
     ポートフォリオサイト <code>lab.iigtn.com</code> を 0 から構築するまでの全 21 記事シリーズ。
     各記事は 3,500〜5,000 字、末尾に用語集付き。
