@@ -77,6 +77,22 @@ resource "aws_cloudfront_origin_access_control" "this" {
 }
 
 # ==============================================================================
+# Section 3.5: CloudFront Function — ディレクトリ末尾スラッシュを index.html に
+# ------------------------------------------------------------------------------
+# OAC + S3 構成では、/blog/ のような末尾スラッシュの URL に対して、S3 が「キー
+# blog/」を返さないため 404 となり、SPA フォールバックでトップに飛ぶ。
+# CloudFront Function (viewer-request) でリクエスト URI を /blog/index.html に
+# 書き換えて、ディレクトリインデックス相当の挙動を実現する。
+# ==============================================================================
+resource "aws_cloudfront_function" "rewrite_index" {
+  name    = "${var.bucket_name}-rewrite-index"
+  runtime = "cloudfront-js-2.0"
+  comment = "Rewrite /xxx/ to /xxx/index.html (directory index emulation for OAC + S3)"
+  publish = true
+  code    = file("${path.module}/functions/rewrite-index.js")
+}
+
+# ==============================================================================
 # Section 4: CloudFront Distribution — CDN 本体
 # ------------------------------------------------------------------------------
 # CloudFront Distribution は CDN の設定 1 セット。世界中の Edge に展開され、
@@ -146,6 +162,12 @@ resource "aws_cloudfront_distribution" "this" {
     # AWS マネージド Response Headers Policy "SecurityHeadersPolicy"
     # X-Frame-Options / X-Content-Type-Options / Referrer-Policy 等を自動で付ける
     response_headers_policy_id = "67f7725c-6f97-4210-82d7-5512b31e9d03" # SecurityHeadersPolicy
+
+    # ディレクトリインデックス書き換え (/blog/ → /blog/index.html)
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.rewrite_index.arn
+    }
   }
 
   # --- /api/* Behavior: API Gateway へ転送 ---
