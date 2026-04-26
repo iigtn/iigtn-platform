@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#ref-02 テキスト処理コマンド完全ガイド | 現場コマンドリファレンス | iigtn</title>
+<meta name="description" content="grep / sed / awk / cut / sort / uniq / tr / wc / paste / join / diff / comm ほか、Linux テキスト処理の主要 50+ コマンドを 7 カテゴリに分けて、実例とパターン集つきで深掘り解説します。ログ解析・CSV 加工・スクリプト下処理に。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/ref/02-text-processing.html">
+<meta property="og:title" content="#ref-02 テキスト処理コマンド完全ガイド">
+<meta property="og:description" content="grep / sed / awk / cut / sort / uniq / tr / wc / paste / join / diff / comm ほか 50+ コマンドを 7 カテゴリで深掘り。ログ解析・CSV 加工に。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/ref/02-text-processing.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="#ref-02 テキスト処理コマンド完全ガイド">
+<meta name="twitter:description" content="grep / sed / awk / cut / sort / uniq / tr / wc / paste / join / diff / comm ほか 50+ コマンドを 7 カテゴリで深掘り。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="stylesheet" href="/blog/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "#ref-02 テキスト処理コマンド完全ガイド",
+  "description": "grep / sed / awk / cut / sort / uniq / tr / wc / paste / join / diff / comm ほか 50+ コマンドを 7 カテゴリで深掘り。",
+  "datePublished": "2026-04-26",
+  "author": { "@type": "Person", "name": "iigtn", "url": "https://lab.iigtn.com/" },
+  "publisher": { "@type": "Person", "name": "iigtn" },
+  "url": "https://lab.iigtn.com/blog/ref/02-text-processing.html",
+  "mainEntityOfPage": "https://lab.iigtn.com/blog/ref/02-text-processing.html",
+  "image": "https://lab.iigtn.com/assets/icon.svg",
+  "inLanguage": "ja",
+  "isPartOf": { "@id": "https://lab.iigtn.com/blog/ref/#blog" }
+}
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="/" class="logo" aria-label="iigtn">
+      <img src="/assets/logo.svg" alt="iigtn" height="32">
+    </a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/" class="active">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+      <li><a href="/learn.html">解説書</a></li>
+    </ul>
+  </nav>
+</header>
+
+<article class="post">
+
+  <header class="post-header">
+    <p class="post-meta">2026-04-26 · 現場コマンドリファレンス · #ref-02</p>
+    <h1>テキスト処理コマンド完全ガイド — 50+ コマンドを 7 カテゴリで</h1>
+  </header>
+
+  <div class="post-body">
+
+    <p>
+      現場のテキスト処理は <strong>「ログから問題を抽出する」「CSV を集計する」「設定ファイルを一括書き換える」</strong>
+      の 3 つに大別されます。これを覚えると Excel を開かずにターミナルだけで多くの仕事が片付きます。
+      AWS 案件でも CloudWatch Logs を <code>aws logs filter-log-events</code> で取ってから先は結局 grep/awk のお仕事です。
+    </p>
+    <p>
+      本記事は <code>grep / sed / awk</code> の三大テキスト処理ツールを軸に、補助的に使う 50+ コマンドを
+      実例パターン付きで解説します。最初は <strong>各セクションの「典型パターン」だけ覚えて、必要時に詳細を引く</strong>
+      使い方を想定。
+    </p>
+
+    <div class="callout info">
+      <strong>動作環境:</strong> 本稿は GNU 系（Linux 標準）を前提。macOS の BSD <code>sed</code> は <code>-i</code> の挙動が違うので、
+      クロスプラットフォームスクリプトでは <code>sed -i.bak '...'</code> のように拡張子を必ず指定するか、<code>perl -i -pe</code> を使うのが安全です。
+    </div>
+
+    <h2>目次</h2>
+    <ol>
+      <li><a href="#sec-1">grep — テキスト検索の王道</a></li>
+      <li><a href="#sec-2">sed — ストリームエディタ（置換・抽出）</a></li>
+      <li><a href="#sec-3">awk — フィールド単位の処理・集計</a></li>
+      <li><a href="#sec-4">列・行操作 (cut / paste / join / column)</a></li>
+      <li><a href="#sec-5">並べ替え・重複 (sort / uniq / shuf)</a></li>
+      <li><a href="#sec-6">変換・カウント (tr / wc / nl / rev)</a></li>
+      <li><a href="#sec-7">差分・パッチ (diff / comm / patch)</a></li>
+      <li><a href="#combos">よく使う組み合わせパターン</a></li>
+      <li><a href="#glossary">用語集</a></li>
+    </ol>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-1">1. grep — テキスト検索の王道</h2>
+
+    <p>テキスト処理の基礎。ファイル内/標準入力から正規表現にマッチする行を抽出します。
+    現場で grep が使えないと話にならないレベル。</p>
+
+    <h3>基本オプション</h3>
+    <table>
+      <tr><th>オプション</th><th>意味</th></tr>
+      <tr><td><code>-i</code></td><td>大小無視</td></tr>
+      <tr><td><code>-v</code></td><td>マッチしない行を出力（除外）</td></tr>
+      <tr><td><code>-n</code></td><td>行番号を表示</td></tr>
+      <tr><td><code>-c</code></td><td>マッチ行数だけ表示</td></tr>
+      <tr><td><code>-l</code></td><td>マッチしたファイル名のみ</td></tr>
+      <tr><td><code>-L</code></td><td>マッチしないファイル名のみ</td></tr>
+      <tr><td><code>-r</code> / <code>-R</code></td><td>再帰検索（ディレクトリ対象）</td></tr>
+      <tr><td><code>-w</code></td><td>単語境界マッチ</td></tr>
+      <tr><td><code>-x</code></td><td>行全体マッチ</td></tr>
+      <tr><td><code>-A N</code> / <code>-B N</code> / <code>-C N</code></td><td>マッチ後 / 前 / 前後 N 行も表示</td></tr>
+      <tr><td><code>-E</code></td><td>拡張正規表現 (egrep 相当)</td></tr>
+      <tr><td><code>-P</code></td><td>Perl 互換正規表現 (PCRE)</td></tr>
+      <tr><td><code>-F</code></td><td>固定文字列として扱う (fgrep 相当、メタ文字無効)</td></tr>
+      <tr><td><code>-o</code></td><td>マッチ部分のみ抽出</td></tr>
+      <tr><td><code>-h</code></td><td>ファイル名を出力しない（複数ファイル時）</td></tr>
+      <tr><td><code>--include</code> / <code>--exclude</code></td><td>再帰時のファイル絞り込み</td></tr>
+      <tr><td><code>--exclude-dir</code></td><td>再帰時にディレクトリ除外</td></tr>
+    </table>
+
+    <h3>実例</h3>
+<pre><code># ログから ERROR を抽出（行番号付き）
+grep -n ERROR app.log
+
+# 大小無視 + 単語境界マッチで warning を厳密検索
+grep -iw warning app.log
+
+# 除外して条件絞り込み（ NOISY な行を除く）
+grep ERROR app.log | grep -v 'connection reset'
+
+# マッチ前後 3 行（コンテキスト確認に頻出）
+grep -C 3 'OutOfMemory' app.log
+
+# プロジェクト全体から TODO を再帰検索（.git/.terraform を除外）
+grep -rn 'TODO' --exclude-dir={.git,.terraform,node_modules} .
+
+# ファイル名拡張子で絞る
+grep -rn 'aws_s3_bucket' --include='*.tf' .
+
+# マッチした行を含むファイル名のみ
+grep -rl 'old_function_name' src/
+
+# 抽出のみ（マッチした文字列だけ）
+grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' access.log | sort -u
+
+# Perl 正規表現（先読みなどが使える）
+grep -P '(?&lt;=user=)\w+' /var/log/auth.log
+
+# 複数パターンの OR 検索
+grep -E 'error|warning|critical' app.log
+grep -e error -e warning -e critical app.log    # -e で複数指定も可
+
+# パターンファイルから読み込み（大量パターン時）
+grep -f patterns.txt huge.log
+
+# 圧縮ログを直接 grep
+zgrep ERROR /var/log/syslog.1.gz</code></pre>
+    <div class="callout warn">
+      <code>grep -P</code> (PCRE) は Linux でしか使えないことが多い（macOS の BSD grep は非対応）。
+      クロスプラットフォーム性を意識するなら <code>-E</code> 止まりにするか、Perl/Python に逃げる。
+    </div>
+
+    <h3>ripgrep (rg) — モダンな代替</h3>
+    <p>grep の上位互換。デフォルトで <code>.gitignore</code> 尊重・並列実行・Unicode 対応・色付き。
+    インストールしたらほぼ <code>grep -rn</code> の代わりに使えます。</p>
+<pre><code>rg ERROR                   # カレントを再帰検索（デフォルトで隠しと .gitignore を除外）
+rg -t tf 'aws_s3_bucket'   # 特定タイプ (terraform) のみ
+rg -i --hidden 'TODO'      # 大小無視 + 隠しファイル含む
+rg --files | wc -l         # 検索対象ファイル数</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-2">2. sed — ストリームエディタ（置換・抽出）</h2>
+
+    <p>テキストを <strong>1 行ずつ</strong> 読んで処理する。最も使う機能は <code>s/old/new/</code> 置換。
+    awk より「構造を意識せず一括書き換え」に強い。</p>
+
+    <h3>基本構文</h3>
+    <p><code>sed [オプション] 'コマンド' ファイル</code>。コマンドの主要なものは:</p>
+    <table>
+      <tr><th>コマンド</th><th>意味</th></tr>
+      <tr><td><code>s/pat/rep/</code></td><td>1 行内の最初の match を置換</td></tr>
+      <tr><td><code>s/pat/rep/g</code></td><td>1 行内の全 match を置換 (global)</td></tr>
+      <tr><td><code>s/pat/rep/I</code></td><td>大小無視で置換</td></tr>
+      <tr><td><code>Np</code></td><td>N 行目を表示 (例: <code>5p</code>)</td></tr>
+      <tr><td><code>Nd</code></td><td>N 行目を削除</td></tr>
+      <tr><td><code>/pat/d</code></td><td>マッチする行を削除</td></tr>
+      <tr><td><code>/pat/p</code></td><td>マッチする行を表示 (要 -n)</td></tr>
+      <tr><td><code>N,Mp</code></td><td>N〜M 行を表示</td></tr>
+      <tr><td><code>1i text</code></td><td>1 行目の前に挿入</td></tr>
+      <tr><td><code>$a text</code></td><td>最終行の後に追加</td></tr>
+      <tr><td><code>y/abc/ABC/</code></td><td>文字を 1:1 変換 (tr 相当)</td></tr>
+    </table>
+    <table>
+      <tr><th>オプション</th><th>意味</th></tr>
+      <tr><td><code>-n</code></td><td>デフォルト出力を抑制 (p との組合わせで明示出力)</td></tr>
+      <tr><td><code>-i</code></td><td>ファイル直接編集（GNU は <code>-i</code> 単独 OK、BSD は <code>-i ''</code>）</td></tr>
+      <tr><td><code>-i.bak</code></td><td>編集前にバックアップ作成（クロスプラットフォーム安全）</td></tr>
+      <tr><td><code>-E</code></td><td>拡張正規表現</td></tr>
+      <tr><td><code>-e</code></td><td>複数コマンド指定</td></tr>
+      <tr><td><code>-f script.sed</code></td><td>スクリプトファイル読み込み</td></tr>
+    </table>
+
+    <h3>実例 — 置換</h3>
+<pre><code># 標準的な置換 (確認のためまず -e で出力)
+sed 's/foo/bar/g' file.txt
+
+# ファイル直接編集（GNU 限定）
+sed -i 's/foo/bar/g' file.txt
+
+# クロスプラットフォーム安全（バックアップ作成）
+sed -i.bak 's/foo/bar/g' file.txt
+
+# 複数ファイル一括置換
+sed -i 's/old_endpoint/new_endpoint/g' src/*.tf
+
+# 区切り文字を / 以外に（パスを置換する時に便利）
+sed -i 's|/old/path|/new/path|g' config.yaml
+
+# 大小無視
+sed -i 's/error/ERROR/Ig' app.log
+
+# 拡張正規表現で複数パターン
+sed -E -i 's/(GET|POST) /[\1] /g' access.log</code></pre>
+
+    <h3>実例 — 抽出・削除</h3>
+<pre><code># 5 行目だけ表示
+sed -n '5p' file
+
+# 10〜20 行を抽出
+sed -n '10,20p' file
+
+# パターンを含む行を削除
+sed '/^#/d' config.yaml          # コメント行を削除
+sed -i '/^$/d' file              # 空行を削除（直接編集）
+
+# パターンに一致する行だけ抽出
+sed -n '/ERROR/p' app.log
+
+# パターン後の行を抽出
+sed -n '/START/,/END/p' file     # START から END までのブロック
+
+# 1 行目を削除（CSV のヘッダ取り除き）
+sed '1d' data.csv
+
+# 末尾 5 行を削除
+sed -i '$d' file                 # 最終行を削除（繰り返しで複数行）</code></pre>
+
+    <h3>実例 — 高度な使い方</h3>
+<pre><code># キャプチャグループの利用
+sed -E 's/^([0-9]+) ([a-z]+)/\2:\1/' file
+# 入力: "42 hello" → 出力: "hello:42"
+
+# 行番号を行頭に付ける
+sed = file | sed 'N;s/\n/: /'
+
+# 改行を含む置換（GNU sed の z モード - null 区切り処理）
+sed -z 's/foo\nbar/baz/g' file
+
+# 複数コマンドを 1 度に
+sed -e 's/foo/bar/g' -e '/^$/d' -e '1d' file
+
+# 行末改行で grep -A の代用（パターン以降を出力）
+sed -n '/MARKER/,$p' file</code></pre>
+    <div class="callout warn">
+      <code>sed -i 's/.../.../'</code> で「思ったところ以外まで置換した」事故が頻発します。
+      まず <code>sed 's/.../.../'</code> （-i なし）で標準出力に流して確認、それから <code>-i</code> を付ける癖を。
+      Git 管理されているなら直後に <code>git diff</code> で差分確認。
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-3">3. awk — フィールド単位の処理・集計</h2>
+
+    <p>「行を空白で区切ったフィールド」として扱える小さなスクリプト言語。
+    CSV/TSV/ログの集計、列の入れ替え、合計・平均算出などはこれが最強です。</p>
+
+    <h3>基本構文</h3>
+    <p><code>awk 'パターン { アクション }' ファイル</code>。<code>$1, $2, ...</code> がフィールド、<code>$0</code> が行全体、<code>NF</code> がフィールド数、<code>NR</code> が行番号。</p>
+    <table>
+      <tr><th>変数</th><th>意味</th></tr>
+      <tr><td><code>$0</code></td><td>行全体</td></tr>
+      <tr><td><code>$1, $2, ...</code></td><td>1, 2, ... 番目のフィールド</td></tr>
+      <tr><td><code>$NF</code></td><td>最後のフィールド</td></tr>
+      <tr><td><code>NF</code></td><td>その行のフィールド数</td></tr>
+      <tr><td><code>NR</code></td><td>累積行数（処理中のレコード番号）</td></tr>
+      <tr><td><code>FNR</code></td><td>現ファイル内の行番号（複数ファイル時）</td></tr>
+      <tr><td><code>FS</code></td><td>入力フィールド区切り（デフォルト空白）</td></tr>
+      <tr><td><code>OFS</code></td><td>出力フィールド区切り</td></tr>
+      <tr><td><code>RS</code></td><td>レコード区切り（デフォルト改行）</td></tr>
+      <tr><td><code>FILENAME</code></td><td>処理中のファイル名</td></tr>
+    </table>
+
+    <h3>実例 — 列抽出</h3>
+<pre><code># 1 列目だけ表示
+awk '{ print $1 }' file
+
+# 複数列を入れ替え
+awk '{ print $3, $1 }' file
+
+# CSV を扱う（区切り指定）
+awk -F, '{ print $2 }' data.csv
+awk -F, 'NR>1 { print $2 }' data.csv     # ヘッダをスキップ
+
+# 区切りを変えて出力
+awk 'BEGIN{OFS=","} { print $1,$3 }' data.tsv
+
+# 最後の列を表示
+awk '{ print $NF }' file
+
+# 行番号を付けて出力
+awk '{ printf "%5d  %s\n", NR, $0 }' file</code></pre>
+
+    <h3>実例 — 条件抽出</h3>
+<pre><code># 特定の値を持つ行だけ
+awk '$3 == "ERROR"' app.log
+awk '$5 > 1000' file              # 5 列目が 1000 超
+awk 'NF > 2' file                 # フィールド数 3 以上の行
+awk '/pattern/ && $2 > 100' file  # 正規表現 + 数値条件
+awk 'NR % 2 == 0' file            # 偶数行のみ
+awk 'NR >= 100 && NR <= 200' file # 行範囲
+awk 'length($0) > 80' file        # 80 文字超の行</code></pre>
+
+    <h3>実例 — 集計</h3>
+<pre><code># 合計
+awk '{ sum += $1 } END { print sum }' nums.txt
+
+# 平均（小数表示）
+awk '{ sum += $1; n++ } END { printf "%.2f\n", sum/n }' nums.txt
+
+# 列ごとの合計
+awk '{ a += $1; b += $2 } END { print a, b }' file
+
+# カテゴリ別カウント（連想配列）
+awk '{ count[$1]++ } END { for (k in count) print k, count[k] }' file
+
+# 最大値・最小値
+awk 'NR==1 || $1 > max { max=$1 } END { print max }' file
+awk 'NR==1 { min=$1 } $1 < min { min=$1 } END { print min }' file
+
+# CSV からカテゴリ別合計（ピボット）
+awk -F, 'NR>1 { sales[$1] += $3 } END { for (k in sales) print k, sales[k] }' sales.csv</code></pre>
+
+    <h3>実例 — ログ解析の典型</h3>
+<pre><code># nginx access.log から HTTP ステータスコード別カウント
+awk '{ print $9 }' access.log | sort | uniq -c | sort -rn
+
+# レスポンスサイズの平均
+awk '{ sum += $10; n++ } END { print sum/n }' access.log
+
+# 5xx エラーのリクエストパスをトップ 10
+awk '$9 ~ /^5/ { print $7 }' access.log | sort | uniq -c | sort -rn | head -n 10
+
+# 1 時間ごとのリクエスト数（時刻フォーマット依存）
+awk '{ split($4, a, ":"); print a[2]":"a[3]":00" }' access.log | sort | uniq -c</code></pre>
+
+    <h3>BEGIN / END ブロック</h3>
+<pre><code>awk 'BEGIN { print "header"; sum=0 }
+     { sum += $1; print NR, $1 }
+     END   { print "total:", sum }' nums.txt</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-4">4. 列・行操作 (cut / paste / join / column)</h2>
+
+    <h3>cut — 列抽出（軽量版 awk）</h3>
+<pre><code>cut -f1,3 data.tsv               # タブ区切り、1, 3 列目
+cut -d',' -f2-4 data.csv         # CSV、2〜4 列目
+cut -d':' -f1 /etc/passwd        # ユーザ名一覧
+cut -c1-10 file.txt              # 各行の先頭 10 文字
+cut -c10- file.txt               # 11 文字目以降</code></pre>
+    <div class="callout info">
+      <code>cut</code> は単純で速い。複雑な処理は <code>awk</code>、CSV 内のクォート対応 (<code>"a,b",c</code>) が必要なら専用ツール (Python <code>csv</code> モジュール、<code>csvkit</code>, <code>miller</code>) を使う。
+    </div>
+
+    <h3>paste — 列方向に連結</h3>
+<pre><code>paste a.txt b.txt                  # 1 列目 a / 2 列目 b（タブ区切り）
+paste -d, a.txt b.txt              # カンマ区切り
+paste -s -d, file                  # 縦並びを横にカンマ連結 (e.g., 1,2,3,4,5)
+paste &lt;(cut -f1 data.tsv) &lt;(cut -f3 data.tsv)   # 列の並び替え + 結合</code></pre>
+
+    <h3>join — 共通キーで結合（SQL の JOIN 相当）</h3>
+    <p>事前に両ファイルともキー列でソートが必要。</p>
+<pre><code>sort -k1,1 users.txt -o users.txt
+sort -k1,1 orders.txt -o orders.txt
+join users.txt orders.txt           # 1 列目（デフォルト）でマッチ
+join -t, -1 1 -2 2 a.csv b.csv      # CSV、a の 1 列目と b の 2 列目で join</code></pre>
+
+    <h3>column — 整形して見やすく</h3>
+<pre><code>cat /etc/passwd | column -t -s:    # コロン区切り → スペース揃え表示
+ls -l | column -t                  # ls -l を縦揃え
+mount | column -t</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-5">5. 並べ替え・重複 (sort / uniq / shuf)</h2>
+
+    <h3>sort — 並べ替え</h3>
+    <table>
+      <tr><th>オプション</th><th>意味</th></tr>
+      <tr><td><code>-n</code></td><td>数値ソート</td></tr>
+      <tr><td><code>-h</code></td><td>人間可読サイズ (1K, 2M) ソート</td></tr>
+      <tr><td><code>-r</code></td><td>降順</td></tr>
+      <tr><td><code>-k N</code></td><td>N 列目をキーに</td></tr>
+      <tr><td><code>-t SEP</code></td><td>区切り文字</td></tr>
+      <tr><td><code>-u</code></td><td>重複除外</td></tr>
+      <tr><td><code>-V</code></td><td>バージョン番号順 (1.10 が 1.2 の後)</td></tr>
+      <tr><td><code>-R</code></td><td>ランダム</td></tr>
+      <tr><td><code>--parallel=N</code></td><td>並列ソート</td></tr>
+    </table>
+<pre><code>sort file                      # 辞書順
+sort -n nums.txt               # 数値順
+sort -nr nums.txt              # 数値順 降順
+sort -k2 -n data.txt           # 2 列目を数値ソート
+sort -t, -k3 -n data.csv       # CSV の 3 列目を数値ソート
+sort -u file                   # 重複除外（uniq の代用）
+sort -V versions.txt           # バージョン順
+du -sh */ | sort -h            # サイズ順（人間可読）
+
+# 大ファイル安定ソート（メモリ節約 + 並列）
+sort --parallel=4 -S 1G huge.txt -o sorted.txt</code></pre>
+
+    <h3>uniq — 重複処理</h3>
+    <p>事前に <code>sort</code> しないと「連続して同じ行のみ」が対象なので注意。</p>
+<pre><code>sort file | uniq               # 重複除去
+sort file | uniq -c            # 出現回数付き
+sort file | uniq -c | sort -rn # 多い順ランキング（超頻出パターン）
+uniq -d file                   # 重複行のみ表示
+uniq -u file                   # ユニーク行（一度しか出ない）のみ
+sort file | uniq -i            # 大小無視で重複判定</code></pre>
+
+    <h3>shuf — ランダムサンプリング</h3>
+<pre><code>shuf file                       # 全行をランダム順
+shuf -n 10 file                 # ランダム 10 行
+shuf -e a b c d                 # 列挙からランダム
+shuf -i 1-100 -n 5              # 1〜100 から 5 個ランダム</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-6">6. 変換・カウント (tr / wc / nl / rev)</h2>
+
+    <h3>tr — 文字単位変換</h3>
+<pre><code>tr 'a-z' 'A-Z' &lt; file              # 小文字→大文字
+tr -d '\r' &lt; win.txt &gt; unix.txt    # CR 削除（CRLF→LF）
+tr -d ' '                            # 空白を全削除
+tr -s ' '                            # 連続空白を 1 個に圧縮
+tr ',' '\n' &lt; csv                  # カンマを改行に
+echo "Hello World" | tr -dc 'a-zA-Z' # 英字以外を削除</code></pre>
+
+    <h3>wc — 数を数える</h3>
+<pre><code>wc -l file              # 行数
+wc -w file              # 単語数
+wc -c file              # バイト数
+wc -m file              # 文字数（マルチバイト対応）
+wc -L file              # 最長行の長さ
+ls | wc -l              # ファイル数</code></pre>
+
+    <h3>nl — 行番号を付ける</h3>
+<pre><code>nl file                          # 空行は番号付けない（デフォルト）
+nl -ba file                      # 全行に番号
+nl -nrz -w 4 file                # ゼロ埋め 4 桁</code></pre>
+
+    <h3>rev — 行内の文字を逆転</h3>
+<pre><code>echo "abcde" | rev               # → edcba
+ls *.tar.gz | rev | cut -d. -f1 | rev   # 拡張子だけ抽出</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-7">7. 差分・パッチ (diff / comm / patch)</h2>
+
+    <h3>diff — 行差分</h3>
+<pre><code>diff a.txt b.txt              # 標準形式
+diff -u a.txt b.txt           # unified 形式 (git diff と同じ)
+diff -y a.txt b.txt           # 横並び
+diff -r dir1/ dir2/           # ディレクトリ再帰
+diff -q -r dir1/ dir2/        # 差分の有無だけ
+diff -i a.txt b.txt           # 大小無視
+diff -w a.txt b.txt           # 空白差分を無視
+diff &lt;(sort a.txt) &lt;(sort b.txt)  # ソート済みで比較（順序差を吸収）</code></pre>
+
+    <h3>comm — ソート済み行集合の比較（共通・差分）</h3>
+<pre><code># 両ファイルとも事前にソート必須
+sort a.txt -o a.txt
+sort b.txt -o b.txt
+
+comm a.txt b.txt              # 3 列: a のみ / b のみ / 共通
+comm -12 a.txt b.txt          # 共通のみ (intersection)
+comm -23 a.txt b.txt          # a にのみある (a - b)
+comm -13 a.txt b.txt          # b にのみある (b - a)</code></pre>
+
+    <h3>patch — パッチ適用</h3>
+<pre><code>diff -u original.txt new.txt &gt; my.patch     # パッチ作成
+patch original.txt &lt; my.patch                # 適用
+patch -R original.txt &lt; my.patch             # 適用を戻す
+patch -p1 &lt; project.patch                    # ディレクトリ階層 1 つスキップ（git 形式）</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="combos">よく使う組み合わせパターン</h2>
+
+    <p>テキスト処理は単体コマンドより <strong>パイプ連結</strong>で力を発揮します。
+    現場で頻出するレシピを集めました。</p>
+
+    <h3>ログ解析パターン</h3>
+<pre><code># nginx の HTTP ステータスコード別 カウント
+awk '{ print $9 }' access.log | sort | uniq -c | sort -rn
+
+# IP アドレス別アクセス回数 トップ 20
+awk '{ print $1 }' access.log | sort | uniq -c | sort -rn | head -n 20
+
+# 5xx エラーが出た URL トップ
+awk '$9 ~ /^5/ { print $7 }' access.log | sort | uniq -c | sort -rn | head
+
+# UA ベースの集計（スペース含む）
+awk -F'"' '{ print $6 }' access.log | sort | uniq -c | sort -rn
+
+# CloudWatch Logs から取った JSON ログの ERROR 抽出
+aws logs filter-log-events --log-group-name /aws/lambda/myfn \
+  | jq -r '.events[] | select(.message | contains("ERROR")) | .message'</code></pre>
+
+    <h3>ファイル一括処理</h3>
+<pre><code># プロジェクト全 .tf から module ブロックの名前一覧
+grep -h '^module' *.tf | awk '{ print $2 }' | tr -d '"'
+
+# CSV のヘッダ取り除いて 3 列目の合計
+tail -n +2 data.csv | awk -F, '{ sum += $3 } END { print sum }'
+
+# 巨大ログから ERROR 行だけ抜き出して別ファイルへ
+grep ERROR huge.log | tee errors.log | wc -l
+
+# Markdown ファイル全部から「TODO:」の行を抽出
+find . -name '*.md' -exec grep -Hn 'TODO:' {} +</code></pre>
+
+    <h3>テキスト整形パターン</h3>
+<pre><code># Windows 改行 (CRLF) → Unix (LF)
+tr -d '\r' &lt; win.txt &gt; unix.txt
+
+# JSON を 1 行にまとめる
+cat data.json | tr -d '\n'
+
+# 空行と コメント行を取り除く
+sed -e '/^#/d' -e '/^$/d' config.yaml
+
+# CSV のカラム入れ替え
+awk -F, 'BEGIN{OFS=","} { print $3,$1,$2 }' data.csv
+
+# ファイルの末尾改行を確認・追加（POSIX 準拠）
+[ -z "$(tail -c1 file)" ] || echo &gt;&gt; file</code></pre>
+
+    <h3>差分・比較パターン</h3>
+<pre><code># 2 ファイルの「行集合」差分（順序関係なく）
+comm -3 &lt;(sort a.txt) &lt;(sort b.txt)
+
+# IaC 適用前後の terraform plan 差分
+terraform show -no-color before.tfplan &gt; before.txt
+terraform show -no-color after.tfplan  &gt; after.txt
+diff -u before.txt after.txt
+
+# 1 つのリストから他リストにないもの
+comm -23 &lt;(sort all.txt) &lt;(sort exclude.txt)</code></pre>
+
+    <!-- ========================================================== -->
+    <section class="post-glossary" id="glossary">
+      <h2>用語集</h2>
+      <dl>
+        <dt>正規表現 (regex)</dt>
+        <dd>文字列パターンを表す記法。<code>.</code>=任意 1 文字、<code>*</code>=0 回以上、<code>+</code>=1 回以上、<code>^</code>=行頭、<code>$</code>=行末、<code>[abc]</code>=いずれか、<code>(...)</code>=グループ。</dd>
+
+        <dt>BRE / ERE / PCRE</dt>
+        <dd>正規表現の方言。BRE = 基本（grep デフォルト・<code>+</code> や <code>?</code> はエスケープ必要）、ERE = 拡張（<code>grep -E</code>・直感的）、PCRE = Perl 互換（<code>grep -P</code>・先読みなど高機能）。</dd>
+
+        <dt>ストリームエディタ</dt>
+        <dd>ファイルを 1 行ずつ読み込みながら処理する設計。<code>sed</code> がその代表。メモリ効率が良いが、複数行にまたがる処理は苦手。</dd>
+
+        <dt>パイプ (|)</dt>
+        <dd>あるコマンドの標準出力を別コマンドの標準入力に渡すシェル機能。テキスト処理ではこれを連結して 1 行のレシピを組むのが基本。</dd>
+
+        <dt>プロセス置換 &lt;(...)</dt>
+        <dd>コマンドの出力を「ファイルのように扱える」シェル機能。<code>diff &lt;(sort a) &lt;(sort b)</code> のように一時ファイルなしで比較できる。bash/zsh で使える。</dd>
+
+        <dt>FS / OFS / RS</dt>
+        <dd>awk の入力フィールド区切り (FS) / 出力フィールド区切り (OFS) / レコード区切り (RS)。CSV を扱う時 <code>FS=","</code> を指定する。</dd>
+
+        <dt>連想配列 (associative array)</dt>
+        <dd>キーで値を引ける配列。awk の <code>arr[key] = value</code>。カテゴリ別カウントなどの集計で頻出。</dd>
+
+        <dt>BEGIN / END ブロック</dt>
+        <dd>awk で「処理開始前 (BEGIN) / 終了後 (END)」に 1 回だけ実行されるブロック。初期化や合計の最終出力に使う。</dd>
+
+        <dt>キャプチャグループ</dt>
+        <dd>正規表現の <code>(...)</code> で囲った部分。後方参照 <code>\1</code> や <code>$1</code> で再利用できる。<code>sed</code> の置換で頻出。</dd>
+
+        <dt>固定文字列マッチ (-F / fgrep)</dt>
+        <dd>正規表現として解釈せず、リテラル文字列として検索するモード。メタ文字を含む文字列を grep する時に使う。</dd>
+
+        <dt>ripgrep (rg)</dt>
+        <dd>Rust 製のモダンな grep 代替。デフォルトで .gitignore 尊重・並列実行・色付き。`rg` で起動。</dd>
+
+        <dt>unified diff 形式</dt>
+        <dd><code>diff -u</code> や <code>git diff</code> が出す、コンテキスト 3 行付きで <code>+/-</code> で差分を示す形式。`patch` コマンドの標準入力にもなる。</dd>
+
+        <dt>標準ストリーム (stdin / stdout / stderr)</dt>
+        <dd>すべてのコマンドが持つ 3 本の入出力。stdin (0) = キーボード or パイプ、stdout (1) = 通常出力、stderr (2) = エラー出力。<code>2&gt;&amp;1</code> で結合できる。</dd>
+
+        <dt>argument list too long</dt>
+        <dd>シェル glob 展開や引数列挙で、プロセスの引数長制限を超えた時のエラー。<code>find ... | xargs</code> や <code>find -exec ... +</code> で回避。</dd>
+
+        <dt>BSD vs GNU coreutils</dt>
+        <dd>macOS 標準は BSD 系、Linux 標準は GNU 系で、<code>sed -i</code>, <code>tar</code>, <code>find -printf</code>, <code>grep -P</code> などの挙動が異なる。クロスプラットフォームスクリプトは特に注意。</dd>
+      </dl>
+    </section>
+
+    <footer class="post-footer">
+      <a href="/blog/ref/01-linux-files.html">← #ref-01 Linux ファイル操作</a>
+      <a href="/blog/ref/">シリーズ目次</a>
+    </footer>
+
+  </div>
+</article>
+
+</body>
+</html>
