@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>hojokin-db 構成解説 — 補助金検索データベース | iigtn</title>
+  <meta name="description" content="hojokin.iigtn.com（補助金検索サイト）がどう動いているかを解説するページ。Next.js 16 (static export) + S3/CloudFront + DynamoDB + Lambda/EventBridge/Bedrock + CodeBuild + Terraform の構成を、配信フロー・自動更新フロー・IaC の 3 観点で図解しています。">
+  <meta name="author" content="iigtn">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://lab.iigtn.com/projects/hojokin-db.html">
+  <meta property="og:title" content="hojokin-db 構成解説 — 補助金検索データベース">
+  <meta property="og:description" content="Next.js + S3/CloudFront + DynamoDB + Lambda/Bedrock + CodeBuild + Terraform で組んだ自動更新型データベースサイトの構成解説。">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://lab.iigtn.com/projects/hojokin-db.html">
+  <meta property="og:site_name" content="iigtn">
+  <meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+  <meta property="og:locale" content="ja_JP">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="hojokin-db 構成解説 — 補助金検索データベース">
+  <meta name="twitter:description" content="自動更新型データベースサイトの AWS サーバレス構成解説。">
+  <meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+  <link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+  <link rel="apple-touch-icon" href="/assets/icon.svg">
+  <link rel="stylesheet" href="/site.css">
+
+  <!-- Google AdSense -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7533093647574923" crossorigin="anonymous"></script>
+  <meta name="google-adsense-account" content="ca-pub-7533093647574923">
+
+  <style>
+    .h-section { padding: 1.6rem 1.8rem; background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 8px; margin: 1.4rem 0; }
+    .h-section h2 { font-size: 1.2rem; margin: 0 0 0.7rem; color: var(--c-accent-dark); }
+    .h-section p { margin: 0.5rem 0; }
+    .h-section ul, .h-section ol { padding-left: 1.4rem; margin: 0.5rem 0; }
+    .h-section li { margin: 0.25rem 0; }
+    .h-section table { width: 100%; border-collapse: collapse; margin: 0.8rem 0; font-size: 0.92rem; }
+    .h-section th, .h-section td { border: 1px solid var(--c-border); padding: 0.5rem 0.7rem; text-align: left; vertical-align: top; }
+    .h-section th { background: #f3f3f3; }
+    .h-section code { background: #f0f0f0; padding: 1px 6px; border-radius: 3px; font-size: 0.88em; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .h-meta { color: var(--c-muted); font-size: 0.88rem; }
+    .h-cta { display: flex; gap: 0.8rem; flex-wrap: wrap; margin: 1rem 0 1.6rem; }
+    .diagram-wrap { background: #fff; border: 1px solid var(--c-border); border-radius: 6px; padding: 0.6rem; margin: 1rem 0; overflow-x: auto; }
+    .diagram-wrap .mxgraph { max-width: 100%; }
+    .h-callout { padding: 0.7rem 1rem; border-left: 4px solid var(--c-info-border, #90caf9); background: var(--c-info-bg, #e3f2fd); border-radius: 5px; margin: 0.8rem 0; font-size: 0.93rem; }
+    .h-callout.warn { border-left-color: #ffd54f; background: #fff8e1; }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="nav">
+    <a href="/" class="logo" aria-label="iigtn">
+      <img src="/assets/logo.svg" alt="iigtn" height="32">
+    </a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html" class="active">Works</a></li>
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+      <li><a href="/learn.html">解説書</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main>
+
+  <header class="page-header">
+    <p class="h-meta">プロジェクト解説 · 2026-04-26 公開稼働中</p>
+    <h1>hojokin-db — 補助金検索データベース</h1>
+    <p class="lead">
+      <code>hojokin.iigtn.com</code> がどう動いているかをモジュール単位で解説するページです。
+      AWS のフル解説ではなく、<strong>「個人で AWS サーバレス + IaC + 自動更新 + AI 整形まで運用している」</strong>事実が伝わる粒度に絞っています。
+    </p>
+    <div class="h-cta">
+      <a class="btn btn-primary" href="https://hojokin.iigtn.com/" target="_blank" rel="noopener">本番サイトを開く →</a>
+      <a class="btn btn-ghost" href="https://github.com/iigtn/hojokin-db" target="_blank" rel="noopener">GitHub (private)</a>
+      <a class="btn btn-ghost" href="/works.html">← Works に戻る</a>
+    </div>
+  </header>
+
+  <section class="page-section">
+
+    <div class="h-section">
+      <h2>サマリ</h2>
+      <table>
+        <tr><th>プロジェクト</th><td>hojokin-db (補助金検索データベース)</td></tr>
+        <tr><th>公開 URL</th><td><a href="https://hojokin.iigtn.com/" target="_blank" rel="noopener">https://hojokin.iigtn.com/</a></td></tr>
+        <tr><th>公開日</th><td>2026-04-26 (Live)</td></tr>
+        <tr><th>用途</th><td>業種 × 地域 × 種別で絞り込める日本の補助金 / 助成金検索 (SEO ロングテール 4,500 ページ予定)</td></tr>
+        <tr><th>運用コスト</th><td>5,500 〜 10,500 円 / 月（補助金件数の伸びに応じて）</td></tr>
+        <tr><th>構成</th><td>Next.js 16 + S3 + CloudFront + DynamoDB + Lambda + Bedrock + CodeBuild + Terraform</td></tr>
+        <tr><th>運用形態</th><td>毎日 02:00 にクローラ、03:00 に再ビルドの 2 段自動運転（ノータッチ）</td></tr>
+      </table>
+    </div>
+
+    <div class="h-section">
+      <h2>全体アーキテクチャ</h2>
+      <p>
+        構成図は drawio (AWS 公式アイコン) で作成しています。下に同等の図解を埋め込んでいます（GitHub 上の <code>.drawio</code> ファイルもそのままレンダリング可能）。
+      </p>
+      <div class="diagram-wrap">
+        <div class="mxgraph" style="max-width:100%; border:1px solid #ddd;" data-mxgraph='{"highlight":"#0000ff","nav":true,"resize":true,"toolbar":"zoom","edit":"_blank","url":"https://lab.iigtn.com/diagrams/hojokin-db/architecture.drawio"}'></div>
+      </div>
+      <p class="h-meta">
+        ソース: <a href="/diagrams/hojokin-db/architecture.drawio">/diagrams/hojokin-db/architecture.drawio</a>
+        （drawio で開けば編集可能）
+      </p>
+    </div>
+
+    <div class="h-section">
+      <h2>A. 訪問者の閲覧フロー</h2>
+      <ol>
+        <li><strong>DNS</strong> ― Squarespace で管理する <code>iigtn.com</code> の DNS に <code>hojokin</code> の CNAME を仕込み、CloudFront へ向けています。</li>
+        <li><strong>CloudFront</strong> ― TLS 終端 + 静的キャッシュ。<code>*.iigtn.com</code> の ACM 証明書（us-east-1）を関連付け。</li>
+        <li><strong>S3 (private)</strong> ― 静的サイトと <code>/data/*.json</code> を配置。Public Access Block を全 true にして、Origin Access Control 経由でしか読めない構造に。</li>
+      </ol>
+      <p>S3 への直アクセスは構造的にできないので、誤ってバケットに上がった機密データが漏れる心配がない、というのが採用理由です。</p>
+    </div>
+
+    <div class="h-section">
+      <h2>B. 毎日 02:00 JST — クローラ &amp; AI 整形</h2>
+      <ol>
+        <li><strong>EventBridge</strong> が <code>cron(0 17 * * ? *)</code>（UTC 17:00 = JST 02:00）で発火し、Lambda を起動します。</li>
+        <li><strong>Lambda (Python 3.13)</strong> が <code>sources.yaml</code> に定義した一次ソース（J-Net21 / ミラサポplus / 自治体ページ）を巡回。</li>
+        <li>取得した HTML を <strong>Amazon Bedrock (Claude Sonnet 4.6)</strong> に渡し、補助金タイトル・対象業種・地域・締切などを構造化 JSON として抽出。</li>
+        <li>結果を <strong>DynamoDB</strong>（<code>subsidies</code> テーブル + GSI ×3）に <code>put_item</code>。重複は PK で吸収。</li>
+      </ol>
+      <p>
+        AI 整形を Bedrock + IAM だけで完結させているので、API キー文字列をどこにも置かない運用です（OpenAI 等の外部 API を使う場合に発生するキー管理コストがゼロ）。
+      </p>
+    </div>
+
+    <div class="h-section">
+      <h2>C. 毎日 03:00 JST — サイト再ビルド</h2>
+      <ol>
+        <li><strong>EventBridge</strong> が <code>cron(0 18 * * ? *)</code>（UTC 18:00 = JST 03:00）で <strong>CodeBuild</strong> を起動。</li>
+        <li>CodeBuild が <code>iigtn/hojokin-db</code> リポジトリを <code>git clone</code>、依存をインストール、<code>scripts/export-data.ts</code> で <strong>DynamoDB → JSON</strong> エクスポート。</li>
+        <li><code>next build</code>（App Router の <code>output: "export"</code>）で <strong>4,500 ページ予定</strong>の SSG を生成。</li>
+        <li><code>aws s3 sync</code> で S3 に同期 → CloudFront を invalidate。</li>
+      </ol>
+      <p>
+        SSG（静的サイト生成）にしているため、訪問者リクエストごとに DB を引かない設計です。
+        CloudFront のキャッシュだけで応答が返るので、月数百円のコストで配信できます。
+      </p>
+    </div>
+
+    <div class="h-section">
+      <h2>D. IaC — Terraform で 25 リソース全部</h2>
+      <p>
+        <code>infra/</code> 配下に Terraform を集約し、aws-prod アカウント（211374268447）に <strong>25 リソース</strong>を apply しています。
+      </p>
+      <ul>
+        <li><code>acm.tf</code> — *.iigtn.com 用の ACM 証明書（us-east-1、検証 CNAME は Squarespace で手動投入）</li>
+        <li><code>s3_cloudfront.tf</code> — S3 + Public Access Block + Versioning + OAC + CloudFront Distribution + Function（末尾 / の URI 書換）</li>
+        <li><code>dynamodb.tf</code> — <code>subsidies</code>（GSI ×3）+ <code>seo-keywords</code> テーブル</li>
+        <li><code>lambda_crawler.tf</code> — Lambda 関数 + 専用 Role + EventBridge ルール（02:00 JST）</li>
+        <li><code>codebuild.tf</code> — CodeBuild プロジェクト + EventBridge ルール（03:00 JST）+ buildspec.yml</li>
+      </ul>
+      <p>state は S3 backend + DynamoDB Lock で管理。<code>terraform apply</code> 1 発で全部立ち上がります。</p>
+    </div>
+
+    <div class="h-section">
+      <h2>採用判断のポイント</h2>
+      <table>
+        <tr><th>項目</th><th>採用</th><th>理由</th></tr>
+        <tr><td>ホスティング</td><td>S3 + CloudFront 静的配信</td><td>iigtn.com と同パターンで運用統一、月数百円、SEO 強い</td></tr>
+        <tr><td>フロント</td><td>Next.js 16 (static export)</td><td>4,500 ロングテール SSG、ビルド時に DDB から JSON にして埋め込み</td></tr>
+        <tr><td>検索 UI</td><td>クライアント JSON fetch</td><td>Lambda 不要、CloudFront キャッシュで完結</td></tr>
+        <tr><td>データ</td><td>DynamoDB On-Demand + GSI ×3</td><td>サーバレス、低コスト、IAM 制御</td></tr>
+        <tr><td>クローラ</td><td>Lambda Python + EventBridge</td><td>iigtn-platform の IaC 流用、運用ノータッチ</td></tr>
+        <tr><td>AI 整形</td><td>Bedrock</td><td>API キー不要、IAM だけで認可、AWS 内完結</td></tr>
+        <tr><td>再ビルド</td><td>CodeBuild + EventBridge</td><td>毎日 03:00 で DDB→JSON→S3 sync</td></tr>
+        <tr><td>IaC</td><td>Terraform 全部</td><td>aws-prod アカウント、再現性確保</td></tr>
+      </table>
+    </div>
+
+    <div class="h-section">
+      <h2>運用上の工夫</h2>
+      <ul>
+        <li><strong>Lambda → Bedrock の retry/backoff</strong> ― 起動直後に呼ぶとモデル warm-up でタイムアウトすることがあるため、ジッタ付き指数バックオフで 3 回までリトライ。</li>
+        <li><strong>クローラの dry-run モード</strong> ― <code>sources.yaml</code> 追加時に Lambda の環境変数で <code>DRY_RUN=true</code> を立て、DynamoDB に書き込まずログだけ確認。</li>
+        <li><strong>CodeBuild の差分 sync</strong> ― <code>aws s3 sync --delete</code> で 4,500 ページの差分のみアップロード、CloudFront <code>/*</code> invalidation は build 末尾で。</li>
+        <li><strong>コスト監視</strong> ― AWS Budgets を <code>iigtn-platform</code> 側に集約し、月次予算超過で SNS Email 通知。</li>
+      </ul>
+    </div>
+
+    <div class="h-section">
+      <h2>これからやる予定</h2>
+      <ul>
+        <li>補助金件数を 12 件 → 1,000 件に拡大（クローラ / sources.yaml の充実）</li>
+        <li>診断ツール（5 問→該当補助金）の追加</li>
+        <li>sitemap.xml 生成 + Search Console 登録 + ロングテール記事化</li>
+        <li>Bedrock のレート制限・コスト最適化（Sonnet → Haiku の使い分け）</li>
+      </ul>
+    </div>
+
+    <div class="h-section">
+      <h2>関連リンク</h2>
+      <ul>
+        <li><a href="https://hojokin.iigtn.com/" target="_blank" rel="noopener">本番サイト hojokin.iigtn.com</a></li>
+        <li><a href="https://github.com/iigtn/hojokin-db" target="_blank" rel="noopener">GitHub: iigtn/hojokin-db</a>（private）</li>
+        <li><a href="/works.html">← Works 一覧へ戻る</a></li>
+        <li><a href="/learn.html">iigtn-platform 解説書（このサイト本体の構築解説）</a></li>
+        <li><a href="/blog/">構築日誌 / コマンドリファレンス</a></li>
+      </ul>
+    </div>
+
+  </section>
+
+</main>
+
+<footer>
+  <div>© 2026 iigtn — Built with Terraform &amp; GitHub Actions</div>
+  <div>
+    <a href="/learn.html">解説書</a>
+    &nbsp;·&nbsp;
+    <a href="https://github.com/iigtn/iigtn-platform">GitHub</a>
+    &nbsp;·&nbsp;
+    <a href="/privacy.html">プライバシーポリシー</a>
+  </div>
+</footer>
+
+<!-- drawio inline viewer (renders all <div class="mxgraph">) -->
+<script src="https://viewer.diagrams.net/js/viewer-static.min.js"></script>
+
+</body>
+</html>
