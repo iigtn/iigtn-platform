@@ -5,6 +5,39 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>⑱ Cross-Region SNS の落とし穴と AWS Budgets — CloudFront アラームの罠 | iigtn 構築日誌</title>
 <meta name="description" content="CloudFront のメトリクスは us-east-1 限定。それを監視する CloudWatch Alarm の alarm_actions に渡す SNS Topic も同一 region 必須という制約と、provider alias で別リージョンに SNS を作る回避策。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/18-cross-region-sns.html">
+<meta property="og:title" content="⑱ Cross-Region SNS の落とし穴と AWS Budgets — CloudFront アラームの罠">
+<meta property="og:description" content="CloudFront のメトリクスは us-east-1 限定。それを監視する CloudWatch Alarm の alarm_actions に渡す SNS Topic も同一 region 必須という制約と、provider alias で別リージョンに SNS を作る回避策。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/18-cross-region-sns.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="⑱ Cross-Region SNS の落とし穴と AWS Budgets — CloudFront アラームの罠">
+<meta name="twitter:description" content="CloudFront のメトリクスは us-east-1 限定。それを監視する CloudWatch Alarm の alarm_actions に渡す SNS Topic も同一 region 必須という制約と、provider alias で別リージョンに SNS を作る回避策。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "⑱ Cross-Region SNS の落とし穴と AWS Budgets — CloudFront アラームの罠",
+  "description": "CloudFront のメトリクスは us-east-1 限定。それを監視する CloudWatch Alarm の alarm_actions に渡す SNS Topic も同一 region 必須という制約と、provider alias で別リージョンに SNS を作る回避策。",
+  "datePublished": "2026-04-26",
+  "author": { "@type": "Person", "name": "iigtn", "url": "https://lab.iigtn.com/" },
+  "publisher": { "@type": "Person", "name": "iigtn" },
+  "url": "https://lab.iigtn.com/blog/18-cross-region-sns.html",
+  "mainEntityOfPage": "https://lab.iigtn.com/blog/18-cross-region-sns.html",
+  "image": "https://lab.iigtn.com/assets/icon.svg",
+  "inLanguage": "ja",
+  "isPartOf": { "@id": "https://lab.iigtn.com/blog/#blog" }
+}
+</script>
 <link rel="stylesheet" href="/blog/style.css">
 </head>
 <body>

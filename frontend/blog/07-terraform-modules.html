@@ -5,6 +5,39 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>⑦ Terraform モジュール設計の考え方 — modules / envs / providers alias | iigtn 構築日誌</title>
 <meta name="description" content="Terraform を実運用する時のモジュール設計について。「いくつに分けるか」「どこを共通化するか」「provider alias の使い方」を、本シリーズで採用した 5 モジュール構成を例に解説。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/07-terraform-modules.html">
+<meta property="og:title" content="⑦ Terraform モジュール設計の考え方 — modules / envs / providers alias">
+<meta property="og:description" content="Terraform を実運用する時のモジュール設計について。「いくつに分けるか」「どこを共通化するか」「provider alias の使い方」を、本シリーズで採用した 5 モジュール構成を例に解説。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/07-terraform-modules.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="⑦ Terraform モジュール設計の考え方 — modules / envs / providers alias">
+<meta name="twitter:description" content="Terraform を実運用する時のモジュール設計について。「いくつに分けるか」「どこを共通化するか」「provider alias の使い方」を、本シリーズで採用した 5 モジュール構成を例に解説。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "⑦ Terraform モジュール設計の考え方 — modules / envs / providers alias",
+  "description": "Terraform を実運用する時のモジュール設計について。「いくつに分けるか」「どこを共通化するか」「provider alias の使い方」を、本シリーズで採用した 5 モジュール構成を例に解説。",
+  "datePublished": "2026-04-26",
+  "author": { "@type": "Person", "name": "iigtn", "url": "https://lab.iigtn.com/" },
+  "publisher": { "@type": "Person", "name": "iigtn" },
+  "url": "https://lab.iigtn.com/blog/07-terraform-modules.html",
+  "mainEntityOfPage": "https://lab.iigtn.com/blog/07-terraform-modules.html",
+  "image": "https://lab.iigtn.com/assets/icon.svg",
+  "inLanguage": "ja",
+  "isPartOf": { "@id": "https://lab.iigtn.com/blog/#blog" }
+}
+</script>
 <link rel="stylesheet" href="/blog/style.css">
 </head>
 <body>

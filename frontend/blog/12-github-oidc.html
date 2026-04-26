@@ -5,6 +5,39 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>⑫ GitHub Actions OIDC の仕組み — JWT で AWS を静的キーレス操作 | iigtn 構築日誌</title>
 <meta name="description" content="GitHub Actions から AWS を「アクセスキーなし」で操作する OIDC + AssumeRoleWithWebIdentity の仕組みと、Terraform での IAM Role 設定 (Trust Policy / Permissions Policy)。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/12-github-oidc.html">
+<meta property="og:title" content="⑫ GitHub Actions OIDC の仕組み — JWT で AWS を静的キーレス操作">
+<meta property="og:description" content="GitHub Actions から AWS を「アクセスキーなし」で操作する OIDC + AssumeRoleWithWebIdentity の仕組みと、Terraform での IAM Role 設定 (Trust Policy / Permissions Policy)。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/12-github-oidc.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="⑫ GitHub Actions OIDC の仕組み — JWT で AWS を静的キーレス操作">
+<meta name="twitter:description" content="GitHub Actions から AWS を「アクセスキーなし」で操作する OIDC + AssumeRoleWithWebIdentity の仕組みと、Terraform での IAM Role 設定 (Trust Policy / Permissions Policy)。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "⑫ GitHub Actions OIDC の仕組み — JWT で AWS を静的キーレス操作",
+  "description": "GitHub Actions から AWS を「アクセスキーなし」で操作する OIDC + AssumeRoleWithWebIdentity の仕組みと、Terraform での IAM Role 設定 (Trust Policy / Permissions Policy)。",
+  "datePublished": "2026-04-26",
+  "author": { "@type": "Person", "name": "iigtn", "url": "https://lab.iigtn.com/" },
+  "publisher": { "@type": "Person", "name": "iigtn" },
+  "url": "https://lab.iigtn.com/blog/12-github-oidc.html",
+  "mainEntityOfPage": "https://lab.iigtn.com/blog/12-github-oidc.html",
+  "image": "https://lab.iigtn.com/assets/icon.svg",
+  "inLanguage": "ja",
+  "isPartOf": { "@id": "https://lab.iigtn.com/blog/#blog" }
+}
+</script>
 <link rel="stylesheet" href="/blog/style.css">
 </head>
 <body>

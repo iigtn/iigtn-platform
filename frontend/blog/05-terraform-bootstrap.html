@@ -5,6 +5,39 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>⑤ Terraform Bootstrap — 鶏卵問題の解決 | iigtn 構築日誌</title>
 <meta name="description" content="Terraform の state を S3 + DynamoDB Lock で集中管理する構成。「state を置く場所自体を Terraform で作れない」鶏卵問題と、bootstrap シェルスクリプトで解決した手順を解説。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/05-terraform-bootstrap.html">
+<meta property="og:title" content="⑤ Terraform Bootstrap — 鶏卵問題の解決">
+<meta property="og:description" content="Terraform の state を S3 + DynamoDB Lock で集中管理する構成。「state を置く場所自体を Terraform で作れない」鶏卵問題と、bootstrap シェルスクリプトで解決した手順を解説。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/05-terraform-bootstrap.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="⑤ Terraform Bootstrap — 鶏卵問題の解決">
+<meta name="twitter:description" content="Terraform の state を S3 + DynamoDB Lock で集中管理する構成。「state を置く場所自体を Terraform で作れない」鶏卵問題と、bootstrap シェルスクリプトで解決した手順を解説。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "⑤ Terraform Bootstrap — 鶏卵問題の解決",
+  "description": "Terraform の state を S3 + DynamoDB Lock で集中管理する構成。「state を置く場所自体を Terraform で作れない」鶏卵問題と、bootstrap シェルスクリプトで解決した手順を解説。",
+  "datePublished": "2026-04-26",
+  "author": { "@type": "Person", "name": "iigtn", "url": "https://lab.iigtn.com/" },
+  "publisher": { "@type": "Person", "name": "iigtn" },
+  "url": "https://lab.iigtn.com/blog/05-terraform-bootstrap.html",
+  "mainEntityOfPage": "https://lab.iigtn.com/blog/05-terraform-bootstrap.html",
+  "image": "https://lab.iigtn.com/assets/icon.svg",
+  "inLanguage": "ja",
+  "isPartOf": { "@id": "https://lab.iigtn.com/blog/#blog" }
+}
+</script>
 <link rel="stylesheet" href="/blog/style.css">
 </head>
 <body>
