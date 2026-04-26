@@ -65,7 +65,7 @@
 
   <header class="page-header">
     <h1>About</h1>
-    <p class="lead">フリーランス・インフラエンジニア iigtn のプロフィール。経歴・スタイル・大事にしている設計観を載せています。</p>
+    <p class="lead">フリーランス・インフラエンジニア iigtn のプロフィール。経歴と所有資格、仕事をするうえで大事にしていることを載せています。</p>
   </header>
 
   <section class="page-section">
@@ -119,38 +119,6 @@
           <li><strong>AWS Certified CloudOps Engineer – Associate (SOA)</strong> — AWS の運用・モニタリング・トラブルシュート</li>
           <li><strong>応用情報技術者試験</strong>（IPA）— 情報処理の基礎全般</li>
         </ul>
-      </div>
-    </div>
-  </section>
-
-  <section class="page-section">
-    <h2>設計思想 4 本柱</h2>
-    <div class="about-grid">
-      <div class="about-text">
-        <p>案件・自社問わず、すべての構成は次の 4 つを軸に判断しています。</p>
-        <ol>
-          <li>
-            <strong>IaC ファースト（Terraform）</strong> ―
-            画面で作って画面で直す運用は将来コストが大きすぎる。
-            ローカルで <code>terraform plan</code> が通ることを「設計の動作確認」と位置づけて、
-            設計レビュー → コード → apply の順で進めます。
-          </li>
-          <li>
-            <strong>静的キーレス CI/CD</strong> ―
-            アクセスキーを GitHub Secrets に置く運用は事故の温床。
-            GitHub Actions の OIDC 認証で AWS の IAM Role を一時的に AssumeRole する形に統一しています。
-          </li>
-          <li>
-            <strong>サーバレス優先</strong> ―
-            「サーバが落ちたから障害」を構造的に減らす。EC2 を立てる前に
-            S3 + CloudFront / Lambda / API Gateway / DynamoDB で要件を満たせないかを必ず検討します。
-          </li>
-          <li>
-            <strong>観測可能性（Observability）</strong> ―
-            「壊れたら気付ける」が大事。CloudWatch Alarms / SNS 通知 / AWS Budgets を最初から組み込み、
-            最低限のラインは Terraform モジュール化して横展開可能にしています。
-          </li>
-        </ol>
       </div>
     </div>
   </section>
