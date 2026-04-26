@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#ref-05 systemd と journalctl 運用 | 現場コマンドリファレンス | iigtn</title>
+<meta name="description" content="systemctl / journalctl / systemd-analyze / loginctl / timedatectl ほか、systemd で日常運用する 40+ コマンドを 5 カテゴリで深掘り解説。サービス起動・ログ確認・タイマー・unit ファイル作成まで。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/ref/05-systemd.html">
+<meta property="og:title" content="#ref-05 systemd と journalctl 運用">
+<meta property="og:description" content="systemctl / journalctl / systemd-analyze / loginctl ほか 40+ コマンドを 5 カテゴリで深掘り。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/ref/05-systemd.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="#ref-05 systemd と journalctl 運用">
+<meta name="twitter:description" content="systemctl / journalctl / systemd-analyze / loginctl ほか 40+ コマンドを 5 カテゴリで深掘り。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="stylesheet" href="/blog/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "#ref-05 systemd と journalctl 運用",
+  "description": "systemctl / journalctl / systemd-analyze / loginctl ほか 40+ コマンドを 5 カテゴリで深掘り。",
+  "datePublished": "2026-04-26",
+  "author": { "@type": "Person", "name": "iigtn", "url": "https://lab.iigtn.com/" },
+  "publisher": { "@type": "Person", "name": "iigtn" },
+  "url": "https://lab.iigtn.com/blog/ref/05-systemd.html",
+  "mainEntityOfPage": "https://lab.iigtn.com/blog/ref/05-systemd.html",
+  "image": "https://lab.iigtn.com/assets/icon.svg",
+  "inLanguage": "ja",
+  "isPartOf": { "@id": "https://lab.iigtn.com/blog/ref/#blog" }
+}
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="/" class="logo" aria-label="iigtn">
+      <img src="/assets/logo.svg" alt="iigtn" height="32">
+    </a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/" class="active">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+      <li><a href="/learn.html">解説書</a></li>
+    </ul>
+  </nav>
+</header>
+
+<article class="post">
+
+  <header class="post-header">
+    <p class="post-meta">2026-04-26 · 現場コマンドリファレンス · #ref-05</p>
+    <h1>systemd と journalctl 運用 — 40+ コマンドを 5 カテゴリで</h1>
+  </header>
+
+  <div class="post-body">
+
+    <p>
+      RHEL 7 / Ubuntu 16.04 以降、Linux のサービス管理は事実上 <strong>systemd</strong> 一択。
+      旧 SysV init の <code>service</code> / <code>chkconfig</code> から <code>systemctl</code> への置き換えが終わって長く、
+      EC2 でも RDS でも EKS Worker でも触れる場面が必ず出てきます。
+    </p>
+
+    <h2>目次</h2>
+    <ol>
+      <li><a href="#sec-1">サービス管理 (systemctl)</a></li>
+      <li><a href="#sec-2">ログ閲覧 (journalctl)</a></li>
+      <li><a href="#sec-3">unit ファイル作成・編集</a></li>
+      <li><a href="#sec-4">タイマー (cron 代替)</a></li>
+      <li><a href="#sec-5">起動分析 / その他 (systemd-analyze / loginctl / timedatectl)</a></li>
+      <li><a href="#cookbook">運用レシピ</a></li>
+      <li><a href="#glossary">用語集</a></li>
+    </ol>
+
+    <h2 id="sec-1">1. サービス管理 (systemctl)</h2>
+
+<pre><code># 開始 / 停止 / 再起動 / リロード
+sudo systemctl start nginx
+sudo systemctl stop nginx
+sudo systemctl restart nginx
+sudo systemctl reload nginx           # 設定再読込（HUP 相当、無停止）
+sudo systemctl reload-or-restart nginx
+
+# 自動起動
+sudo systemctl enable nginx           # 起動時に開始
+sudo systemctl disable nginx
+sudo systemctl enable --now nginx     # 即時開始 + 自動起動有効化
+sudo systemctl disable --now nginx
+sudo systemctl mask nginx             # 完全無効化（誰も start できなくする）
+sudo systemctl unmask nginx
+
+# 状態確認
+systemctl status nginx                # 状態 + 直近ログ
+systemctl is-active nginx             # active / inactive
+systemctl is-enabled nginx            # enabled / disabled / masked
+systemctl is-failed nginx             # failed?
+
+# 一覧
+systemctl list-units --type=service                    # 起動中サービス
+systemctl list-units --type=service --state=failed    # 失敗中
+systemctl list-units --all                             # 停止中含む
+systemctl list-unit-files --type=service              # 全 unit ファイル
+
+# unit の依存関係
+systemctl list-dependencies nginx
+systemctl list-dependencies nginx --reverse
+
+# プロパティ表示・編集
+systemctl show nginx                                    # 全プロパティ
+systemctl show nginx --property=MainPID,ActiveState
+sudo systemctl edit nginx                               # ドロップイン (.d/override.conf) 編集
+sudo systemctl edit --full nginx                        # unit ファイル全文編集
+sudo systemctl daemon-reload                            # 編集後はこれ必須
+
+# システムレベル
+sudo systemctl reboot
+sudo systemctl poweroff
+sudo systemctl suspend
+sudo systemctl rescue                                   # シングルユーザモード相当
+sudo systemctl emergency
+sudo systemctl get-default                              # デフォルトターゲット (graphical / multi-user)
+sudo systemctl set-default multi-user.target</code></pre>
+
+    <h2 id="sec-2">2. ログ閲覧 (journalctl)</h2>
+
+<pre><code># 全ログ（古い→新しい順）
+journalctl
+
+# 末尾だけ + 追従
+journalctl -f
+journalctl -u nginx -f                       # 特定 unit の追従
+
+# 特定 unit
+journalctl -u nginx
+journalctl -u nginx -u php-fpm               # 複数 unit
+journalctl -u nginx --since '10 min ago'
+journalctl -u nginx --since '2026-04-26 09:00' --until '2026-04-26 12:00'
+
+# ログレベル
+journalctl -p err -u nginx                   # err 以上 (emerg/alert/crit/err/warning/notice/info/debug)
+journalctl -p warning..err                   # 範囲指定
+
+# kernel ログ
+journalctl -k                                # dmesg 相当
+journalctl -k -b                             # 今回起動分のみ
+
+# 起動順
+journalctl -b                                # 今回起動
+journalctl -b -1                             # 1 つ前の起動
+journalctl --list-boots                      # 起動履歴
+journalctl --reverse                         # 新しい順
+
+# 出力形式
+journalctl -o short-iso                      # 標準
+journalctl -o cat                            # メッセージのみ
+journalctl -o json                           # JSON
+journalctl -o json-pretty | jq
+
+# 容量管理
+journalctl --disk-usage
+sudo journalctl --vacuum-size=200M           # 200MB に切り詰め
+sudo journalctl --vacuum-time=14d            # 14 日より古いを削除
+
+# プロセスグループ別
+journalctl _SYSTEMD_UNIT=nginx.service
+journalctl _PID=1234
+journalctl _UID=1000</code></pre>
+    <div class="callout info">
+      journald は構造化ログ（フィールド付き）。<code>-o json</code> で取れば jq でフィルタ可能。
+      <code>_SYSTEMD_UNIT</code>, <code>_HOSTNAME</code>, <code>MESSAGE_ID</code> 等が使える。
+    </div>
+
+    <h2 id="sec-3">3. unit ファイル作成・編集</h2>
+
+    <h3>unit ファイルの場所</h3>
+<pre><code>/lib/systemd/system/      # ディストリ提供 (パッケージ)
+/etc/systemd/system/      # ユーザ追加・上書き (こちらが優先)
+~/.config/systemd/user/   # ユーザ単位 (systemctl --user)</code></pre>
+
+    <h3>シンプルな .service ファイル</h3>
+<pre><code># /etc/systemd/system/myapp.service
+[Unit]
+Description=My App
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=myapp
+Group=myapp
+WorkingDirectory=/opt/myapp
+ExecStart=/opt/myapp/bin/server
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=5
+EnvironmentFile=/etc/myapp/env
+StandardOutput=journal
+StandardError=journal
+
+# セキュリティ強化（推奨）
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/myapp
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+
+    <h3>登録と起動</h3>
+<pre><code>sudo systemctl daemon-reload                # 新規/編集後に必須
+sudo systemctl enable --now myapp
+journalctl -u myapp -f</code></pre>
+
+    <h3>ドロップイン（既存 unit を部分上書き）</h3>
+<pre><code>sudo systemctl edit nginx
+# エディタで以下のような部分上書きを書く
+# [Service]
+# LimitNOFILE=200000
+# Environment="FOO=bar"
+
+# 確認
+systemctl cat nginx                          # 全有効設定（base + drop-in）
+
+# 元に戻す
+sudo systemctl revert nginx</code></pre>
+
+    <h2 id="sec-4">4. タイマー (cron 代替)</h2>
+
+    <p>cron に対する systemd 流儀の代替。実行が journald に残る・依存関係が書ける・unit と統一管理できる利点。</p>
+
+<pre><code># /etc/systemd/system/backup.service
+[Unit]
+Description=Daily backup
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/backup.sh
+
+# /etc/systemd/system/backup.timer
+[Unit]
+Description=Daily backup timer
+
+[Timer]
+OnCalendar=*-*-* 03:00:00          # 毎日 03:00
+RandomizedDelaySec=600             # ジッタ ±10 分
+Persistent=true                    # 起動時に過去未実行を補完
+
+[Install]
+WantedBy=timers.target
+
+# 有効化
+sudo systemctl daemon-reload
+sudo systemctl enable --now backup.timer
+
+# 状態
+systemctl list-timers --all
+systemctl status backup.timer
+journalctl -u backup.service       # 実行ログ</code></pre>
+
+    <h3>OnCalendar の書き方サンプル</h3>
+<pre><code>OnCalendar=hourly                  # 毎時 0 分
+OnCalendar=daily                   # 毎日 0 時
+OnCalendar=Mon,Wed *-*-* 03:00:00 # 月水 03:00
+OnCalendar=*-*-01 04:00:00        # 月初 04:00
+OnCalendar=*-*-* 0/2:00:00        # 2 時間ごと
+
+# テスト
+systemd-analyze calendar 'Mon,Wed *-*-* 03:00:00'</code></pre>
+
+    <h2 id="sec-5">5. 起動分析 / その他</h2>
+
+    <h3>systemd-analyze — 起動時間の分析</h3>
+<pre><code>systemd-analyze                              # トータル起動時間
+systemd-analyze blame                        # サービスごとの起動時間
+systemd-analyze critical-chain               # クリティカルパス
+systemd-analyze critical-chain nginx.service
+systemd-analyze plot &gt; boot.svg              # ガントチャート SVG
+systemd-analyze verify /etc/systemd/system/myapp.service   # unit 構文チェック
+systemd-analyze security nginx               # サービスのセキュリティ評価</code></pre>
+
+    <h3>loginctl — セッション管理</h3>
+<pre><code>loginctl list-sessions
+loginctl list-users
+loginctl show-session 5
+sudo loginctl terminate-session 5
+sudo loginctl enable-linger www-data        # ユーザの user systemd を常時起動</code></pre>
+
+    <h3>timedatectl — 時刻管理</h3>
+<pre><code>timedatectl                                  # 現在の時刻設定
+sudo timedatectl set-timezone Asia/Tokyo
+sudo timedatectl set-ntp true
+timedatectl list-timezones | grep Tokyo</code></pre>
+
+    <h3>hostnamectl / localectl</h3>
+<pre><code>hostnamectl                                  # hostname / kernel / OS 情報
+sudo hostnamectl set-hostname web-01
+localectl                                    # ロケール
+sudo localectl set-locale LANG=ja_JP.UTF-8</code></pre>
+
+    <h2 id="cookbook">運用レシピ</h2>
+
+    <h3>レシピ 1 — サービスが起動失敗してる</h3>
+<pre><code>systemctl status myapp                       # 状態 + 直近 10 行ログ
+journalctl -u myapp -n 100                   # 末尾 100 行
+journalctl -u myapp -p err --since '1 hour ago'
+sudo systemctl daemon-reload                 # unit 編集後の反映漏れ?
+systemd-analyze verify /etc/systemd/system/myapp.service  # 構文OK?</code></pre>
+
+    <h3>レシピ 2 — ログを CloudWatch / 外部に送る</h3>
+<pre><code># journald のログを永続化（デフォルトで /var/log/journal）
+sudo mkdir -p /var/log/journal
+sudo systemctl restart systemd-journald
+
+# CloudWatch Agent をインストールして journald を取り込み
+# /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
+# {"logs":{"logs_collected":{"journald":{"collect":[{...}]}}}}
+
+# あるいは Vector / Fluent Bit で送る
+journalctl -f --output=json -u myapp | vector ...</code></pre>
+
+    <h3>レシピ 3 — 起動が遅い</h3>
+<pre><code>systemd-analyze
+systemd-analyze blame | head -n 10
+systemd-analyze critical-chain
+systemd-analyze plot &gt; boot.svg              # 視覚的に</code></pre>
+
+    <h3>レシピ 4 — タイマーが動いてない</h3>
+<pre><code>systemctl list-timers --all                  # 次回実行時刻が見える
+systemctl status backup.timer
+journalctl -u backup.service                 # 過去実行のログ
+systemctl cat backup.timer                   # OnCalendar 設定確認
+systemd-analyze calendar 'Mon,Wed *-*-* 03:00:00'</code></pre>
+
+    <h2>コマンド早見表</h2>
+<pre><code># サービス
+sudo systemctl enable --now myapp
+sudo systemctl restart nginx
+systemctl status nginx
+systemctl list-units --type=service --state=failed
+
+# ログ
+journalctl -u nginx -f
+journalctl -u nginx -p err --since '1 hour ago'
+journalctl --disk-usage
+
+# unit 編集
+sudo systemctl edit nginx
+sudo systemctl daemon-reload
+systemctl cat nginx
+
+# タイマー
+systemctl list-timers --all
+systemd-analyze calendar 'expression'
+
+# 起動分析
+systemd-analyze blame
+systemd-analyze critical-chain</code></pre>
+
+    <section class="post-glossary" id="glossary">
+      <h2>用語集</h2>
+      <dl>
+        <dt>systemd</dt>
+        <dd>Linux の init システム + サービスマネージャ。RHEL 7 / Ubuntu 16.04 以降の標準。SysV init の <code>service</code>/<code>chkconfig</code> 後継。</dd>
+
+        <dt>unit</dt>
+        <dd>systemd の管理単位。<code>.service</code> / <code>.timer</code> / <code>.socket</code> / <code>.target</code> / <code>.mount</code> など。</dd>
+
+        <dt>target</dt>
+        <dd>複数 unit をまとめた論理グループ。<code>multi-user.target</code> = CUI 通常起動、<code>graphical.target</code> = GUI 含む。SysV のランレベル相当。</dd>
+
+        <dt>WantedBy / RequiredBy</dt>
+        <dd>「自分が起動すべき target」を指定するインストール時設定。<code>WantedBy=multi-user.target</code> で <code>enable</code> 時に target に紐付く。</dd>
+
+        <dt>Type=simple / forking / oneshot / notify</dt>
+        <dd>サービスのプロセス管理モード。simple = ExecStart がメイン / forking = デーモン化する / oneshot = 1 回実行で終わる / notify = 起動完了を sd_notify で通知。</dd>
+
+        <dt>ドロップイン (.d/override.conf)</dt>
+        <dd>既存 unit を部分上書きする仕組み。<code>systemctl edit X</code> で作成。元のパッケージを汚さずカスタマイズできる。</dd>
+
+        <dt>journald</dt>
+        <dd>systemd のログデーモン。構造化ログをバイナリ形式で保管、<code>journalctl</code> で閲覧・フィルタ。</dd>
+
+        <dt>systemd timer</dt>
+        <dd>cron に代わるスケジューラ。<code>.timer</code> unit + <code>.service</code> unit の対で動かす。実行ログが journald に残る、Persistent=true で見逃し補完できる。</dd>
+
+        <dt>OnCalendar</dt>
+        <dd>timer の実行スケジュール式。<code>*-*-* 03:00:00</code>（毎日 3 時）等。<code>systemd-analyze calendar</code> でテストできる。</dd>
+
+        <dt>systemd-analyze blame</dt>
+        <dd>各 unit の起動所要時間ランキング。起動の遅延ボトルネック特定に。</dd>
+
+        <dt>NoNewPrivileges / ProtectSystem / PrivateTmp</dt>
+        <dd>unit に書ける サービス強化オプション。最小権限・FS 保護・/tmp 隔離等。<code>systemd-analyze security</code> でスコア表示できる。</dd>
+
+        <dt>masked</dt>
+        <dd>unit を完全無効化した状態（<code>/dev/null</code> へのシンボリックリンク化）。disable よりも強力で、誰かが <code>start</code> しようとしても起動できない。</dd>
+
+        <dt>EnvironmentFile</dt>
+        <dd>unit が読み込む KEY=VALUE 形式のファイル。シークレットや環境別設定の分離に使う。</dd>
+
+        <dt>linger</dt>
+        <dd>ユーザがログアウトしてもユーザレベル systemd を継続起動させる設定。<code>loginctl enable-linger USER</code>。</dd>
+
+        <dt>WantedBy=timers.target</dt>
+        <dd>タイマー unit を有効化する時の標準 target。これがないと enable しても自動起動しない。</dd>
+      </dl>
+    </section>
+
+    <footer class="post-footer">
+      <a href="/blog/ref/04-process-resource.html">← #ref-04 プロセス・リソース監視</a>
+      <a href="/blog/ref/">シリーズ目次</a>
+    </footer>
+
+  </div>
+</article>
+
+</body>
+</html>

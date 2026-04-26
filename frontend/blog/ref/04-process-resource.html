@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#ref-04 プロセス・リソース監視 | 現場コマンドリファレンス | iigtn</title>
+<meta name="description" content="ps / top / htop / kill / pkill / pgrep / lsof / strace / vmstat / iostat / free / uptime ほか、Linux でプロセスとシステムリソースを観測する 50+ コマンドを 6 カテゴリで深掘り解説。障害時の犯人特定・容量調査・パフォーマンス調整に。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/ref/04-process-resource.html">
+<meta property="og:title" content="#ref-04 プロセス・リソース監視">
+<meta property="og:description" content="ps / top / htop / kill / lsof / strace / vmstat / iostat / free ほか 50+ コマンドを 6 カテゴリで深掘り。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/ref/04-process-resource.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="#ref-04 プロセス・リソース監視">
+<meta name="twitter:description" content="ps / top / htop / kill / lsof / strace / vmstat / iostat / free ほか 50+ コマンドを 6 カテゴリで深掘り。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="stylesheet" href="/blog/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "#ref-04 プロセス・リソース監視",
+  "description": "ps / top / htop / kill / lsof / strace / vmstat / iostat / free ほか 50+ コマンドを 6 カテゴリで深掘り。",
+  "datePublished": "2026-04-26",
+  "author": { "@type": "Person", "name": "iigtn", "url": "https://lab.iigtn.com/" },
+  "publisher": { "@type": "Person", "name": "iigtn" },
+  "url": "https://lab.iigtn.com/blog/ref/04-process-resource.html",
+  "mainEntityOfPage": "https://lab.iigtn.com/blog/ref/04-process-resource.html",
+  "image": "https://lab.iigtn.com/assets/icon.svg",
+  "inLanguage": "ja",
+  "isPartOf": { "@id": "https://lab.iigtn.com/blog/ref/#blog" }
+}
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="/" class="logo" aria-label="iigtn">
+      <img src="/assets/logo.svg" alt="iigtn" height="32">
+    </a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/" class="active">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+      <li><a href="/learn.html">解説書</a></li>
+    </ul>
+  </nav>
+</header>
+
+<article class="post">
+
+  <header class="post-header">
+    <p class="post-meta">2026-04-26 · 現場コマンドリファレンス · #ref-04</p>
+    <h1>プロセス・リソース監視 — 50+ コマンドを 6 カテゴリで</h1>
+  </header>
+
+  <div class="post-body">
+
+    <p>
+      「サーバが重い」「CPU が張り付いてる」「メモリ枯渇でプロセスが OOM Kill された」「ディスクが急に埋まった」――
+      この手の障害対応では <code>top</code>・<code>ps</code>・<code>lsof</code>・<code>vmstat</code>・<code>iostat</code> が主役。
+      AWS の CloudWatch だけでは見えない「インスタンス内部で何が起きているか」を掴むのに必須です。
+    </p>
+
+    <h2>目次</h2>
+    <ol>
+      <li><a href="#sec-1">プロセス一覧 (ps / pgrep)</a></li>
+      <li><a href="#sec-2">リアルタイム監視 (top / htop / atop)</a></li>
+      <li><a href="#sec-3">プロセス制御 (kill / pkill / nice / renice)</a></li>
+      <li><a href="#sec-4">CPU / メモリ / I/O 統計 (vmstat / iostat / free / mpstat / sar)</a></li>
+      <li><a href="#sec-5">ファイルディスクリプタ・呼出し追跡 (lsof / strace / ltrace)</a></li>
+      <li><a href="#sec-6">ジョブ制御・バックグラウンド実行 (jobs / nohup / disown / screen / tmux)</a></li>
+      <li><a href="#cookbook">障害対応レシピ</a></li>
+      <li><a href="#glossary">用語集</a></li>
+    </ol>
+
+    <h2 id="sec-1">1. プロセス一覧 (ps / pgrep)</h2>
+
+    <h3>ps — プロセス一覧</h3>
+    <p>BSD 形式 (<code>ps aux</code>) と System V 形式 (<code>ps -ef</code>) があります。現場でよく使うのは <code>ps aux</code>。</p>
+    <table>
+      <tr><th>引数</th><th>意味</th></tr>
+      <tr><td><code>aux</code></td><td>全ユーザの全プロセス + ターミナル無しも表示（BSD）</td></tr>
+      <tr><td><code>-ef</code></td><td>全プロセスをフルフォーマット表示（System V）</td></tr>
+      <tr><td><code>-p PID</code></td><td>特定 PID</td></tr>
+      <tr><td><code>-u USER</code></td><td>特定ユーザ</td></tr>
+      <tr><td><code>--sort=-%cpu</code></td><td>CPU 降順</td></tr>
+      <tr><td><code>--sort=-%mem</code></td><td>メモリ降順</td></tr>
+      <tr><td><code>-o FIELDS</code></td><td>表示列カスタマイズ</td></tr>
+      <tr><td><code>-L</code></td><td>スレッドも表示</td></tr>
+    </table>
+<pre><code># 全プロセス
+ps aux
+
+# CPU 使用率トップ 10
+ps aux --sort=-%cpu | head -n 11
+
+# メモリ使用量トップ 10
+ps aux --sort=-%mem | head -n 11
+
+# 特定プロセス
+ps -ef | grep nginx
+
+# ツリー表示（親子関係）
+ps auxf
+ps -ejH
+
+# カスタム列
+ps -eo pid,ppid,user,%cpu,%mem,rss,etime,cmd --sort=-%mem | head
+
+# 特定 PID の詳細
+ps -p 1234 -o pid,ppid,user,%cpu,%mem,etime,cmd
+
+# 特定ユーザのプロセス
+ps -u www-data</code></pre>
+
+    <h3>pgrep / pidof — PID を検索</h3>
+<pre><code>pgrep nginx                # nginx の PID 列挙
+pgrep -u www-data          # 特定ユーザ
+pgrep -f 'python app.py'   # コマンドラインも対象
+pgrep -l nginx             # 名前付き
+pgrep -a nginx             # コマンドライン全体表示
+pidof sshd                 # 古典的な PID 取得</code></pre>
+
+    <h3>pstree — ツリー表示</h3>
+<pre><code>pstree -p              # PID 付き
+pstree -u              # ユーザ付き
+pstree -p PID          # 特定 PID から下を表示</code></pre>
+
+    <h2 id="sec-2">2. リアルタイム監視 (top / htop / atop)</h2>
+
+    <h3>top — 標準のプロセスモニタ</h3>
+<pre><code>top
+# 主要キー: P (CPU 順) / M (メモリ順) / T (時間順) / k (kill) / r (renice) / 1 (CPU 別)
+# / で名前検索、u でユーザ絞り込み、c でフルコマンド表示
+# H でスレッド表示
+
+top -b -n 1 | head -n 20         # 1 回スナップショット (バッチモード、cron で取得)
+top -p 1234,5678                 # 特定 PID
+top -u www-data                  # ユーザ絞り込み
+top -d 0.5                       # 0.5 秒ごと更新</code></pre>
+
+    <h3>htop — top の見やすい代替</h3>
+<pre><code>htop
+# F2 で設定、F4 でフィルタ、F5 でツリー、F6 でソートキー、F9 で kill
+# Space でプロセス選択、c でツリーで折りたたみ
+htop -u www-data
+htop -p 1234,5678</code></pre>
+
+    <h3>atop — 過去ログを残せる</h3>
+<pre><code>atop                              # リアルタイム（CPU/MEM/DSK/NET 全部）
+atop -r /var/log/atop/atop_YYYYMMDD   # 過去ログ再生
+atop -PCPU,DSK -r ...               # 特定リソースのみ</code></pre>
+    <div class="callout info">
+      atop は <code>atopd</code> サービスで定期取得すると、後から「あの時何が起きてたか」を再生できる。
+      本番運用では入れておくと障害事後分析に強い。
+    </div>
+
+    <h2 id="sec-3">3. プロセス制御 (kill / pkill / nice / renice)</h2>
+
+    <h3>kill — シグナル送信</h3>
+    <table>
+      <tr><th>シグナル</th><th>番号</th><th>意味</th></tr>
+      <tr><td>SIGTERM</td><td>15</td><td>正常終了要求（デフォルト）</td></tr>
+      <tr><td>SIGKILL</td><td>9</td><td>強制終了（プロセスが捕捉不可）</td></tr>
+      <tr><td>SIGINT</td><td>2</td><td>Ctrl+C 相当</td></tr>
+      <tr><td>SIGHUP</td><td>1</td><td>設定再読込（多くのデーモンが採用）</td></tr>
+      <tr><td>SIGUSR1/2</td><td>10/12</td><td>アプリ独自</td></tr>
+      <tr><td>SIGSTOP/SIGCONT</td><td>19/18</td><td>一時停止/再開</td></tr>
+    </table>
+<pre><code>kill 1234                   # SIGTERM 送信
+kill -9 1234                # SIGKILL（最終手段）
+kill -HUP 1234              # 設定再読込
+kill -l                     # 全シグナル一覧
+
+pkill nginx                 # 名前で送信
+pkill -f 'python app.py'    # コマンドライン
+pkill -u www-data           # ユーザ単位
+pkill -9 -f 'stuck-process'
+
+killall nginx               # 別実装、名前一致で送信</code></pre>
+
+    <h3>nice / renice — 優先度</h3>
+<pre><code>nice -n 10 long-job             # nice 値 10 (低優先) で起動
+renice -n 5 -p 1234             # 既存 PID の優先度変更
+ionice -c 3 -p 1234             # I/O 優先度を idle に変更</code></pre>
+
+    <h3>timeout — 強制時間制限</h3>
+<pre><code>timeout 30s ./long-script.sh    # 30 秒で SIGTERM
+timeout -s KILL 30s cmd         # 30 秒で SIGKILL
+timeout 30s sleep 60; echo $?   # 124 (timeout)</code></pre>
+
+    <h2 id="sec-4">4. CPU / メモリ / I/O 統計</h2>
+
+    <h3>vmstat — システム統計</h3>
+<pre><code>vmstat 1                      # 1 秒ごと
+vmstat 1 5                    # 1 秒ごと 5 回
+vmstat -SM 1                  # メモリ単位を MB に
+vmstat -d                     # ディスク統計
+vmstat -s                     # メモリ統計サマリ
+
+# 主要カラム:
+# r=実行待ち / b=ブロック中 / si=swap-in / so=swap-out / wa=I/O 待ち %CPU</code></pre>
+
+    <h3>iostat — I/O 統計</h3>
+<pre><code>iostat -x 1                   # 拡張統計、1 秒ごと
+iostat -dx 1                  # ディスクのみ
+iostat -kx 1                  # KB 単位
+iostat -p sda 1               # 特定デバイス
+
+# 主要カラム:
+# %util=デバイス使用率 / await=平均応答時間 ms / r/s, w/s=IOPS</code></pre>
+
+    <h3>free — メモリ</h3>
+<pre><code>free -h                       # 人間可読
+free -m                       # MB
+free -s 2                     # 2 秒ごと連続表示
+
+# available 列が「実際に使える空き」（バッファ/キャッシュ含めた近似値）</code></pre>
+
+    <h3>mpstat — CPU コアごと</h3>
+<pre><code>mpstat -P ALL 1               # 全コア、1 秒ごと
+mpstat -P ALL 1 5             # 5 回</code></pre>
+
+    <h3>sar — 過去〜現在の系列データ</h3>
+<pre><code># 必要パッケージ: sysstat (デフォルトで cron が定期収集)
+sar -u                         # CPU 履歴
+sar -r                         # メモリ履歴
+sar -d                         # ディスク
+sar -n DEV                     # ネットワーク
+sar -A                         # 全リソース
+sar -f /var/log/sa/sa10        # 10 日のログ再生</code></pre>
+
+    <h3>uptime — 負荷平均</h3>
+<pre><code>uptime
+# 例: 14:32:18 up 13 days, 3:17, 2 users, load average: 0.42, 0.51, 0.48
+# 過去 1, 5, 15 分の load average</code></pre>
+    <div class="callout info">
+      Linux の load average は「実行中 + I/O 待ち」を含むので、CPU コア数を超えても瞬時に「過負荷」とは限らない。
+      コア数で割って 1.0 を超えてれば確かに重い、1.0 未満なら通常運転。
+    </div>
+
+    <h2 id="sec-5">5. ファイルディスクリプタ・呼出し追跡 (lsof / strace / ltrace)</h2>
+
+    <h3>lsof — 開いているファイル / ソケット</h3>
+<pre><code>sudo lsof                          # 全プロセスの全 FD（重い）
+sudo lsof -p 1234                  # 特定 PID
+sudo lsof -i :443                  # 443 ポートを開いているプロセス
+sudo lsof -i tcp                   # TCP 全ソケット
+sudo lsof -u www-data              # 特定ユーザ
+sudo lsof /var/log/app.log         # 特定ファイルを誰が掴んでいるか
+sudo lsof +D /var/lib/docker       # ディレクトリ配下を再帰
+sudo lsof +L1                      # unlink 済みだがプロセスが掴んでるファイル（ディスクが空かない犯人）</code></pre>
+
+    <h3>strace — システムコール追跡</h3>
+<pre><code>sudo strace -p 1234                          # 既存プロセスにアタッチ
+sudo strace -p 1234 -f -e trace=network      # 子プロセスも + ネットワーク系のみ
+sudo strace -c ls                            # システムコールのサマリ統計
+strace -e trace=open,openat ls               # 特定システムコールのみ
+strace -o trace.log ./bin                    # ログ保存</code></pre>
+
+    <h3>ltrace — ライブラリ呼出し追跡</h3>
+<pre><code>ltrace ./bin                 # 関数呼出しを追跡
+ltrace -p 1234 -e malloc+free</code></pre>
+    <div class="callout warn">
+      <code>strace</code> は対象プロセスを大幅に遅くします（10 倍以上のことも）。本番で動作中サービスにアタッチするのは非常に注意。
+    </div>
+
+    <h2 id="sec-6">6. ジョブ制御・バックグラウンド実行</h2>
+
+<pre><code># フォアグラウンドで動かしてる時 Ctrl+Z で停止
+# bg で background へ、fg で foreground に戻る
+jobs                              # 現在のジョブ一覧
+fg %1                             # ジョブ 1 を foreground
+bg %1                             # ジョブ 1 を background
+disown %1                         # 親シェルから切り離す（exit 後も動かす）
+
+# はじめからバックグラウンド
+./long.sh &amp;
+nohup ./long.sh &amp;                 # ハングアップ無視（terminal 切断後も継続）
+nohup ./long.sh &gt; out.log 2&gt;&amp;1 &amp;
+
+# screen / tmux で永続セッション
+screen -S work                    # 起動 (Ctrl+A D で detach)
+screen -r work                    # 再接続
+tmux new -s work                  # 起動 (Ctrl+B D で detach)
+tmux attach -t work               # 再接続
+tmux ls                           # セッション一覧</code></pre>
+
+    <h2 id="cookbook">障害対応レシピ</h2>
+
+    <h3>レシピ 1 — CPU が 100% 張り付いている犯人特定</h3>
+<pre><code>top -b -n 1 | head -n 15                            # 全体スナップショット
+ps aux --sort=-%cpu | head -n 5                     # CPU 上位
+top -H -p $(pgrep -d, java)                         # スレッド単位
+sudo strace -p &lt;PID&gt; -f -e trace=network -c        # システムコール集計</code></pre>
+
+    <h3>レシピ 2 — メモリ枯渇で OOM Killer が発動</h3>
+<pre><code>dmesg -T | grep -i 'killed process'                 # 何が殺されたか
+journalctl -k | grep -i oom
+ps aux --sort=-%mem | head                          # 残ってる大食いプロセス
+free -h
+cat /proc/&lt;PID&gt;/status | grep -E 'VmRSS|VmSize'</code></pre>
+
+    <h3>レシピ 3 — ディスクが急に埋まった</h3>
+<pre><code>df -h                                                # まずこれ
+sudo du --max-depth=1 -h /var | sort -h             # 大きい配下
+sudo find / -size +1G -type f 2&gt;/dev/null
+sudo lsof +L1                                        # unlink 済みファイルを掴んでるプロセス（再起動で解放）
+journalctl --vacuum-size=200M                        # journald 切り詰め</code></pre>
+
+    <h3>レシピ 4 — プロセスが固まって kill -9 でも消えない</h3>
+<pre><code># Z (zombie): 親プロセスが wait してない → 親を再起動
+ps -A -ostat,pid,ppid | awk '/^[Zz]/ { print }'
+# D (uninterruptible sleep): I/O ブロック中、無理に殺せない → カーネル側 I/O 待ち調査
+ps aux | awk '$8 ~ /D/'</code></pre>
+
+    <h3>レシピ 5 — ボトルネック切り分け（CPU / IO / Network）</h3>
+<pre><code>vmstat 1 5         # r 大 → CPU 律速、b 大 → I/O 律速、wa 高 → I/O 待ち
+iostat -x 1 5      # %util 高 / await 大 → ディスク律速
+sar -n DEV 1 5     # rxkB/s, txkB/s で帯域使用率</code></pre>
+
+    <h2>コマンド早見表</h2>
+<pre><code># プロセス
+ps aux --sort=-%mem | head
+pgrep -af 'python app.py'
+pstree -p
+
+# モニタ
+top / htop / atop -r LOG
+
+# 制御
+kill -TERM PID / kill -9 PID
+pkill -f pattern
+nohup ./cmd &gt; out.log 2&gt;&amp;1 &amp;
+
+# 統計
+vmstat 1 / iostat -x 1 / free -h
+mpstat -P ALL 1 / sar -A
+
+# 追跡
+sudo lsof -p PID / sudo lsof -i :443 / sudo lsof +L1
+sudo strace -p PID -f</code></pre>
+
+    <section class="post-glossary" id="glossary">
+      <h2>用語集</h2>
+      <dl>
+        <dt>PID / PPID</dt>
+        <dd>プロセス ID / 親プロセス ID。<code>ps -ef</code> や <code>pstree -p</code> で関係性を辿れる。</dd>
+
+        <dt>RSS (Resident Set Size)</dt>
+        <dd>プロセスが物理メモリに載せている量。<code>ps</code> の RSS 列、<code>top</code> の RES 列。</dd>
+
+        <dt>VSZ / VmSize</dt>
+        <dd>プロセスの仮想メモリサイズ。RSS より大きい。実際の物理使用量は RSS で見るのが正解。</dd>
+
+        <dt>nice / nice 値</dt>
+        <dd>プロセスのスケジューリング優先度。-20（高優先）〜 19（低優先）。<code>nice</code>/<code>renice</code> で変更。</dd>
+
+        <dt>シグナル (SIGTERM/SIGKILL/SIGHUP)</dt>
+        <dd>プロセスに送る OS の通知。SIGKILL のみプロセスは捕捉不可で確実に殺せる。</dd>
+
+        <dt>OOM Killer</dt>
+        <dd>Linux カーネルがメモリ枯渇時にスコアの高いプロセスを強制終了する仕組み。<code>dmesg</code> や <code>journalctl -k</code> で発動ログ確認。</dd>
+
+        <dt>load average</dt>
+        <dd>過去 1/5/15 分の「実行待ち + I/O 待ち」プロセスの平均数。CPU コア数で割ると負荷率の目安。</dd>
+
+        <dt>%util / await (iostat)</dt>
+        <dd>%util = デバイス利用率 / await = I/O 1 件あたりの平均応答時間 (ms)。両方高いとディスクボトルネック。</dd>
+
+        <dt>FD (File Descriptor)</dt>
+        <dd>プロセスが開いているファイル / ソケットの管理番号。OS / プロセスごとに上限 (<code>ulimit -n</code>)。</dd>
+
+        <dt>strace / ltrace</dt>
+        <dd>システムコール追跡 / ライブラリ呼出し追跡。原因不明のハング・遅延調査に使う。本番運用では負荷注意。</dd>
+
+        <dt>ジョブ制御</dt>
+        <dd>シェルが管理する fg/bg/jobs/disown の仕組み。<code>nohup</code> や <code>disown</code> でターミナル切断後も継続できる。</dd>
+
+        <dt>screen / tmux</dt>
+        <dd>仮想ターミナルセッション。SSH 切断しても作業継続、複数ペイン分割が可能。長時間ジョブには必須。</dd>
+
+        <dt>ゾンビプロセス (Z)</dt>
+        <dd>子プロセスが終了したのに親が <code>wait</code> していない状態。親プロセスが原因なので親を再起動。</dd>
+
+        <dt>uninterruptible sleep (D)</dt>
+        <dd>カーネル空間で I/O 完了待ち。Ctrl+C・SIGKILL でも止められない。NFS や故障ディスクで発生しがち。</dd>
+
+        <dt>sar / sysstat</dt>
+        <dd>過去のリソース統計を時系列で残すツール群。<code>sysstat</code> パッケージインストール後 cron で自動収集される。</dd>
+      </dl>
+    </section>
+
+    <footer class="post-footer">
+      <a href="/blog/ref/03-network.html">← #ref-03 ネットワーク診断</a>
+      <a href="/blog/ref/">シリーズ目次</a>
+    </footer>
+
+  </div>
+</article>
+
+</body>
+</html>

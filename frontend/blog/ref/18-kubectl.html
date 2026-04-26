@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#ref-18 Kubernetes (kubectl) 徹底解説 | 現場コマンドリファレンス | iigtn</title>
+<meta name="description" content="kubectl get / describe / apply / delete / logs / exec / port-forward / rollout / scale / top / cp / patch ほか、k8s 運用の 60+ コマンドを 8 カテゴリで深掘り解説。デバッグ・障害対応の典型レシピ付き。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/ref/18-kubectl.html">
+<meta property="og:title" content="#ref-18 Kubernetes (kubectl) 徹底解説">
+<meta property="og:description" content="get / describe / apply / logs / exec / port-forward / rollout / scale 60+ コマンドを 8 カテゴリで深掘り。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/ref/18-kubectl.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="#ref-18 Kubernetes (kubectl) 徹底解説">
+<meta name="twitter:description" content="kubectl 60+ コマンドを 8 カテゴリで深掘り。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="stylesheet" href="/blog/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "#ref-18 Kubernetes (kubectl) 徹底解説",
+  "description": "kubectl 60+ コマンドを 8 カテゴリで深掘り。",
+  "datePublished": "2026-04-26",
+  "author": { "@type": "Person", "name": "iigtn", "url": "https://lab.iigtn.com/" },
+  "publisher": { "@type": "Person", "name": "iigtn" },
+  "url": "https://lab.iigtn.com/blog/ref/18-kubectl.html",
+  "mainEntityOfPage": "https://lab.iigtn.com/blog/ref/18-kubectl.html",
+  "image": "https://lab.iigtn.com/assets/icon.svg",
+  "inLanguage": "ja",
+  "isPartOf": { "@id": "https://lab.iigtn.com/blog/ref/#blog" }
+}
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="/" class="logo" aria-label="iigtn">
+      <img src="/assets/logo.svg" alt="iigtn" height="32">
+    </a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/" class="active">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+      <li><a href="/learn.html">解説書</a></li>
+    </ul>
+  </nav>
+</header>
+
+<article class="post">
+
+  <header class="post-header">
+    <p class="post-meta">2026-04-26 · 現場コマンドリファレンス · #ref-18</p>
+    <h1>Kubernetes (kubectl) 徹底解説 — 60+ コマンドを 8 カテゴリで</h1>
+  </header>
+
+  <div class="post-body">
+
+    <p>
+      Kubernetes 案件は単価が伸びやすい領域。EKS / GKE / AKS / Self-managed の違いはあれど <code>kubectl</code> の使い方は共通。
+      本記事は CRUD 操作からデバッグ、ロールアウト戦略まで 60+ コマンドを整理します。
+    </p>
+
+    <h2>目次</h2>
+    <ol>
+      <li><a href="#sec-1">context / namespace</a></li>
+      <li><a href="#sec-2">リソース一覧・詳細 (get / describe)</a></li>
+      <li><a href="#sec-3">apply / delete / patch / edit</a></li>
+      <li><a href="#sec-4">ログ・exec・cp・port-forward</a></li>
+      <li><a href="#sec-5">rollout / scale / autoscale</a></li>
+      <li><a href="#sec-6">node / events / top</a></li>
+      <li><a href="#sec-7">RBAC・Secret・ConfigMap</a></li>
+      <li><a href="#sec-8">よく使うアドオン (kubens / k9s / stern)</a></li>
+      <li><a href="#cookbook">障害対応レシピ</a></li>
+      <li><a href="#glossary">用語集</a></li>
+    </ol>
+
+    <h2 id="sec-1">1. context / namespace</h2>
+
+<pre><code># context（接続先クラスタ + 認証情報 + namespace）
+kubectl config get-contexts
+kubectl config current-context
+kubectl config use-context my-cluster
+kubectl config rename-context old new
+kubectl config delete-context old
+
+# namespace
+kubectl get ns
+kubectl create ns dev
+kubectl delete ns dev
+
+# デフォルト namespace 設定
+kubectl config set-context --current --namespace=dev
+
+# kubeconfig マージ
+KUBECONFIG=~/.kube/config:~/.kube/config-eks kubectl config view --merge --flatten &gt; ~/.kube/merged
+mv ~/.kube/merged ~/.kube/config
+
+# AWS EKS の context を取り込む
+aws eks update-kubeconfig --name my-cluster --region ap-northeast-1</code></pre>
+
+    <h2 id="sec-2">2. リソース一覧・詳細</h2>
+
+<pre><code>kubectl get pods                                           # 現 namespace
+kubectl get pods -A                                        # 全 namespace
+kubectl get pods -n kube-system
+kubectl get pods -o wide                                   # IP / Node も表示
+kubectl get pods --selector=app=web                        # ラベル絞り込み
+kubectl get pods -l 'env in (prod,stg)'
+kubectl get pods --field-selector=status.phase=Failed
+kubectl get pods -w                                        # watch (変化追跡)
+
+# 形式
+kubectl get pod web-xxx -o yaml
+kubectl get pod web-xxx -o json
+kubectl get pod web-xxx -o jsonpath='{.status.podIP}'
+kubectl get pods -o custom-columns='NAME:.metadata.name,IP:.status.podIP'
+
+# 各種リソース
+kubectl get deploy / svc / ing / cm / secret / pv / pvc / sa / role / rolebinding / hpa
+kubectl get all -n my-ns                                   # 主要リソース横断
+kubectl api-resources                                       # 全リソース型一覧
+kubectl api-versions
+
+# describe (events 含む詳細)
+kubectl describe pod web-xxx
+kubectl describe deployment web
+kubectl describe node ip-10-0-0-5.ap-northeast-1.compute.internal</code></pre>
+
+    <h2 id="sec-3">3. apply / delete / patch / edit</h2>
+
+<pre><code>kubectl apply -f manifest.yaml                              # 作成 / 更新
+kubectl apply -f ./k8s/                                     # ディレクトリ
+kubectl apply -k ./overlays/prod                            # Kustomize
+kubectl apply -f - &lt;&lt; 'EOF'
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app
+data:
+  LOG_LEVEL: debug
+EOF
+
+kubectl create -f manifest.yaml                             # 既存ならエラー
+kubectl replace -f manifest.yaml                            # 置換
+kubectl delete -f manifest.yaml
+kubectl delete deploy web
+kubectl delete pod web-xxx --grace-period=0 --force         # 強制削除
+
+# 部分更新
+kubectl patch deploy web -p '{"spec":{"replicas":5}}'
+kubectl patch deploy web --type='json' \
+  -p '[{"op":"replace","path":"/spec/replicas","value":5}]'
+
+# その場編集
+kubectl edit deploy web                                     # $EDITOR でその場編集
+
+# diff
+kubectl diff -f manifest.yaml
+
+# dry-run
+kubectl apply -f manifest.yaml --dry-run=client -o yaml
+kubectl apply -f manifest.yaml --dry-run=server</code></pre>
+
+    <h2 id="sec-4">4. ログ・exec・cp・port-forward</h2>
+
+<pre><code># logs
+kubectl logs web-xxx
+kubectl logs web-xxx -c container-name                       # マルチコンテナ
+kubectl logs web-xxx -f                                       # tail -f
+kubectl logs web-xxx --since=10m
+kubectl logs web-xxx --tail=200
+kubectl logs web-xxx --previous                               # 前回 crash 時のログ
+kubectl logs -l app=web --max-log-requests=10 -f             # ラベルで複数 Pod 同時 tail
+
+# exec
+kubectl exec -it web-xxx -- bash
+kubectl exec web-xxx -- ls /etc
+kubectl exec -it web-xxx -c sidecar -- sh                    # マルチコンテナ
+
+# ファイル コピー
+kubectl cp ./local.txt my-ns/web-xxx:/tmp/
+kubectl cp my-ns/web-xxx:/var/log/app.log ./
+
+# port-forward
+kubectl port-forward pod/web-xxx 8080:80
+kubectl port-forward svc/web 8080:80
+kubectl port-forward deploy/web 8080:80</code></pre>
+
+    <h2 id="sec-5">5. rollout / scale / autoscale</h2>
+
+<pre><code># rollout (Deployment 更新)
+kubectl rollout status deploy/web
+kubectl rollout history deploy/web
+kubectl rollout history deploy/web --revision=3
+kubectl rollout undo deploy/web                              # 直前に戻す
+kubectl rollout undo deploy/web --to-revision=2
+kubectl rollout pause deploy/web                              # 一時停止
+kubectl rollout resume deploy/web
+kubectl rollout restart deploy/web                            # 強制再起動
+
+# scale
+kubectl scale deploy web --replicas=5
+kubectl scale deploy web --current-replicas=3 --replicas=5    # 現状確認しつつ
+kubectl scale --replicas=0 deploy/web                          # 一時停止相当
+
+# HPA (Horizontal Pod Autoscaler)
+kubectl autoscale deploy web --min=2 --max=10 --cpu-percent=70
+kubectl get hpa
+kubectl describe hpa web
+
+# Image 更新（rollout 系の最速）
+kubectl set image deploy/web web=myapp:1.2.3 --record
+kubectl set env deploy/web LOG_LEVEL=debug</code></pre>
+
+    <h2 id="sec-6">6. node / events / top</h2>
+
+<pre><code>kubectl get nodes
+kubectl describe node ip-10-0-0-5.ap-northeast-1.compute.internal
+kubectl top node                                              # CPU/Mem (要 metrics-server)
+kubectl top pod -A
+kubectl top pod -l app=web --containers
+
+# node 操作
+kubectl cordon NODE                                            # 新規 Pod スケジュール禁止
+kubectl uncordon NODE
+kubectl drain NODE --ignore-daemonsets --delete-emptydir-data  # 退避してから停止
+
+# events（クラスタ内で起きたこと）
+kubectl get events --sort-by='.lastTimestamp'
+kubectl get events -n my-ns --field-selector type=Warning
+kubectl get events --watch                                      # リアルタイム</code></pre>
+
+    <h2 id="sec-7">7. RBAC・Secret・ConfigMap</h2>
+
+<pre><code># RBAC
+kubectl get sa / role / rolebinding / clusterrole / clusterrolebinding -A
+kubectl create sa my-sa
+kubectl create role pod-reader --verb=get,list --resource=pods
+kubectl create rolebinding pod-reader-binding --role=pod-reader --serviceaccount=my-ns:my-sa
+
+# 自分の権限確認
+kubectl auth can-i list pods
+kubectl auth can-i delete pods --as=system:serviceaccount:my-ns:my-sa
+
+# Secret
+kubectl create secret generic my-secret --from-literal=KEY=value
+kubectl create secret generic my-secret --from-file=./secret.txt
+kubectl create secret docker-registry regcred --docker-server=... --docker-username=... \
+  --docker-password=... --docker-email=...
+
+# Secret を覗く
+kubectl get secret my-secret -o jsonpath='{.data.KEY}' | base64 -d
+
+# ConfigMap
+kubectl create cm app-config --from-literal=LOG_LEVEL=info
+kubectl create cm app-config --from-file=./config/
+kubectl get cm app-config -o yaml
+
+# Secret/CM を Pod から参照は manifest 側 envFrom / volumeMounts</code></pre>
+
+    <h2 id="sec-8">8. よく使うアドオン</h2>
+
+<pre><code># kubens / kubectx (namespace / context 切替)
+kubens                              # 一覧
+kubens dev                          # 切替
+kubectx                             # context 一覧
+kubectx my-cluster                  # context 切替
+
+# k9s（TUI）
+k9s
+# 矢印キーでナビゲート、l = logs、s = shell、d = describe、Ctrl+d = delete
+
+# stern (複数 Pod ログ tail)
+stern app-                          # prefix マッチ全 Pod
+stern -l app=web --tail 100
+
+# kubie (会話的 namespace/context)
+kubie ctx
+kubie ns
+
+# helm（パッケージマネージャ）
+helm install myapp ./chart
+helm upgrade myapp ./chart -f values-prod.yaml
+helm rollback myapp 1
+helm list
+helm uninstall myapp</code></pre>
+
+    <h2 id="cookbook">障害対応レシピ</h2>
+
+    <h3>レシピ 1 — Pod が CrashLoopBackOff</h3>
+<pre><code>kubectl get pods                                         # 状態確認
+kubectl describe pod CRASH_POD                          # Events を見る
+kubectl logs CRASH_POD --previous                       # 前回 crash 時のログ
+kubectl logs CRASH_POD -c init-xxx                      # init container 落ちてないか
+kubectl get events --sort-by='.lastTimestamp' | tail -n 20</code></pre>
+
+    <h3>レシピ 2 — Pod が Pending のまま</h3>
+<pre><code>kubectl describe pod PENDING_POD                        # Events に "FailedScheduling" 等
+kubectl get nodes                                        # ノード足りる?
+kubectl describe nodes | grep -A5 'Allocated resources'
+# nodeSelector / taints / tolerations / resources の不一致が大半</code></pre>
+
+    <h3>レシピ 3 — DNS が引けない</h3>
+<pre><code>kubectl exec -it any-pod -- nslookup kubernetes.default
+kubectl exec -it any-pod -- cat /etc/resolv.conf
+kubectl get pods -n kube-system | grep coredns          # CoreDNS 動いてる?
+kubectl logs -n kube-system -l k8s-app=kube-dns</code></pre>
+
+    <h3>レシピ 4 — Service につながらない</h3>
+<pre><code>kubectl get svc
+kubectl describe svc web                                # Endpoints が空 = selector ミスマッチ
+kubectl get endpoints web
+kubectl get pods --show-labels                          # Pod label と svc selector を比較
+kubectl exec -it any-pod -- curl http://web.my-ns.svc.cluster.local:80</code></pre>
+
+    <h3>レシピ 5 — ロールアウト失敗の即座 rollback</h3>
+<pre><code>kubectl rollout status deploy/web                       # ハング検出
+kubectl rollout history deploy/web
+kubectl rollout undo deploy/web --to-revision=PREV_OK</code></pre>
+
+    <h3>レシピ 6 — node 退避してメンテ</h3>
+<pre><code>kubectl cordon NODE                                     # 新規スケジュール禁止
+kubectl drain NODE --ignore-daemonsets --delete-emptydir-data
+# 作業
+kubectl uncordon NODE</code></pre>
+
+    <h2>コマンド早見表</h2>
+<pre><code># 基本
+kubectl get pods -A -o wide
+kubectl describe pod P
+kubectl logs -f -l app=web --max-log-requests=10
+kubectl exec -it P -- bash
+
+# 更新
+kubectl apply -f file.yaml
+kubectl set image deploy/D C=image:tag
+kubectl rollout undo deploy/D --to-revision=N
+kubectl rollout restart deploy/D
+
+# port-forward / cp
+kubectl port-forward svc/web 8080:80
+kubectl cp local file ns/pod:/tmp/
+
+# context
+aws eks update-kubeconfig --name C --region R
+kubectl config use-context X
+kubectl config set-context --current --namespace=NS</code></pre>
+
+    <section class="post-glossary" id="glossary">
+      <h2>用語集</h2>
+      <dl>
+        <dt>Pod</dt>
+        <dd>K8s の最小単位。1 個以上のコンテナを共通 NW/IPC 名前空間で束ねた実行単位。</dd>
+
+        <dt>Deployment / ReplicaSet / StatefulSet / DaemonSet / Job / CronJob</dt>
+        <dd>Pod を管理するコントローラ。Deployment = 通常アプリ、StatefulSet = ステートフル、DaemonSet = 全 Node 1 個、Job = バッチ、CronJob = 定期。</dd>
+
+        <dt>Service / Ingress</dt>
+        <dd>Service = Pod 群への安定エンドポイント (ClusterIP / NodePort / LoadBalancer)。Ingress = HTTP L7 ルータ + TLS 終端。</dd>
+
+        <dt>ConfigMap / Secret</dt>
+        <dd>設定値 / 機密値を Pod に注入するリソース。env / volume として参照。</dd>
+
+        <dt>namespace</dt>
+        <dd>論理的な分離単位。リソース名は namespace 内でユニーク。</dd>
+
+        <dt>context / kubeconfig</dt>
+        <dd>kubeconfig = 接続情報の YAML ファイル (~/.kube/config)。context = cluster + user + namespace の組合せ。</dd>
+
+        <dt>RBAC (Role / RoleBinding / ClusterRole / ClusterRoleBinding)</dt>
+        <dd>K8s の認可。Role = namespace スコープ、ClusterRole = クラスタスコープ。Binding で Subject と紐付け。</dd>
+
+        <dt>HPA (Horizontal Pod Autoscaler)</dt>
+        <dd>CPU / メモリ / カスタムメトリクスに応じて Pod レプリカ数を自動調整。<code>metrics-server</code> 必須。</dd>
+
+        <dt>rollout</dt>
+        <dd>Deployment の段階的更新。RollingUpdate がデフォルト、戦略は <code>maxSurge</code> / <code>maxUnavailable</code> で調整。</dd>
+
+        <dt>cordon / drain / uncordon</dt>
+        <dd>cordon = 新規 Pod スケジュール禁止 / drain = 退避 + cordon / uncordon = 解除。Node メンテナンスに使う。</dd>
+
+        <dt>taint / toleration</dt>
+        <dd>Node に taint を付けると、対応する toleration を持つ Pod のみ配置可能。専用 Node の予約に。</dd>
+
+        <dt>nodeSelector / nodeAffinity</dt>
+        <dd>Pod が配置される Node の希望条件。GPU node に限定する等。</dd>
+
+        <dt>CoreDNS</dt>
+        <dd>K8s クラスタ内 DNS。<code>service.namespace.svc.cluster.local</code> 形式で名前解決。</dd>
+
+        <dt>EKS / GKE / AKS</dt>
+        <dd>AWS / GCP / Azure のマネージド K8s。Control Plane の運用が不要になる。</dd>
+
+        <dt>kustomize / Helm</dt>
+        <dd>kustomize = ベース + オーバーレイで manifest 生成。Helm = Chart + values でテンプレート化。両方とも実用。</dd>
+
+        <dt>k9s / stern / kubectx / kubens</dt>
+        <dd>kubectl の人気アドオン。k9s = TUI、stern = 複数 Pod ログ、kubectx/kubens = context/namespace 切替。</dd>
+      </dl>
+    </section>
+
+    <footer class="post-footer">
+      <a href="/blog/ref/17-docker.html">← #ref-17 Docker</a>
+      <a href="/blog/ref/">シリーズ目次</a>
+    </footer>
+
+  </div>
+</article>
+
+</body>
+</html>

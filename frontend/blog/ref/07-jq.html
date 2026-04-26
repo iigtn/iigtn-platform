@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#ref-07 jq 完全ガイド — AWS CLI 出力を自在に扱う | 現場コマンドリファレンス | iigtn</title>
+<meta name="description" content="jq のフィルタ・select・map・group_by・reduce・to_entries・配列/オブジェクト操作・複数ファイル処理ほか、JSON 処理の 50+ パターンを 7 カテゴリで深掘り解説。AWS CLI / kubectl 出力の加工に。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/ref/07-jq.html">
+<meta property="og:title" content="#ref-07 jq 完全ガイド">
+<meta property="og:description" content="フィルタ・select・map・group_by・reduce・to_entries 等 50+ パターンを 7 カテゴリで深掘り。AWS CLI 出力の加工に。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/ref/07-jq.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="#ref-07 jq 完全ガイド">
+<meta name="twitter:description" content="フィルタ・select・map・group_by・reduce・to_entries 等 50+ パターンを 7 カテゴリで深掘り。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="stylesheet" href="/blog/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "#ref-07 jq 完全ガイド",
+  "description": "フィルタ・select・map・group_by・reduce・to_entries 等 50+ パターンを 7 カテゴリで深掘り。",
+  "datePublished": "2026-04-26",
+  "author": { "@type": "Person", "name": "iigtn", "url": "https://lab.iigtn.com/" },
+  "publisher": { "@type": "Person", "name": "iigtn" },
+  "url": "https://lab.iigtn.com/blog/ref/07-jq.html",
+  "mainEntityOfPage": "https://lab.iigtn.com/blog/ref/07-jq.html",
+  "image": "https://lab.iigtn.com/assets/icon.svg",
+  "inLanguage": "ja",
+  "isPartOf": { "@id": "https://lab.iigtn.com/blog/ref/#blog" }
+}
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="/" class="logo" aria-label="iigtn">
+      <img src="/assets/logo.svg" alt="iigtn" height="32">
+    </a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/" class="active">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+      <li><a href="/learn.html">解説書</a></li>
+    </ul>
+  </nav>
+</header>
+
+<article class="post">
+
+  <header class="post-header">
+    <p class="post-meta">2026-04-26 · 現場コマンドリファレンス · #ref-07</p>
+    <h1>jq 完全ガイド — AWS CLI / kubectl 出力を自在に扱う</h1>
+  </header>
+
+  <div class="post-body">
+
+    <p>
+      <strong>jq</strong> は JSON 用の sed/awk と言える小さな関数型スクリプト言語。AWS CLI の <code>--output json</code> や
+      kubectl の <code>-o json</code> から欲しい情報だけ抽出・整形・集計する用途で日常的に使います。
+      AWS CLI には <code>--query</code> (JMESPath) も内蔵されてますが、複雑な処理は jq の方が表現力が高いです。
+    </p>
+
+    <p>サンプル JSON として下記を仮定します（適宜置き換えて読んでください）:</p>
+<pre><code>{
+  "users": [
+    { "id": 1, "name": "alice", "tags": ["admin", "ops"], "score": 92 },
+    { "id": 2, "name": "bob",   "tags": ["dev"],         "score": 78 },
+    { "id": 3, "name": "carol", "tags": ["dev", "ops"],  "score": 85 }
+  ]
+}</code></pre>
+
+    <h2>目次</h2>
+    <ol>
+      <li><a href="#sec-1">基本フィルタ</a></li>
+      <li><a href="#sec-2">配列・オブジェクト操作</a></li>
+      <li><a href="#sec-3">select / map — 絞り込みと変換</a></li>
+      <li><a href="#sec-4">group_by / sort_by / unique</a></li>
+      <li><a href="#sec-5">reduce / 集計関数</a></li>
+      <li><a href="#sec-6">to_entries / from_entries</a></li>
+      <li><a href="#sec-7">複数入力・変数・関数定義</a></li>
+      <li><a href="#cookbook">AWS / k8s 実戦レシピ</a></li>
+      <li><a href="#glossary">用語集</a></li>
+    </ol>
+
+    <h2 id="sec-1">1. 基本フィルタ</h2>
+
+    <table>
+      <tr><th>jq 式</th><th>意味</th></tr>
+      <tr><td><code>.</code></td><td>全体（identity）</td></tr>
+      <tr><td><code>.users</code></td><td>キー users の値</td></tr>
+      <tr><td><code>.users[0]</code></td><td>配列の 0 番目</td></tr>
+      <tr><td><code>.users[]</code></td><td>配列を「ストリーム」として展開</td></tr>
+      <tr><td><code>.users | length</code></td><td>長さ</td></tr>
+      <tr><td><code>.users[0].name</code></td><td>ネストアクセス</td></tr>
+      <tr><td><code>.users[].name</code></td><td>全 user の name（複数値）</td></tr>
+      <tr><td><code>.users[].tags[0]</code></td><td>各 user の最初のタグ</td></tr>
+      <tr><td><code>.users[].name?</code></td><td>キーが無くてもエラーにしない</td></tr>
+      <tr><td><code>keys</code></td><td>オブジェクトのキー一覧</td></tr>
+      <tr><td><code>type</code></td><td>型名 (string / number / object / array / boolean / null)</td></tr>
+    </table>
+
+<pre><code>cat data.json | jq .                              # 整形表示
+cat data.json | jq -r '.users[].name'             # raw 出力（クォート無し）
+echo '{"a":1}' | jq -c .                          # compact (1 行)
+cat data.json | jq -S .                           # キーをソート
+cat data.json | jq '.users | length'              # 件数
+cat data.json | jq '.users[0]'                    # 先頭オブジェクト</code></pre>
+
+    <div class="callout info">
+      <code>-r</code> (raw) は文字列出力時にクォートを取り除く。bash の変数代入や file パスとして使う時は必須。
+      <code>-c</code> (compact) は API レスポンス保存時、<code>-S</code> は git diff しやすくする用。
+    </div>
+
+    <h2 id="sec-2">2. 配列・オブジェクト操作</h2>
+
+<pre><code># 配列スライス
+echo '[1,2,3,4,5]' | jq '.[1:3]'                  # [2, 3]
+echo '[1,2,3,4,5]' | jq '.[-2:]'                  # [4, 5] (末尾 2 件)
+
+# 結合
+echo '{"a":1, "b":2}' | jq '. + {"c":3}'          # マージ
+echo '[1,2] [3,4]' | jq -s 'add'                  # スリュル全体を 1 配列に → 結合
+echo '{"a":1}{"b":2}' | jq -s 'add'               # オブジェクト結合
+
+# 削除
+jq 'del(.users[0])' data.json                     # 0 番目を削除
+jq 'del(.users[].score)' data.json                # 全 user の score を削除
+
+# 追加・更新（| =）
+jq '.users[].active = true' data.json
+jq '.users[0].name = "ALICE"' data.json
+jq '.users |= . + [{"id":4,"name":"dave"}]' data.json  # 配列末尾追加
+
+# パス指定
+jq 'paths' data.json                              # 全パス列挙
+jq 'paths(numbers)' data.json                     # number のあるパスだけ</code></pre>
+
+    <h2 id="sec-3">3. select / map — 絞り込みと変換</h2>
+
+<pre><code># 条件絞り込み
+jq '.users[] | select(.score &gt; 80)' data.json
+jq '.users[] | select(.tags | contains(["ops"]))' data.json
+jq '.users[] | select(.name | startswith("a"))' data.json
+jq '.users[] | select(.tags | length == 1)' data.json
+
+# 複数条件
+jq '.users[] | select(.score &gt; 80 and (.tags | contains(["ops"])))' data.json
+
+# キーの存在チェック
+jq '.users[] | select(has("score"))' data.json
+
+# null チェック
+jq '.users[] | select(.score != null)' data.json
+
+# map — 配列を写像
+jq '.users | map(.name)' data.json                # 名前配列
+jq '.users | map(.score * 1.1)' data.json         # 全スコアを 10% 増し
+jq '.users | map({id, name})' data.json           # 必要な属性だけ
+jq '.users | map(select(.score &gt; 80))' data.json  # フィルタ + 配列維持
+
+# map_values — オブジェクトの各値を変換
+echo '{"a":1,"b":2}' | jq 'map_values(. * 2)'</code></pre>
+
+    <h2 id="sec-4">4. group_by / sort_by / unique</h2>
+
+<pre><code># sort
+jq '.users | sort_by(.score)' data.json           # 昇順
+jq '.users | sort_by(.score) | reverse' data.json # 降順
+jq '.users | sort_by(.tags | length)' data.json   # 計算式でも可
+
+# unique
+echo '[1,2,2,3,3,3]' | jq 'unique'
+jq '[.users[].tags[]] | unique' data.json         # 全 tag のユニークリスト
+
+# group_by — 同じキーごとに配列をネスト
+jq '.users | group_by(.score &gt; 80)' data.json
+jq '.users | group_by(.tags[0])' data.json
+
+# group + count
+jq '.users | group_by(.tags[0]) | map({tag: .[0].tags[0], count: length})' data.json
+
+# min/max
+jq '[.users[].score] | min' data.json
+jq '[.users[].score] | max' data.json
+jq '[.users[].score] | (add / length)' data.json  # 平均</code></pre>
+
+    <h2 id="sec-5">5. reduce / 集計関数</h2>
+
+<pre><code># reduce — アキュムレータで畳み込み
+jq '.users | reduce .[] as $u (0; . + $u.score)' data.json   # 合計
+jq '.users | reduce .[] as $u ({}; .[$u.name] = $u.score)' data.json  # name → score の辞書
+
+# 組み込み集計
+jq '.users | map(.score) | add' data.json                    # 合計
+jq '.users | map(.score) | length' data.json
+jq '.users | map(.score) | (add / length)' data.json         # 平均
+jq '.users | min_by(.score)' data.json                       # スコア最小の user
+jq '.users | max_by(.score)' data.json
+
+# any / all
+jq '.users | any(.score &gt; 90)' data.json                     # true if 1 人でも
+jq '.users | all(.score &gt; 60)' data.json
+
+# 文字列結合
+jq -r '.users | map(.name) | join(", ")' data.json
+jq -r '.users[] | "\(.id): \(.name)"' data.json              # 文字列補間</code></pre>
+
+    <h2 id="sec-6">6. to_entries / from_entries</h2>
+
+    <p>オブジェクトを配列風に扱える強力イディオム。AWS Tag のような <code>[{Key:..., Value:...}]</code> 形式と KV オブジェクトの相互変換に超頻出。</p>
+
+<pre><code># {a:1, b:2} → [{key:"a", value:1}, {key:"b", value:2}]
+echo '{"a":1,"b":2}' | jq 'to_entries'
+
+# 逆向き
+echo '[{"key":"a","value":1}]' | jq 'from_entries'
+
+# 値による絞り込み（オブジェクト → 配列 → filter → オブジェクト）
+echo '{"a":1,"b":2,"c":3}' | jq 'to_entries | map(select(.value &gt; 1)) | from_entries'
+
+# AWS Tag → KV オブジェクト
+echo '[{"Key":"Env","Value":"prod"},{"Key":"App","Value":"web"}]' \
+  | jq 'map({(.Key): .Value}) | add'
+# 結果: {"Env":"prod","App":"web"}
+
+# KV オブジェクト → AWS Tag
+echo '{"Env":"prod","App":"web"}' \
+  | jq 'to_entries | map({Key: .key, Value: .value})'
+
+# キーのリネーム
+echo '{"old_name":1}' | jq 'with_entries(.key |= sub("old"; "new"))'</code></pre>
+
+    <h2 id="sec-7">7. 複数入力・変数・関数定義</h2>
+
+<pre><code># --slurp (-s) — 入力を 1 配列にまとめる
+cat *.json | jq -s '.'                             # 各ファイルを配列要素に
+cat *.json | jq -s 'add'                           # 全配列を結合
+
+# --null-input (-n) — 標準入力を読まず変数だけで構築
+jq -n --arg name 'iigtn' '{user: $name}'
+
+# 変数（--arg / --argjson）
+jq --arg level 'error' '.events[] | select(.level == $level)' log.json
+jq --argjson th 80 '.users[] | select(.score &gt; $th)' data.json
+
+# 環境変数
+EVAL=prod jq -n 'env.EVAL'                        # "prod"
+
+# 関数定義
+jq '
+def is_ops: .tags | contains(["ops"]);
+.users[] | select(is_ops)
+' data.json
+
+# 再帰下降 (..)
+echo '{"a":{"b":{"c":1}}}' | jq '.. | numbers?'    # 全 number 列挙</code></pre>
+
+    <h2 id="cookbook">AWS / k8s 実戦レシピ</h2>
+
+    <h3>レシピ 1 — EC2 instance を Tag フィルタで抽出</h3>
+<pre><code>aws ec2 describe-instances \
+  | jq -r '.Reservations[].Instances[]
+      | select(.State.Name == "running")
+      | select((.Tags // []) | map(select(.Key == "Env" and .Value == "prod")) | length &gt; 0)
+      | [.InstanceId, .InstanceType, .PrivateIpAddress] | @tsv'</code></pre>
+
+    <h3>レシピ 2 — IAM Role の信頼ポリシーから Principal を抽出</h3>
+<pre><code>aws iam list-roles \
+  | jq -r '.Roles[]
+      | .AssumeRolePolicyDocument as $p
+      | "\(.RoleName)\t\($p.Statement[].Principal | tostring)"'</code></pre>
+
+    <h3>レシピ 3 — CloudWatch Logs から ERROR メッセージを抽出</h3>
+<pre><code>aws logs filter-log-events --log-group-name /aws/lambda/myfn \
+  | jq -r '.events[]
+      | select(.message | test("ERROR"))
+      | "\(.timestamp / 1000 | strftime("%Y-%m-%d %H:%M:%S"))  \(.message)"'</code></pre>
+
+    <h3>レシピ 4 — kubectl Pod の resource 集計</h3>
+<pre><code>kubectl get pods -A -o json \
+  | jq -r '.items[]
+      | .metadata.namespace as $ns
+      | .spec.containers[]
+      | "\($ns)\t\(.name)\t\(.resources.requests.cpu // "-")\t\(.resources.requests.memory // "-")"' \
+  | column -t -s $'\t'</code></pre>
+
+    <h3>レシピ 5 — 複数 JSON ファイルから値を 1 個ずつ更新</h3>
+<pre><code># 各 JSON に property を追加して上書き保存
+for f in configs/*.json; do
+  jq '. + {"version":"1.2.3"}' "$f" &gt; "$f.tmp" &amp;&amp; mv "$f.tmp" "$f"
+done</code></pre>
+
+    <h3>レシピ 6 — CSV エクスポート</h3>
+<pre><code>aws s3api list-buckets \
+  | jq -r '.Buckets[] | [.Name, .CreationDate] | @csv'
+
+# ヘッダ込み
+aws s3api list-buckets \
+  | jq -r '
+    ["Name","CreationDate"],
+    (.Buckets[] | [.Name, .CreationDate])
+    | @csv'</code></pre>
+
+    <h3>レシピ 7 — 2 つの JSON を結合（join 相当）</h3>
+<pre><code># users.json と orders.json を user_id で join
+jq -s '
+  .[0] as $users | .[1] as $orders
+  | $orders | map(. + ($users[] | select(.id == .user_id) | {user_name: .name}))
+' users.json orders.json</code></pre>
+
+    <h2>コマンド早見表</h2>
+<pre><code># 基本
+jq . file.json                                  # 整形
+jq -r '.users[].name' file.json                 # raw 出力
+jq -c '.' file.json                             # compact
+
+# 絞り込み・変換
+jq '.users[] | select(.score &gt; 80)' file.json
+jq '.users | map({id, name})' file.json
+
+# 集計
+jq '.users | group_by(.tags[0]) | map({tag: .[0].tags[0], count: length})'
+jq '.users | map(.score) | (add / length)'      # 平均
+
+# 形式変換
+jq 'to_entries / from_entries'                  # オブジェクト ↔ 配列
+jq -r '.users[] | [.id, .name] | @tsv'          # TSV
+jq -r '.users[] | [.id, .name] | @csv'          # CSV
+
+# 複数入力
+jq -s 'add' *.json                              # 全配列結合
+jq -n --arg k v '{key: $k, value: $v}'          # null input から構築</code></pre>
+
+    <section class="post-glossary" id="glossary">
+      <h2>用語集</h2>
+      <dl>
+        <dt>jq</dt>
+        <dd>JSON 用のフィルタ言語兼処理コマンド。C 製、軽量・高速。GitHub の <code>jqlang/jq</code> がメンテ。</dd>
+
+        <dt>identity (.)</dt>
+        <dd>jq の最も基本のフィルタ「入力をそのまま返す」。整形だけしたい時 <code>jq .</code>。</dd>
+
+        <dt>パイプ (|)</dt>
+        <dd>左の出力を右の入力に渡す jq の演算子。シェルの | と概念は近い。</dd>
+
+        <dt>配列展開 [.]</dt>
+        <dd><code>.users[]</code> は「配列を展開して各要素をストリームとして次に流す」。<code>map(...)</code> で配列のまま処理することも可能。</dd>
+
+        <dt>raw 出力 (-r)</dt>
+        <dd>文字列の出力時にクォートを取り除く。bash 変数代入やファイル名生成に必須。</dd>
+
+        <dt>slurp (-s)</dt>
+        <dd>標準入力の全 JSON を 1 配列にまとめてから処理する。複数ファイル / NDJSON の集計で使う。</dd>
+
+        <dt>null input (-n)</dt>
+        <dd>標準入力を読まず、純粋に式と変数だけで JSON を構築するモード。</dd>
+
+        <dt>--arg / --argjson</dt>
+        <dd>外部から jq 内変数に値を渡す。--arg は文字列、--argjson は JSON として解釈。</dd>
+
+        <dt>select / map</dt>
+        <dd>select は条件で絞り込み（要素を消すかそのまま）、map は配列の各要素に式を適用して配列を返す。</dd>
+
+        <dt>group_by / sort_by / min_by / max_by</dt>
+        <dd>計算式に基づくグループ化・ソート・最小最大選出。</dd>
+
+        <dt>reduce</dt>
+        <dd>「初期値からアキュムレータを使って畳み込む」関数型の集計操作。合計や辞書化で使う。</dd>
+
+        <dt>to_entries / from_entries / with_entries</dt>
+        <dd>オブジェクトと <code>{key,value}</code> 配列の相互変換。AWS Tag のフォーマット変換に超頻出。</dd>
+
+        <dt>文字列補間 \(.x)</dt>
+        <dd>jq の文字列内で式を埋め込む構文。<code>"\(.id): \(.name)"</code> でフォーマット出力。</dd>
+
+        <dt>@tsv / @csv / @json / @sh / @uri</dt>
+        <dd>配列を特定形式へ変換する出力フィルタ。<code>jq -r '.x | @csv'</code>。</dd>
+
+        <dt>JMESPath との違い</dt>
+        <dd>AWS CLI の <code>--query</code> は JMESPath。集計が苦手なので、複雑な処理は jq に渡すのが現場の定番。</dd>
+
+        <dt>関数定義 (def)</dt>
+        <dd>jq 内で再利用できる関数を <code>def name: ...;</code> で定義可能。複雑なクエリの可読性向上に。</dd>
+      </dl>
+    </section>
+
+    <footer class="post-footer">
+      <a href="/blog/ref/06-ssh-rsync.html">← #ref-06 SSH</a>
+      <a href="/blog/ref/">シリーズ目次</a>
+    </footer>
+
+  </div>
+</article>
+
+</body>
+</html>

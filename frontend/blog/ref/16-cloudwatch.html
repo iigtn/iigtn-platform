@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#ref-16 CloudWatch + CloudWatch Logs | 現場コマンドリファレンス | iigtn</title>
+<meta name="description" content="aws logs tail / filter-log-events / start-query と aws cloudwatch get-metric-data / put-metric-alarm / list-metrics ほか、CloudWatch Logs と Metrics の 40+ コマンドを 6 カテゴリで深掘り解説。Logs Insights クエリ集も。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/ref/16-cloudwatch.html">
+<meta property="og:title" content="#ref-16 CloudWatch + CloudWatch Logs">
+<meta property="og:description" content="logs tail / filter / Insights と cloudwatch get-metric-data / put-metric-alarm 40+ コマンドを 6 カテゴリで深掘り。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/ref/16-cloudwatch.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="#ref-16 CloudWatch + CloudWatch Logs">
+<meta name="twitter:description" content="Logs Insights クエリ集を含む 40+ コマンドを 6 カテゴリで深掘り。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="stylesheet" href="/blog/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "#ref-16 CloudWatch + CloudWatch Logs",
+  "description": "logs tail / filter / Insights と cloudwatch metrics / alarm 40+ コマンドを 6 カテゴリで深掘り。",
+  "datePublished": "2026-04-26",
+  "author": { "@type": "Person", "name": "iigtn", "url": "https://lab.iigtn.com/" },
+  "publisher": { "@type": "Person", "name": "iigtn" },
+  "url": "https://lab.iigtn.com/blog/ref/16-cloudwatch.html",
+  "mainEntityOfPage": "https://lab.iigtn.com/blog/ref/16-cloudwatch.html",
+  "image": "https://lab.iigtn.com/assets/icon.svg",
+  "inLanguage": "ja",
+  "isPartOf": { "@id": "https://lab.iigtn.com/blog/ref/#blog" }
+}
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="/" class="logo" aria-label="iigtn">
+      <img src="/assets/logo.svg" alt="iigtn" height="32">
+    </a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/" class="active">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+      <li><a href="/learn.html">解説書</a></li>
+    </ul>
+  </nav>
+</header>
+
+<article class="post">
+
+  <header class="post-header">
+    <p class="post-meta">2026-04-26 · 現場コマンドリファレンス · #ref-16</p>
+    <h1>CloudWatch + CloudWatch Logs — 40+ コマンドを 6 カテゴリで</h1>
+  </header>
+
+  <div class="post-body">
+
+    <p>
+      AWS の標準モニタリング基盤。Logs（ログ集約）と Metrics（数値時系列）と Alarms（閾値通知）の 3 つを CLI で操作。
+      Console で迷子になりがちな絞り込みも、CLI なら 1 行で済むことが多いです。
+    </p>
+
+    <h2>目次</h2>
+    <ol>
+      <li><a href="#sec-1">Logs グループ・ストリーム</a></li>
+      <li><a href="#sec-2">ログ tail / filter</a></li>
+      <li><a href="#sec-3">Logs Insights (クエリ言語)</a></li>
+      <li><a href="#sec-4">Metrics 取得</a></li>
+      <li><a href="#sec-5">Alarms 作成・管理</a></li>
+      <li><a href="#sec-6">Dashboard / 出力先 (SNS)</a></li>
+      <li><a href="#cookbook">運用レシピ</a></li>
+      <li><a href="#glossary">用語集</a></li>
+    </ol>
+
+    <h2 id="sec-1">1. Logs グループ・ストリーム</h2>
+
+<pre><code># Group 一覧
+aws logs describe-log-groups
+aws logs describe-log-groups --log-group-name-prefix '/aws/lambda/'
+
+# Group 作成 / 削除
+aws logs create-log-group --log-group-name /myapp
+aws logs delete-log-group --log-group-name /myapp
+
+# 保持期間（デフォルトは無期限 = コスト垂れ流し）
+aws logs put-retention-policy --log-group-name /myapp --retention-in-days 30
+aws logs put-retention-policy --log-group-name /aws/lambda/myfn --retention-in-days 14
+
+# Stream 一覧
+aws logs describe-log-streams --log-group-name /aws/lambda/myfn \
+  --order-by LastEventTime --descending --max-items 5</code></pre>
+
+    <div class="callout warn">
+      Lambda は初回実行で勝手に Log Group を作るが <strong>retention 無期限</strong>がデフォルト。Terraform で 14d / 30d を必ず設定。
+    </div>
+
+    <h2 id="sec-2">2. ログ tail / filter</h2>
+
+<pre><code># tail （Console の Live Tail に近い）
+aws logs tail /aws/lambda/myfn --follow
+aws logs tail /aws/lambda/myfn --since 30m
+aws logs tail /aws/lambda/myfn --filter-pattern 'ERROR'
+aws logs tail /aws/lambda/myfn --format short
+aws logs tail /aws/lambda/myfn --log-stream-name-prefix '2026/04/26/'
+
+# filter-log-events （より細かいフィルタ）
+aws logs filter-log-events --log-group-name /aws/lambda/myfn \
+  --filter-pattern 'ERROR' \
+  --start-time $(date -d '1 hour ago' +%s)000
+
+# 構造化ログを JSON フィルタ
+aws logs filter-log-events --log-group-name /aws/lambda/myfn \
+  --filter-pattern '{ $.level = "error" &amp;&amp; $.statusCode &gt;= 500 }' \
+  --max-items 100
+
+# 前後の文脈を見る（複数 stream をまたぐ）
+aws logs get-log-events --log-group-name /aws/lambda/myfn \
+  --log-stream-name '2026/04/26/[$LATEST]xxx' \
+  --limit 100 --start-from-head
+
+# ログをローカルに落とす
+aws logs filter-log-events --log-group-name /aws/lambda/myfn \
+  --start-time $(date -d '1 day ago' +%s)000 \
+  --query 'events[].message' --output text \
+  &gt; lambda.log</code></pre>
+
+    <h2 id="sec-3">3. Logs Insights (クエリ言語)</h2>
+
+<pre><code># 非同期クエリ実行（QueryId を取得 → 後で結果取得）
+QID=$(aws logs start-query \
+  --log-group-name /aws/lambda/myfn \
+  --start-time $(date -d '1 hour ago' +%s) \
+  --end-time $(date +%s) \
+  --query-string 'fields @timestamp, @message | sort @timestamp desc | limit 50' \
+  --query 'queryId' --output text)
+
+# 結果取得（Status: Running → Complete）
+aws logs get-query-results --query-id $QID
+
+# よく使うクエリパターン:
+
+# (1) ERROR を時系列で
+fields @timestamp, @message
+| filter @message like /ERROR/
+| sort @timestamp desc
+| limit 100
+
+# (2) Lambda の所要時間を 5 分集計
+filter @type = "REPORT"
+| stats avg(@duration), max(@duration), pct(@duration, 95) by bin(5m)
+
+# (3) HTTP ステータス別カウント
+filter @message like /\"status\":/
+| parse @message /"status":(?&lt;st&gt;\d+)/
+| stats count(*) by st
+
+# (4) 5xx URL ランキング
+filter @message like /\"status\":5/
+| parse @message /"path":"(?&lt;p&gt;[^"]*)"/
+| stats count(*) as cnt by p
+| sort cnt desc | limit 20
+
+# (5) Memory used が設定の 80% を超えた呼び出し
+filter @type = "REPORT"
+| filter @maxMemoryUsed / @memorySize &gt; 0.8
+| display @timestamp, @memorySize, @maxMemoryUsed</code></pre>
+
+    <h2 id="sec-4">4. Metrics 取得</h2>
+
+<pre><code># Namespace / Metric 一覧
+aws cloudwatch list-metrics --namespace AWS/Lambda
+aws cloudwatch list-metrics --namespace AWS/Lambda \
+  --dimensions Name=FunctionName,Value=myfn
+
+# 単発取得（古い API）
+aws cloudwatch get-metric-statistics \
+  --namespace AWS/Lambda --metric-name Errors \
+  --dimensions Name=FunctionName,Value=myfn \
+  --start-time 2026-04-25T00:00:00Z --end-time 2026-04-26T00:00:00Z \
+  --period 3600 --statistics Sum
+
+# 推奨: get-metric-data（複数メトリクス並列）
+cat &gt; query.json &lt;&lt; 'EOF'
+[
+  {
+    "Id":"err",
+    "MetricStat":{
+      "Metric":{
+        "Namespace":"AWS/Lambda","MetricName":"Errors",
+        "Dimensions":[{"Name":"FunctionName","Value":"myfn"}]
+      },
+      "Period":300, "Stat":"Sum"
+    }
+  },
+  {
+    "Id":"dur",
+    "MetricStat":{
+      "Metric":{
+        "Namespace":"AWS/Lambda","MetricName":"Duration",
+        "Dimensions":[{"Name":"FunctionName","Value":"myfn"}]
+      },
+      "Period":300, "Stat":"Average"
+    }
+  }
+]
+EOF
+aws cloudwatch get-metric-data \
+  --metric-data-queries file://query.json \
+  --start-time 2026-04-26T00:00:00Z --end-time 2026-04-26T01:00:00Z
+
+# カスタムメトリクスを送る
+aws cloudwatch put-metric-data --namespace MyApp \
+  --metric-name SignupCount --value 1 --unit Count \
+  --dimensions Env=prod</code></pre>
+
+    <h2 id="sec-5">5. Alarms 作成・管理</h2>
+
+<pre><code># Alarm 一覧
+aws cloudwatch describe-alarms
+aws cloudwatch describe-alarms --state-value ALARM
+aws cloudwatch describe-alarms --alarm-name-prefix 'myfn-'
+
+# Lambda Errors アラーム
+aws cloudwatch put-metric-alarm \
+  --alarm-name myfn-errors \
+  --alarm-description 'Lambda errors over 1 in 5min' \
+  --namespace AWS/Lambda --metric-name Errors \
+  --dimensions Name=FunctionName,Value=myfn \
+  --statistic Sum --period 300 --evaluation-periods 1 \
+  --threshold 1 --comparison-operator GreaterThanOrEqualToThreshold \
+  --treat-missing-data notBreaching \
+  --alarm-actions arn:aws:sns:ap-northeast-1:xxx:alerts
+
+# Duration p95 アラーム（メトリクス数式）
+aws cloudwatch put-metric-alarm \
+  --alarm-name myfn-duration-p95 \
+  --metrics file://metric-math.json \
+  --evaluation-periods 2 --threshold 3000 \
+  --comparison-operator GreaterThanThreshold \
+  --alarm-actions arn:aws:sns:...
+
+# 一時停止 / 再開
+aws cloudwatch disable-alarm-actions --alarm-names myfn-errors
+aws cloudwatch enable-alarm-actions --alarm-names myfn-errors
+
+# 削除
+aws cloudwatch delete-alarms --alarm-names myfn-errors
+
+# Alarm の履歴
+aws cloudwatch describe-alarm-history --alarm-name myfn-errors --max-items 10</code></pre>
+
+    <h2 id="sec-6">6. Dashboard / 出力先 (SNS)</h2>
+
+<pre><code># Dashboard 一覧
+aws cloudwatch list-dashboards
+aws cloudwatch get-dashboard --dashboard-name my-dashboard
+aws cloudwatch put-dashboard --dashboard-name my-dashboard --dashboard-body file://dashboard.json
+aws cloudwatch delete-dashboards --dashboard-names my-dashboard
+
+# SNS Topic 作成 + Email サブスクライブ
+aws sns create-topic --name alerts
+aws sns subscribe --topic-arn arn:... --protocol email --notification-endpoint contact@iigtn.com
+aws sns list-subscriptions-by-topic --topic-arn arn:...
+aws sns publish --topic-arn arn:... --message 'test alert' --subject 'CW test'</code></pre>
+
+    <h2 id="cookbook">運用レシピ</h2>
+
+    <h3>レシピ 1 — Lambda の直近 1 時間のエラー集計</h3>
+<pre><code>aws cloudwatch get-metric-statistics \
+  --namespace AWS/Lambda --metric-name Errors \
+  --dimensions Name=FunctionName,Value=myfn \
+  --start-time $(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%SZ) \
+  --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
+  --period 60 --statistics Sum \
+  --query 'Datapoints | sort_by(@, &amp;Timestamp)' --output table</code></pre>
+
+    <h3>レシピ 2 — 全 Lambda の log retention を 14 日に統一</h3>
+<pre><code>for fn in $(aws lambda list-functions --query 'Functions[].FunctionName' --output text); do
+  aws logs put-retention-policy --log-group-name "/aws/lambda/$fn" --retention-in-days 14
+done</code></pre>
+
+    <h3>レシピ 3 — Logs Insights をシェルから 1 発で叩く（同期化）</h3>
+<pre><code>QID=$(aws logs start-query \
+  --log-group-name /aws/lambda/myfn \
+  --start-time $(date -d '1 hour ago' +%s) --end-time $(date +%s) \
+  --query-string 'fields @timestamp, @message | filter @message like /ERROR/ | limit 100' \
+  --query 'queryId' --output text)
+
+while true; do
+  STATUS=$(aws logs get-query-results --query-id $QID --query 'status' --output text)
+  [ "$STATUS" = "Complete" ] &amp;&amp; break
+  sleep 1
+done
+
+aws logs get-query-results --query-id $QID --query 'results[].[field, value]' --output table</code></pre>
+
+    <h3>レシピ 4 — 全アラームの状態確認</h3>
+<pre><code>aws cloudwatch describe-alarms --state-value ALARM \
+  --query 'MetricAlarms[].[AlarmName,StateValue,StateUpdatedTimestamp]' --output table</code></pre>
+
+    <h3>レシピ 5 — メトリクスを CSV で取得（後で Excel 集計）</h3>
+<pre><code>aws cloudwatch get-metric-data \
+  --metric-data-queries file://query.json \
+  --start-time 2026-04-25T00:00:00Z --end-time 2026-04-26T00:00:00Z \
+  | jq -r '.MetricDataResults[] | [.Id, (.Timestamps | join("|"))] | @tsv'</code></pre>
+
+    <h2>コマンド早見表</h2>
+<pre><code># Logs
+aws logs tail /aws/lambda/F --follow --filter-pattern 'ERROR'
+aws logs filter-log-events --log-group-name LG --filter-pattern '{ $.level = "error" }'
+aws logs put-retention-policy --log-group-name LG --retention-in-days 14
+
+# Logs Insights
+aws logs start-query --log-group-name LG --start-time T0 --end-time T1 --query-string '...'
+aws logs get-query-results --query-id QID
+
+# Metrics
+aws cloudwatch list-metrics --namespace AWS/Lambda
+aws cloudwatch get-metric-data --metric-data-queries file://query.json ...
+aws cloudwatch put-metric-data --namespace MyApp --metric-name X --value 1
+
+# Alarms
+aws cloudwatch put-metric-alarm --alarm-name N --metric-name Errors ...
+aws cloudwatch describe-alarms --state-value ALARM
+aws cloudwatch disable-alarm-actions --alarm-names N
+
+# SNS
+aws sns publish --topic-arn arn:... --message 'msg'</code></pre>
+
+    <section class="post-glossary" id="glossary">
+      <h2>用語集</h2>
+      <dl>
+        <dt>Log Group / Log Stream</dt>
+        <dd>Group = 論理的なログ束（リテンション・暗号化単位）。Stream = 1 ファイル相当（Lambda は実行コンテナ単位、EC2 はインスタンス単位）。</dd>
+
+        <dt>Retention (保持期間)</dt>
+        <dd>ログを保持する日数。デフォルト無期限。コスト垂れ流し防止に必須。</dd>
+
+        <dt>filter-pattern</dt>
+        <dd>シンプル文字列マッチ + JSON マッチ (<code>{ $.x = "y" }</code>) 構文。Logs Insights とは別物（より単純で速い）。</dd>
+
+        <dt>Logs Insights</dt>
+        <dd>SQL 風のクエリ言語で大量ログを集計・抽出。fields / filter / parse / stats / sort / limit が主要句。</dd>
+
+        <dt>Namespace / Dimension</dt>
+        <dd>Namespace = メトリクスの分類 (AWS/Lambda 等)。Dimension = キー/値ラベル (FunctionName=myfn 等)。</dd>
+
+        <dt>Statistic / Period</dt>
+        <dd>Statistic = Sum / Avg / Min / Max / pNN。Period = 集約区間（秒）。1 / 5 / 60 / 300 等。</dd>
+
+        <dt>get-metric-data vs get-metric-statistics</dt>
+        <dd>get-metric-data は新 API、複数メトリクスを並列・メトリクス数式対応。get-metric-statistics は古いがシンプル。新規は data 推奨。</dd>
+
+        <dt>MetricMath</dt>
+        <dd><code>m1 / m2 * 100</code> 等の数式で派生メトリクスを作る機能。エラー率など。</dd>
+
+        <dt>Alarm 状態 (OK / ALARM / INSUFFICIENT_DATA)</dt>
+        <dd>OK = 閾値以下、ALARM = 閾値超え、INSUFFICIENT_DATA = データ不足。<code>treat-missing-data</code> で挙動を選べる。</dd>
+
+        <dt>Composite Alarm</dt>
+        <dd>複数 Alarm を AND/OR で組み合わせた合成アラーム。ノイズ削減に有効。</dd>
+
+        <dt>SNS Topic / Subscription</dt>
+        <dd>Topic = 通知の送信先カテゴリ。Subscription = 受信先（Email / SMS / Lambda / SQS 等）。Alarm から SNS → 通知の標準パターン。</dd>
+
+        <dt>Live Tail</dt>
+        <dd>Console / <code>aws logs tail --follow</code> でログをリアルタイム追跡する機能。デバッグに便利。</dd>
+
+        <dt>Dashboard</dt>
+        <dd>複数 Widget（メトリクス / ログクエリ / テキスト）を JSON で定義した Console ビュー。Terraform で IaC 化できる。</dd>
+
+        <dt>Container Insights / Lambda Insights</dt>
+        <dd>追加エージェントで CPU / メモリ / ネットワーク詳細を収集する拡張機能。深掘り用。</dd>
+
+        <dt>EMF (Embedded Metric Format)</dt>
+        <dd>JSON ログを書くだけで CloudWatch Metrics に変換される標準仕様。Lambda の自前メトリクス公開に便利。</dd>
+      </dl>
+    </section>
+
+    <footer class="post-footer">
+      <a href="/blog/ref/15-aws-lambda-apigw-ddb.html">← #ref-15 Lambda + APIGW + DDB</a>
+      <a href="/blog/ref/">シリーズ目次</a>
+    </footer>
+
+  </div>
+</article>
+
+</body>
+</html>

@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#ref-14 AWS IAM + STS 運用コマンド | 現場コマンドリファレンス | iigtn</title>
+<meta name="description" content="aws iam create-user / role / policy / attach-role-policy / get-caller-identity / assume-role など、IAM と STS の 40+ コマンドを 7 カテゴリで深掘り解説。最小権限・ロール設計・OIDC 連携に。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/ref/14-aws-iam-sts.html">
+<meta property="og:title" content="#ref-14 AWS IAM + STS 運用コマンド">
+<meta property="og:description" content="iam create-user/role/policy/attach + sts assume-role 40+ コマンドを 7 カテゴリで深掘り。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/ref/14-aws-iam-sts.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="#ref-14 AWS IAM + STS 運用コマンド">
+<meta name="twitter:description" content="iam create-user/role/policy/attach + sts assume-role 40+ コマンドを 7 カテゴリで深掘り。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="stylesheet" href="/blog/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "#ref-14 AWS IAM + STS 運用コマンド",
+  "description": "iam create-user/role/policy/attach + sts assume-role 40+ コマンドを 7 カテゴリで深掘り。",
+  "datePublished": "2026-04-26",
+  "author": { "@type": "Person", "name": "iigtn", "url": "https://lab.iigtn.com/" },
+  "publisher": { "@type": "Person", "name": "iigtn" },
+  "url": "https://lab.iigtn.com/blog/ref/14-aws-iam-sts.html",
+  "mainEntityOfPage": "https://lab.iigtn.com/blog/ref/14-aws-iam-sts.html",
+  "image": "https://lab.iigtn.com/assets/icon.svg",
+  "inLanguage": "ja",
+  "isPartOf": { "@id": "https://lab.iigtn.com/blog/ref/#blog" }
+}
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="/" class="logo" aria-label="iigtn">
+      <img src="/assets/logo.svg" alt="iigtn" height="32">
+    </a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/" class="active">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+      <li><a href="/learn.html">解説書</a></li>
+    </ul>
+  </nav>
+</header>
+
+<article class="post">
+
+  <header class="post-header">
+    <p class="post-meta">2026-04-26 · 現場コマンドリファレンス · #ref-14</p>
+    <h1>AWS IAM + STS 運用コマンド — 40+ コマンドを 7 カテゴリで</h1>
+  </header>
+
+  <div class="post-body">
+
+    <p>
+      IAM は AWS の入口。Role 設計が雑だと事故・侵害の温床になります。
+      この記事では「現場で必ず使う」User / Role / Policy / Group の操作と、STS による一時認証情報・MFA・OIDC を 40+ コマンドで整理。
+    </p>
+
+    <div class="callout warn">
+      原則: <strong>長期 AccessKey は人間用には作らず</strong>、IAM Identity Center / SSO / OIDC で短命認証情報を使う。
+      IAM User + AccessKey が必要なのは「自動化スクリプト + 外部ツール」「3rd party SaaS への提供」程度に限定。
+    </div>
+
+    <h2>目次</h2>
+    <ol>
+      <li><a href="#sec-1">User 管理</a></li>
+      <li><a href="#sec-2">Role 管理</a></li>
+      <li><a href="#sec-3">Policy（管理ポリシー / インラインポリシー）</a></li>
+      <li><a href="#sec-4">Group / 権限境界</a></li>
+      <li><a href="#sec-5">STS — assume-role / get-caller-identity / OIDC</a></li>
+      <li><a href="#sec-6">アクセス分析・診断 (access-analyzer / simulate-policy)</a></li>
+      <li><a href="#sec-7">監査・ローテーション</a></li>
+      <li><a href="#cookbook">運用レシピ</a></li>
+      <li><a href="#glossary">用語集</a></li>
+    </ol>
+
+    <h2 id="sec-1">1. User 管理</h2>
+
+<pre><code>aws iam list-users
+aws iam get-user                                # 現在の自分（呼び出し元 User の場合）
+aws iam create-user --user-name iigtn
+aws iam delete-user --user-name iigtn          # access-keys / policies 全外し後
+
+# Console ログインプロファイル
+aws iam create-login-profile --user-name iigtn --password 'TempP@ssw0rd!' --password-reset-required
+aws iam delete-login-profile --user-name iigtn
+
+# AccessKey
+aws iam create-access-key --user-name iigtn
+aws iam list-access-keys --user-name iigtn
+aws iam update-access-key --user-name iigtn --access-key-id AKIA... --status Inactive
+aws iam delete-access-key --user-name iigtn --access-key-id AKIA...
+
+# Last used 確認（古い鍵の整理）
+aws iam get-access-key-last-used --access-key-id AKIA...
+
+# User にポリシー直接アタッチ
+aws iam attach-user-policy --user-name iigtn \
+  --policy-arn arn:aws:iam::aws:policy/ReadOnlyAccess
+aws iam list-attached-user-policies --user-name iigtn
+aws iam detach-user-policy --user-name iigtn --policy-arn arn:...
+
+# MFA デバイス登録
+aws iam create-virtual-mfa-device --virtual-mfa-device-name iigtn-mfa \
+  --outfile qrcode.png --bootstrap-method QRCodePNG
+aws iam enable-mfa-device --user-name iigtn --serial-number arn:aws:iam::xxx:mfa/iigtn-mfa \
+  --authentication-code1 123456 --authentication-code2 234567
+aws iam list-virtual-mfa-devices</code></pre>
+
+    <h2 id="sec-2">2. Role 管理</h2>
+
+<pre><code># 一覧
+aws iam list-roles
+aws iam list-roles --query 'Roles[].RoleName' --output text
+aws iam get-role --role-name my-role
+aws iam list-role-tags --role-name my-role
+
+# 作成（信頼ポリシーが必須）
+cat &gt; trust.json &lt;&lt; 'EOF'
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Principal": { "Service": "lambda.amazonaws.com" },
+    "Action": "sts:AssumeRole"
+  }]
+}
+EOF
+aws iam create-role --role-name lambda-exec --assume-role-policy-document file://trust.json
+
+# 信頼ポリシー更新
+aws iam update-assume-role-policy --role-name lambda-exec --policy-document file://trust.json
+
+# Role にポリシーアタッチ
+aws iam attach-role-policy --role-name lambda-exec \
+  --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+# Role にインラインポリシー
+aws iam put-role-policy --role-name lambda-exec --policy-name s3-write \
+  --policy-document file://s3-write.json
+aws iam list-role-policies --role-name lambda-exec
+aws iam delete-role-policy --role-name lambda-exec --policy-name s3-write
+
+# 削除（先にアタッチを全部外す）
+aws iam list-attached-role-policies --role-name lambda-exec
+# 全部 detach し終えたら
+aws iam delete-role --role-name lambda-exec</code></pre>
+
+    <h2 id="sec-3">3. Policy</h2>
+
+<pre><code># 管理ポリシー一覧
+aws iam list-policies --scope Local                # 自分のアカウントのカスタム
+aws iam list-policies --scope AWS                  # AWS マネージド
+
+# Policy 詳細
+aws iam get-policy --policy-arn arn:aws:iam::xxx:policy/MyPol
+aws iam get-policy-version --policy-arn arn:... --version-id v1
+
+# 作成
+aws iam create-policy --policy-name MyPol \
+  --policy-document file://policy.json \
+  --description 'My custom policy'
+
+# 更新（バージョン付き、最大 5 個まで）
+aws iam create-policy-version --policy-arn arn:aws:iam::xxx:policy/MyPol \
+  --policy-document file://policy-v2.json --set-as-default
+
+# 古いバージョン削除
+aws iam list-policy-versions --policy-arn arn:...
+aws iam delete-policy-version --policy-arn arn:... --version-id v2
+
+# Policy 削除（先にすべての user/role/group から detach）
+aws iam delete-policy --policy-arn arn:aws:iam::xxx:policy/MyPol</code></pre>
+
+    <h3>サンプル Policy（最小権限）</h3>
+<pre><code>{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadObjects",
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:ListBucket"],
+      "Resource": [
+        "arn:aws:s3:::my-bucket",
+        "arn:aws:s3:::my-bucket/*"
+      ]
+    },
+    {
+      "Sid": "DenyDeleteWithoutMFA",
+      "Effect": "Deny",
+      "Action": "s3:Delete*",
+      "Resource": "*",
+      "Condition": {
+        "BoolIfExists": { "aws:MultiFactorAuthPresent": "false" }
+      }
+    }
+  ]
+}</code></pre>
+
+    <h2 id="sec-4">4. Group / 権限境界</h2>
+
+<pre><code># Group
+aws iam create-group --group-name developers
+aws iam add-user-to-group --user-name iigtn --group-name developers
+aws iam attach-group-policy --group-name developers --policy-arn arn:...
+aws iam list-groups
+aws iam list-groups-for-user --user-name iigtn
+aws iam remove-user-from-group --user-name iigtn --group-name developers
+aws iam delete-group --group-name developers
+
+# Permissions Boundary（ロール / ユーザの最大権限）
+aws iam put-user-permissions-boundary --user-name iigtn \
+  --permissions-boundary arn:aws:iam::aws:policy/ReadOnlyAccess
+aws iam delete-user-permissions-boundary --user-name iigtn
+aws iam put-role-permissions-boundary --role-name r --permissions-boundary arn:...</code></pre>
+
+    <h2 id="sec-5">5. STS</h2>
+
+<pre><code># 自分が誰として動いてるか（最初に必ず叩く）
+aws sts get-caller-identity
+
+# AssumeRole
+RESP=$(aws sts assume-role \
+  --role-arn arn:aws:iam::222233334444:role/Admin \
+  --role-session-name dev-session \
+  --duration-seconds 3600)
+export AWS_ACCESS_KEY_ID=$(echo "$RESP" | jq -r .Credentials.AccessKeyId)
+export AWS_SECRET_ACCESS_KEY=$(echo "$RESP" | jq -r .Credentials.SecretAccessKey)
+export AWS_SESSION_TOKEN=$(echo "$RESP" | jq -r .Credentials.SessionToken)
+
+# OIDC（GitHub Actions 等）
+aws sts assume-role-with-web-identity \
+  --role-arn arn:aws:iam::xxx:role/github-actions-deploy \
+  --role-session-name gha \
+  --web-identity-token "$OIDC_TOKEN" \
+  --duration-seconds 900
+
+# MFA Session
+aws sts get-session-token \
+  --serial-number arn:aws:iam::xxx:mfa/iigtn \
+  --token-code 123456 --duration-seconds 28800
+
+# AccessKey の発行アカウント確認
+aws sts get-access-key-info --access-key-id AKIA...
+
+# 拒否レスポンスの decode
+aws sts decode-authorization-message --encoded-message ...</code></pre>
+
+    <h2 id="sec-6">6. アクセス分析・診断</h2>
+
+<pre><code># Policy Simulator (シミュレーション)
+aws iam simulate-principal-policy \
+  --policy-source-arn arn:aws:iam::xxx:user/iigtn \
+  --action-names s3:PutObject \
+  --resource-arns 'arn:aws:s3:::my-bucket/*'
+
+# Access Analyzer（外部公開の検出）
+aws accessanalyzer list-analyzers
+aws accessanalyzer list-findings --analyzer-arn arn:...
+aws accessanalyzer get-finding --analyzer-arn arn:... --id finding-xxx
+
+# IAM Access Advisor（最終使用日時）
+aws iam generate-service-last-accessed-details --arn arn:aws:iam::xxx:role/r
+aws iam get-service-last-accessed-details --job-id jobid</code></pre>
+
+    <h2 id="sec-7">7. 監査・ローテーション</h2>
+
+<pre><code># Credential Report (全 user の鍵 / 最終使用 / MFA 状況をまとめた CSV)
+aws iam generate-credential-report
+aws iam get-credential-report --output text --query 'Content' | base64 -d &gt; report.csv
+
+# 90 日以上未使用 AccessKey の検出
+aws iam list-users --query 'Users[].UserName' --output text | xargs -n1 -I{} \
+  aws iam list-access-keys --user-name {} \
+    --query 'AccessKeyMetadata[?CreateDate&lt;=`2026-01-26`].[UserName,AccessKeyId,CreateDate]' \
+    --output table
+
+# 古い鍵を Inactive に
+aws iam update-access-key --user-name iigtn --access-key-id AKIA... --status Inactive</code></pre>
+
+    <h2 id="cookbook">運用レシピ</h2>
+
+    <h3>レシピ 1 — 自分の権限を一覧</h3>
+<pre><code>USER=$(aws sts get-caller-identity --query Arn --output text | awk -F/ '{print $NF}')
+aws iam list-attached-user-policies --user-name $USER
+aws iam list-user-policies --user-name $USER
+aws iam list-groups-for-user --user-name $USER</code></pre>
+
+    <h3>レシピ 2 — Role の信頼関係（誰が assume できるか）を確認</h3>
+<pre><code>aws iam get-role --role-name lambda-exec --query 'Role.AssumeRolePolicyDocument'</code></pre>
+
+    <h3>レシピ 3 — マネージド ポリシーをインラインに変換（移植時）</h3>
+<pre><code>aws iam get-policy-version --policy-arn arn:aws:iam::xxx:policy/MyPol \
+  --version-id v1 --query 'PolicyVersion.Document' &gt; pol.json
+aws iam put-role-policy --role-name r --policy-name MyPol-inline \
+  --policy-document file://pol.json</code></pre>
+
+    <h3>レシピ 4 — 全 Role の最終使用日時取得</h3>
+<pre><code>for r in $(aws iam list-roles --query 'Roles[].RoleName' --output text); do
+  job=$(aws iam generate-service-last-accessed-details --arn arn:aws:iam::xxx:role/$r --query JobId --output text)
+  sleep 2
+  aws iam get-service-last-accessed-details --job-id $job \
+    --query "[Arn, ServicesLastAccessed[?LastAuthenticated]]" --output json
+done</code></pre>
+
+    <h3>レシピ 5 — GitHub Actions 用 OIDC Role 作成</h3>
+<pre><code># Trust Policy で repo を絞る
+cat &gt; trust.json &lt;&lt; 'EOF'
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Principal": { "Federated": "arn:aws:iam::xxx:oidc-provider/token.actions.githubusercontent.com" },
+    "Action": "sts:AssumeRoleWithWebIdentity",
+    "Condition": {
+      "StringEquals": { "token.actions.githubusercontent.com:aud": "sts.amazonaws.com" },
+      "StringLike":   { "token.actions.githubusercontent.com:sub": "repo:iigtn/iigtn-platform:*" }
+    }
+  }]
+}
+EOF
+
+aws iam create-role --role-name github-actions-deploy \
+  --assume-role-policy-document file://trust.json
+aws iam attach-role-policy --role-name github-actions-deploy \
+  --policy-arn arn:aws:iam::xxx:policy/iigtn-deploy-permissions</code></pre>
+
+    <h2>コマンド早見表</h2>
+<pre><code># User
+aws iam create-user --user-name X
+aws iam create-access-key --user-name X
+aws iam attach-user-policy --user-name X --policy-arn arn:...
+
+# Role
+aws iam create-role --role-name R --assume-role-policy-document file://trust.json
+aws iam attach-role-policy --role-name R --policy-arn arn:...
+aws iam put-role-policy --role-name R --policy-name P --policy-document file://x.json
+
+# Policy
+aws iam create-policy --policy-name P --policy-document file://x.json
+aws iam create-policy-version --policy-arn arn:... --policy-document file://x.json --set-as-default
+
+# STS
+aws sts get-caller-identity
+aws sts assume-role --role-arn arn:... --role-session-name s
+aws sts assume-role-with-web-identity --role-arn arn:... --web-identity-token "$T"
+
+# 監査
+aws iam generate-credential-report
+aws iam simulate-principal-policy --policy-source-arn arn:... --action-names s3:PutObject ...</code></pre>
+
+    <section class="post-glossary" id="glossary">
+      <h2>用語集</h2>
+      <dl>
+        <dt>IAM (Identity and Access Management)</dt>
+        <dd>AWS の認証・認可サービス。User / Group / Role / Policy で構成。</dd>
+
+        <dt>User vs Role</dt>
+        <dd>User = 人 or アプリ「単位」の長期存在 ID（AccessKey 持てる）。Role = 「引き受けられる役割」短命。CI/CD は Role 推奨。</dd>
+
+        <dt>Managed Policy vs Inline Policy</dt>
+        <dd>Managed = 独立リソース、複数 user/role に再利用 + バージョン管理。Inline = 特定 user/role/group に埋め込み、その対象と運命共同体。</dd>
+
+        <dt>Trust Policy (信頼ポリシー)</dt>
+        <dd>Role に紐付く「誰が AssumeRole できるか」の宣言。Principal で AWS / Service / Federated / OIDC を指定。</dd>
+
+        <dt>Permissions Policy</dt>
+        <dd>Role / User が「何をできるか」の宣言。Allow / Deny + Action + Resource + Condition。</dd>
+
+        <dt>Permissions Boundary</dt>
+        <dd>Role / User の「最大権限」の上限を別途定義する仕組み。委譲先が過剰な権限を attach しないよう制限。</dd>
+
+        <dt>SCP (Service Control Policy)</dt>
+        <dd>AWS Organizations の OU / Account 単位で「アカウント全体に強制する禁止条項」。IAM より上位。</dd>
+
+        <dt>STS (Security Token Service)</dt>
+        <dd>一時認証情報を発行するサービス。AssumeRole / AssumeRoleWithWebIdentity / GetSessionToken 等。</dd>
+
+        <dt>get-caller-identity</dt>
+        <dd>「自分は今、どのアカウント / どの ARN として動いているか」を返す API。デバッグの第一手。</dd>
+
+        <dt>OIDC Provider</dt>
+        <dd>外部 ID プロバイダ（GitHub / GitLab / EKS）を AWS に登録したもの。AssumeRoleWithWebIdentity の前提。</dd>
+
+        <dt>Condition Keys</dt>
+        <dd>Policy の条件節で使えるキー。aws:SourceIp / aws:MultiFactorAuthPresent / aws:RequestTag / aws:PrincipalArn 等。</dd>
+
+        <dt>Resource ARN</dt>
+        <dd><code>arn:aws:service:region:account:resource</code> 形式の AWS リソース識別子。Policy の Resource で対象指定。</dd>
+
+        <dt>MFA (Multi-Factor Authentication)</dt>
+        <dd>仮想 MFA / U2F / SMS 等。Console ログイン保護 + 一部 API 操作の Condition 化（<code>aws:MultiFactorAuthPresent</code>）に使用。</dd>
+
+        <dt>Access Analyzer</dt>
+        <dd>外部公開しているリソース（S3 / IAM Role / KMS 等）を検出する AWS マネージド分析。</dd>
+
+        <dt>Credential Report</dt>
+        <dd>全 IAM User の鍵年齢・最終使用・MFA 有無等を CSV にまとめた監査レポート。</dd>
+
+        <dt>Service Last Accessed</dt>
+        <dd>Role / User が「いつ何のサービスを最後に使ったか」を返す API。不要な権限の発見に。</dd>
+      </dl>
+    </section>
+
+    <footer class="post-footer">
+      <a href="/blog/ref/13-aws-ec2-vpc.html">← #ref-13 EC2 / VPC</a>
+      <a href="/blog/ref/">シリーズ目次</a>
+    </footer>
+
+  </div>
+</article>
+
+</body>
+</html>

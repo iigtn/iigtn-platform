@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#ref-15 AWS Lambda + API GW + DynamoDB | 現場コマンドリファレンス | iigtn</title>
+<meta name="description" content="aws lambda invoke / update-function-code / list と aws apigatewayv2 routes / integrations と aws dynamodb get-item / put-item / query / scan ほか、サーバレス三種の神器の 50+ コマンドを 6 カテゴリで深掘り解説。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/ref/15-aws-lambda-apigw-ddb.html">
+<meta property="og:title" content="#ref-15 AWS Lambda + API GW + DynamoDB">
+<meta property="og:description" content="サーバレス三種の神器の 50+ コマンドを 6 カテゴリで深掘り。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/ref/15-aws-lambda-apigw-ddb.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="#ref-15 AWS Lambda + API GW + DynamoDB">
+<meta name="twitter:description" content="サーバレス三種の神器の 50+ コマンドを 6 カテゴリで深掘り。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="stylesheet" href="/blog/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "#ref-15 AWS Lambda + API GW + DynamoDB",
+  "description": "サーバレス三種の神器の 50+ コマンドを 6 カテゴリで深掘り。",
+  "datePublished": "2026-04-26",
+  "author": { "@type": "Person", "name": "iigtn", "url": "https://lab.iigtn.com/" },
+  "publisher": { "@type": "Person", "name": "iigtn" },
+  "url": "https://lab.iigtn.com/blog/ref/15-aws-lambda-apigw-ddb.html",
+  "mainEntityOfPage": "https://lab.iigtn.com/blog/ref/15-aws-lambda-apigw-ddb.html",
+  "image": "https://lab.iigtn.com/assets/icon.svg",
+  "inLanguage": "ja",
+  "isPartOf": { "@id": "https://lab.iigtn.com/blog/ref/#blog" }
+}
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="/" class="logo" aria-label="iigtn">
+      <img src="/assets/logo.svg" alt="iigtn" height="32">
+    </a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/" class="active">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+      <li><a href="/learn.html">解説書</a></li>
+    </ul>
+  </nav>
+</header>
+
+<article class="post">
+
+  <header class="post-header">
+    <p class="post-meta">2026-04-26 · 現場コマンドリファレンス · #ref-15</p>
+    <h1>AWS Lambda + API GW + DynamoDB — 50+ コマンドを 6 カテゴリで</h1>
+  </header>
+
+  <div class="post-body">
+
+    <p>
+      サーバレス三種の神器（Lambda / API Gateway / DynamoDB）は IaC で管理する前提でも、CLI で確認・診断・即応する場面が多々あります。
+      Console を行ったり来たりするより速い操作を整理。
+    </p>
+
+    <h2>目次</h2>
+    <ol>
+      <li><a href="#sec-1">Lambda 関数管理</a></li>
+      <li><a href="#sec-2">Lambda 実行・ログ確認</a></li>
+      <li><a href="#sec-3">API Gateway HTTP API (apigatewayv2)</a></li>
+      <li><a href="#sec-4">API Gateway REST API (apigateway)</a></li>
+      <li><a href="#sec-5">DynamoDB 基本操作 (get/put/query/scan)</a></li>
+      <li><a href="#sec-6">DynamoDB テーブル設定 (PITR / TTL / Stream)</a></li>
+      <li><a href="#cookbook">運用レシピ</a></li>
+      <li><a href="#glossary">用語集</a></li>
+    </ol>
+
+    <h2 id="sec-1">1. Lambda 関数管理</h2>
+
+<pre><code># 一覧
+aws lambda list-functions
+aws lambda list-functions --query 'Functions[].FunctionName' --output text
+aws lambda get-function --function-name myfn
+aws lambda get-function-configuration --function-name myfn
+
+# 作成
+zip -j fn.zip index.mjs
+aws lambda create-function \
+  --function-name myfn \
+  --runtime nodejs22.x \
+  --architectures arm64 \
+  --memory-size 256 \
+  --timeout 10 \
+  --role arn:aws:iam::xxx:role/lambda-exec \
+  --handler index.handler \
+  --zip-file fileb://fn.zip \
+  --environment 'Variables={LOG_LEVEL=info}'
+
+# コード更新
+aws lambda update-function-code --function-name myfn --zip-file fileb://fn.zip
+aws lambda update-function-code --function-name myfn --s3-bucket b --s3-key fn.zip
+
+# 設定更新
+aws lambda update-function-configuration --function-name myfn \
+  --memory-size 512 --timeout 15 \
+  --environment 'Variables={LOG_LEVEL=debug,API_URL=https://...}'
+
+# Permission（Resource Policy）— API GW から呼べるように
+aws lambda add-permission --function-name myfn \
+  --statement-id apigw-invoke \
+  --action lambda:InvokeFunction \
+  --principal apigateway.amazonaws.com \
+  --source-arn 'arn:aws:execute-api:ap-northeast-1:xxx:apixxx/*/*/path'
+aws lambda get-policy --function-name myfn
+aws lambda remove-permission --function-name myfn --statement-id apigw-invoke
+
+# Alias / Version
+aws lambda publish-version --function-name myfn
+aws lambda list-versions-by-function --function-name myfn
+aws lambda create-alias --function-name myfn --name prod --function-version 5
+aws lambda update-alias --function-name myfn --name prod --function-version 6
+aws lambda list-aliases --function-name myfn
+
+# 削除
+aws lambda delete-function --function-name myfn</code></pre>
+
+    <h2 id="sec-2">2. Lambda 実行・ログ確認</h2>
+
+<pre><code># 同期実行
+aws lambda invoke --function-name myfn \
+  --payload '{"key":"value"}' \
+  --cli-binary-format raw-in-base64-out \
+  out.json
+cat out.json
+
+# 非同期 (Event)
+aws lambda invoke --function-name myfn --invocation-type Event \
+  --payload '{"x":1}' --cli-binary-format raw-in-base64-out out.json
+
+# DryRun (権限チェックのみ)
+aws lambda invoke --function-name myfn --invocation-type DryRun out.json
+
+# RequestResponse でレスポンス本体を表示
+aws lambda invoke --function-name myfn \
+  --payload '{}' --cli-binary-format raw-in-base64-out /dev/stdout
+
+# ログを tail
+aws logs tail /aws/lambda/myfn --follow
+aws logs tail /aws/lambda/myfn --since 10m
+aws logs tail /aws/lambda/myfn --filter-pattern 'ERROR'
+aws logs tail /aws/lambda/myfn --format short
+
+# 同時実行数
+aws lambda put-function-concurrency --function-name myfn --reserved-concurrent-executions 10
+aws lambda delete-function-concurrency --function-name myfn
+
+# Provisioned Concurrency（コールドスタート対策）
+aws lambda put-provisioned-concurrency-config \
+  --function-name myfn --qualifier prod --provisioned-concurrent-executions 5</code></pre>
+
+    <h2 id="sec-3">3. API Gateway HTTP API (apigatewayv2)</h2>
+
+    <p>新しい HTTP API（v2）。REST API より高速・安価で多くのケースで第一選択。</p>
+
+<pre><code># API 一覧 / 詳細
+aws apigatewayv2 get-apis
+aws apigatewayv2 get-api --api-id xxx
+
+# API 作成（Lambda Proxy）
+aws apigatewayv2 create-api --name my-api --protocol-type HTTP \
+  --target arn:aws:lambda:ap-northeast-1:xxx:function:myfn
+
+# Route / Integration / Stage
+aws apigatewayv2 get-routes --api-id xxx
+aws apigatewayv2 get-integrations --api-id xxx
+aws apigatewayv2 get-stages --api-id xxx
+
+# Route 追加
+aws apigatewayv2 create-integration --api-id xxx \
+  --integration-type AWS_PROXY --integration-uri 'arn:aws:lambda:...:function:myfn' \
+  --payload-format-version 2.0
+aws apigatewayv2 create-route --api-id xxx \
+  --route-key 'POST /contact' --target 'integrations/&lt;integrationId&gt;'
+
+# Stage （$default が標準）
+aws apigatewayv2 create-stage --api-id xxx --stage-name v1 --auto-deploy
+
+# CORS
+aws apigatewayv2 update-api --api-id xxx \
+  --cors-configuration 'AllowOrigins=https://lab.iigtn.com,AllowMethods=GET,POST,OPTIONS,AllowHeaders=Content-Type'
+
+# 削除
+aws apigatewayv2 delete-api --api-id xxx</code></pre>
+
+    <h2 id="sec-4">4. API Gateway REST API (apigateway)</h2>
+
+<pre><code># 一覧
+aws apigateway get-rest-apis
+aws apigateway get-resources --rest-api-id xxx
+aws apigateway get-stages --rest-api-id xxx
+
+# Stage / Deployment
+aws apigateway create-deployment --rest-api-id xxx --stage-name v1
+aws apigateway delete-stage --rest-api-id xxx --stage-name v1
+
+# Usage Plan / API Key
+aws apigateway get-usage-plans
+aws apigateway get-api-keys
+aws apigateway create-api-key --name my-key --enabled
+aws apigateway create-usage-plan-key --usage-plan-id up-xxx \
+  --key-id key-xxx --key-type API_KEY
+
+# テスト呼び出し
+aws apigateway test-invoke-method --rest-api-id xxx \
+  --resource-id rsrc-xxx --http-method GET</code></pre>
+
+    <h2 id="sec-5">5. DynamoDB 基本操作</h2>
+
+<pre><code># テーブル一覧
+aws dynamodb list-tables
+aws dynamodb describe-table --table-name users
+
+# 単一 item 取得
+aws dynamodb get-item --table-name users \
+  --key '{"id":{"S":"u1"}}'
+
+# 書き込み
+aws dynamodb put-item --table-name users \
+  --item '{"id":{"S":"u1"},"name":{"S":"alice"},"score":{"N":"92"}}'
+
+# 上書き保護（item が存在する時だけ更新）
+aws dynamodb put-item --table-name users \
+  --item '{"id":{"S":"u1"},"name":{"S":"alice2"}}' \
+  --condition-expression 'attribute_exists(id)'
+
+# 削除
+aws dynamodb delete-item --table-name users --key '{"id":{"S":"u1"}}'
+
+# Update（部分更新）
+aws dynamodb update-item --table-name users \
+  --key '{"id":{"S":"u1"}}' \
+  --update-expression 'SET score = :s, updated_at = :t' \
+  --expression-attribute-values '{":s":{"N":"95"},":t":{"S":"2026-04-26T00:00:00Z"}}'
+
+# Query（PK + 条件）
+aws dynamodb query --table-name orders \
+  --key-condition-expression 'user_id = :u AND order_date &gt;= :d' \
+  --expression-attribute-values '{":u":{"S":"u1"},":d":{"S":"2026-04-01"}}'
+
+# Scan（全走査、本番は基本避ける）
+aws dynamodb scan --table-name users
+aws dynamodb scan --table-name users --limit 100
+aws dynamodb scan --table-name users \
+  --filter-expression 'score &gt; :s' \
+  --expression-attribute-values '{":s":{"N":"80"}}'
+
+# BatchGet / BatchWrite（25 件/req）
+aws dynamodb batch-get-item --request-items '{
+  "users":{"Keys":[{"id":{"S":"u1"}},{"id":{"S":"u2"}}]}
+}'
+
+aws dynamodb batch-write-item --request-items '{
+  "users":[
+    {"PutRequest":{"Item":{"id":{"S":"u3"},"name":{"S":"carol"}}}},
+    {"DeleteRequest":{"Key":{"id":{"S":"u4"}}}}
+  ]
+}'
+
+# Transactions（最大 100 件、ACID）
+aws dynamodb transact-write-items --transact-items '[
+  {"Put":{"TableName":"orders","Item":{"id":{"S":"o1"}}}},
+  {"Update":{"TableName":"users","Key":{"id":{"S":"u1"}},
+   "UpdateExpression":"SET order_count = if_not_exists(order_count, :z) + :i",
+   "ExpressionAttributeValues":{":z":{"N":"0"},":i":{"N":"1"}}}}
+]'</code></pre>
+
+    <h2 id="sec-6">6. DynamoDB テーブル設定</h2>
+
+<pre><code># テーブル作成（On-Demand）
+aws dynamodb create-table --table-name users \
+  --attribute-definitions AttributeName=id,AttributeType=S \
+  --key-schema AttributeName=id,KeyType=HASH \
+  --billing-mode PAY_PER_REQUEST
+
+# Provisioned + GSI
+aws dynamodb create-table --table-name orders \
+  --attribute-definitions \
+    AttributeName=order_id,AttributeType=S \
+    AttributeName=user_id,AttributeType=S \
+    AttributeName=order_date,AttributeType=S \
+  --key-schema AttributeName=order_id,KeyType=HASH \
+  --billing-mode PAY_PER_REQUEST \
+  --global-secondary-indexes '[{
+    "IndexName":"user-date-index",
+    "KeySchema":[
+      {"AttributeName":"user_id","KeyType":"HASH"},
+      {"AttributeName":"order_date","KeyType":"RANGE"}
+    ],
+    "Projection":{"ProjectionType":"ALL"}
+  }]'
+
+# PITR 有効化（誤削除復旧）
+aws dynamodb update-continuous-backups --table-name users \
+  --point-in-time-recovery-specification PointInTimeRecoveryEnabled=true
+
+# TTL 有効化
+aws dynamodb update-time-to-live --table-name sessions \
+  --time-to-live-specification 'Enabled=true,AttributeName=expires_at'
+
+# Stream 有効化
+aws dynamodb update-table --table-name users \
+  --stream-specification 'StreamEnabled=true,StreamViewType=NEW_AND_OLD_IMAGES'
+
+# バックアップ
+aws dynamodb create-backup --table-name users --backup-name users-2026-04-26
+aws dynamodb list-backups --table-name users
+aws dynamodb restore-table-from-backup --target-table-name users-restored \
+  --backup-arn arn:...
+
+# 削除
+aws dynamodb delete-table --table-name users</code></pre>
+
+    <h2 id="cookbook">運用レシピ</h2>
+
+    <h3>レシピ 1 — Lambda の最近のエラーをサクッと確認</h3>
+<pre><code>aws logs tail /aws/lambda/myfn --since 1h --filter-pattern 'ERROR'</code></pre>
+
+    <h3>レシピ 2 — API GW の URL を取得</h3>
+<pre><code>API_ID=$(aws apigatewayv2 get-apis --query 'Items[?Name==`my-api`].ApiId | [0]' --output text)
+echo "https://${API_ID}.execute-api.ap-northeast-1.amazonaws.com/"</code></pre>
+
+    <h3>レシピ 3 — DynamoDB を JSON でダンプ → 別テーブルに移行</h3>
+<pre><code># scan で全件取得
+aws dynamodb scan --table-name old --output json &gt; dump.json
+
+# jq で BatchWrite 形式に整形
+jq -c '.Items[] | {PutRequest:{Item:.}}' dump.json &gt; items.ndjson
+
+# 25 件ずつバッチ書込
+split -l 25 items.ndjson chunk_
+for f in chunk_*; do
+  echo "{\"new-table\":[" &gt; req.json
+  paste -sd, $f &gt;&gt; req.json
+  echo "]}" &gt;&gt; req.json
+  aws dynamodb batch-write-item --request-items file://req.json
+done</code></pre>
+
+    <h3>レシピ 4 — Lambda の memory / timeout を一括調整</h3>
+<pre><code>for fn in $(aws lambda list-functions --query 'Functions[].FunctionName' --output text); do
+  aws lambda update-function-configuration --function-name $fn \
+    --memory-size 256 --timeout 10
+done</code></pre>
+
+    <h3>レシピ 5 — API GW の slow request 抽出</h3>
+<pre><code># Access logging を CloudWatch に出している前提
+aws logs filter-log-events --log-group-name '/aws/apigateway/my-api/v1' \
+  --filter-pattern '{ $.responseLatency &gt; 3000 }' \
+  --start-time $(date -d '1 hour ago' +%s)000 \
+  | jq -r '.events[].message' | jq</code></pre>
+
+    <h2>コマンド早見表</h2>
+<pre><code># Lambda
+aws lambda invoke --function-name F --payload '{}' --cli-binary-format raw-in-base64-out out.json
+aws logs tail /aws/lambda/F --follow
+aws lambda update-function-code --function-name F --zip-file fileb://fn.zip
+aws lambda update-function-configuration --function-name F --memory-size 512
+
+# API GW (HTTP)
+aws apigatewayv2 get-apis
+aws apigatewayv2 get-routes --api-id A
+aws apigatewayv2 update-api --api-id A --cors-configuration ...
+
+# DynamoDB
+aws dynamodb get-item --table-name T --key '{...}'
+aws dynamodb put-item --table-name T --item '{...}'
+aws dynamodb query --table-name T --key-condition-expression 'pk = :p'
+aws dynamodb update-continuous-backups --table-name T --point-in-time-recovery-specification PointInTimeRecoveryEnabled=true</code></pre>
+
+    <section class="post-glossary" id="glossary">
+      <h2>用語集</h2>
+      <dl>
+        <dt>Lambda</dt>
+        <dd>関数を呼び出された時だけ実行するサーバレス実行環境。Node.js/Python/Java/Go 等。arm64 (Graviton) で安価。</dd>
+
+        <dt>Cold Start</dt>
+        <dd>Lambda コンテナの初回起動オーバーヘッド。Provisioned Concurrency で回避できるが追加料金。</dd>
+
+        <dt>Lambda Alias / Version</dt>
+        <dd>Version = イミュータブルなコードスナップショット、Alias = それを指す可変ポインタ（例: prod → version 5）。Blue/Green デプロイに使う。</dd>
+
+        <dt>Resource Policy (Lambda Permission)</dt>
+        <dd>「誰が この Lambda を呼べるか」のポリシー。API GW などからのトリガ設定で必要。</dd>
+
+        <dt>API Gateway HTTP API (v2)</dt>
+        <dd>新型の API GW。REST API より高速・安価。OAuth2/JWT、CORS、自動デプロイなどモダン機能を持つ。</dd>
+
+        <dt>Lambda Proxy 統合 (payload v2)</dt>
+        <dd>HTTP API → Lambda の統合方式。リクエスト全体を Event として渡し、レスポンスをそのまま HTTP レスポンスにする。</dd>
+
+        <dt>DynamoDB</dt>
+        <dd>AWS のフルマネージド NoSQL。PK/SK 設計、On-Demand vs Provisioned 課金、PITR / Stream / TTL 等。</dd>
+
+        <dt>PK / SK / GSI / LSI</dt>
+        <dd>Partition Key / Sort Key / Global Secondary Index / Local Secondary Index。クエリパターンに合わせて設計。</dd>
+
+        <dt>Query vs Scan</dt>
+        <dd>Query = PK 指定で効率的。Scan = 全走査で重い。本番では Query 一択 + 必要な GSI を準備する。</dd>
+
+        <dt>PITR (Point-in-Time Recovery)</dt>
+        <dd>過去 35 日間の任意時点に復旧できるバックアップ機能。誤削除復旧の最後の砦。</dd>
+
+        <dt>TTL</dt>
+        <dd>属性に設定した UNIX タイムスタンプを過ぎた item を自動削除する機能。セッションキャッシュ等に。</dd>
+
+        <dt>DynamoDB Stream</dt>
+        <dd>テーブル変更を順次配信するイベントソース。Lambda トリガで cross-table 整合性や監査ログに利用。</dd>
+
+        <dt>BatchGet / BatchWrite / Transact</dt>
+        <dd>BatchGet = 100 件 / 16MB まで、BatchWrite = 25 件まで（部分失敗あり）、Transact = 100 件 ACID 保証（部分失敗なし）。</dd>
+
+        <dt>Conditional Write</dt>
+        <dd>condition-expression で「ある条件を満たす場合のみ書き込む」操作。楽観的ロック実装の基本。</dd>
+
+        <dt>Provisioned Concurrency</dt>
+        <dd>Lambda の指定数を常時起動状態に保つ機能。Cold Start を消せるが追加料金。レイテンシ重視の本番のみ使う。</dd>
+      </dl>
+    </section>
+
+    <footer class="post-footer">
+      <a href="/blog/ref/14-aws-iam-sts.html">← #ref-14 IAM / STS</a>
+      <a href="/blog/ref/">シリーズ目次</a>
+    </footer>
+
+  </div>
+</article>
+
+</body>
+</html>

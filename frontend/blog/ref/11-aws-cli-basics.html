@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#ref-11 AWS CLI 基本構文・認証・プロファイル | 現場コマンドリファレンス | iigtn</title>
+<meta name="description" content="aws configure / sso / sts / --query / --output / --profile / MFA など、AWS CLI を使う前に押さえておく基本構文と認証まわりを 50+ コマンドで深掘り解説。マルチアカウント運用と OIDC 対応も。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/ref/11-aws-cli-basics.html">
+<meta property="og:title" content="#ref-11 AWS CLI 基本構文・認証・プロファイル">
+<meta property="og:description" content="configure / sso / sts / --query / --output / --profile / MFA など、AWS CLI 認証まわり 50+ コマンドを深掘り。マルチアカウント運用も。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/ref/11-aws-cli-basics.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="#ref-11 AWS CLI 基本構文・認証・プロファイル">
+<meta name="twitter:description" content="configure / sso / sts / --query / --output / --profile / MFA など、AWS CLI 認証まわり 50+ コマンドを深掘り。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="stylesheet" href="/blog/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "#ref-11 AWS CLI 基本構文・認証・プロファイル",
+  "description": "configure / sso / sts / --query / --output / --profile / MFA など、AWS CLI 認証まわり 50+ コマンドを深掘り。",
+  "datePublished": "2026-04-26",
+  "author": { "@type": "Person", "name": "iigtn", "url": "https://lab.iigtn.com/" },
+  "publisher": { "@type": "Person", "name": "iigtn" },
+  "url": "https://lab.iigtn.com/blog/ref/11-aws-cli-basics.html",
+  "mainEntityOfPage": "https://lab.iigtn.com/blog/ref/11-aws-cli-basics.html",
+  "image": "https://lab.iigtn.com/assets/icon.svg",
+  "inLanguage": "ja",
+  "isPartOf": { "@id": "https://lab.iigtn.com/blog/ref/#blog" }
+}
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="/" class="logo" aria-label="iigtn">
+      <img src="/assets/logo.svg" alt="iigtn" height="32">
+    </a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/" class="active">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+      <li><a href="/learn.html">解説書</a></li>
+    </ul>
+  </nav>
+</header>
+
+<article class="post">
+
+  <header class="post-header">
+    <p class="post-meta">2026-04-26 · 現場コマンドリファレンス · #ref-11</p>
+    <h1>AWS CLI 基本構文・認証・プロファイル — 50+ コマンドを 8 カテゴリで</h1>
+  </header>
+
+  <div class="post-body">
+
+    <p>
+      AWS CLI で詰まる原因の 8 割は <strong>認証とプロファイル設定</strong>です。
+      アカウントが 2 つ以上ある現場では <code>aws s3 ls</code> ひとつで「あれ、これどっちのアカウント見てる？」が頻発します。
+      また CI/CD で OIDC 認証を扱うなら <code>sts</code> 系の挙動も理解必須。
+    </p>
+    <p>
+      本記事は AWS CLI を使い始めた人〜マルチアカウント運用に踏み込む人向けに、認証・プロファイル・出力整形・
+      マネージド一時認証情報・MFA・OIDC を 50+ コマンドでまとめます。サービス別 CLI（s3 / ec2 / iam / lambda 等）は
+      <a href="/blog/ref/">後続の ref-12 以降</a> で扱います。
+    </p>
+
+    <div class="callout info">
+      <strong>動作環境:</strong> AWS CLI v2 を前提（v1 は EOL）。
+      Windows: <code>winget install Amazon.AWSCLI</code> / macOS: <code>brew install awscli</code> /
+      Linux: 公式の zip インストーラ推奨。インストール後 <code>aws --version</code> で確認。
+    </div>
+
+    <h2>目次</h2>
+    <ol>
+      <li><a href="#sec-1">基本構文と help / version</a></li>
+      <li><a href="#sec-2">認証情報の場所と優先順位</a></li>
+      <li><a href="#sec-3">configure — プロファイル管理</a></li>
+      <li><a href="#sec-4">SSO (IAM Identity Center)</a></li>
+      <li><a href="#sec-5">STS — 一時認証情報・AssumeRole・MFA</a></li>
+      <li><a href="#sec-6">出力整形 (--query / --output)</a></li>
+      <li><a href="#sec-7">CI/CD・OIDC との連携</a></li>
+      <li><a href="#sec-8">よくあるエラーと対処</a></li>
+      <li><a href="#cookbook">よく使うレシピ</a></li>
+      <li><a href="#glossary">用語集</a></li>
+    </ol>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-1">1. 基本構文と help / version</h2>
+
+    <h3>共通構造</h3>
+    <p><code>aws &lt;サービス&gt; &lt;サブコマンド&gt; &lt;オプション&gt;</code> の三段構造。例: <code>aws s3 ls --profile prod</code>。</p>
+
+<pre><code>aws --version                       # CLI バージョン確認 (v1 と v2 で挙動差あり)
+aws help                            # 全サービス一覧
+aws s3 help                         # サービス内のサブコマンド一覧
+aws s3 cp help                      # サブコマンドの詳細ヘルプ
+aws ec2 describe-instances help     # 引数の詳細</code></pre>
+    <div class="callout info">
+      ヘルプは超充実。困ったらまず <code>aws &lt;cmd&gt; help</code>。<code>man</code>-like なページャで開くので <code>q</code> で終了。
+    </div>
+
+    <h3>主要なグローバルオプション</h3>
+    <table>
+      <tr><th>オプション</th><th>意味</th></tr>
+      <tr><td><code>--profile NAME</code></td><td>使用プロファイル指定</td></tr>
+      <tr><td><code>--region REGION</code></td><td>リージョン上書き</td></tr>
+      <tr><td><code>--output FORMAT</code></td><td>json / yaml / yaml-stream / text / table</td></tr>
+      <tr><td><code>--query EXPR</code></td><td>JMESPath で抽出</td></tr>
+      <tr><td><code>--no-paginate</code></td><td>1 ページのみ</td></tr>
+      <tr><td><code>--max-items N</code></td><td>取得件数の上限</td></tr>
+      <tr><td><code>--debug</code></td><td>HTTP リクエスト・SDK ログ表示（トラブル時に必須）</td></tr>
+      <tr><td><code>--no-cli-pager</code></td><td>結果を less に通さず出力</td></tr>
+      <tr><td><code>--cli-input-yaml/json file://x</code></td><td>引数をファイルから渡す</td></tr>
+      <tr><td><code>--generate-cli-skeleton</code></td><td>引数の雛形 JSON を出力（複雑コマンドで超便利）</td></tr>
+      <tr><td><code>--dry-run</code></td><td>権限チェックだけ実行（ec2 系で特に使う）</td></tr>
+    </table>
+
+<pre><code># debug 例
+aws sts get-caller-identity --debug 2&gt;&amp;1 | head -50
+
+# skeleton で雛形を生成して埋める
+aws lambda create-function --generate-cli-skeleton &gt; create-fn.json
+# create-fn.json を編集後
+aws lambda create-function --cli-input-json file://create-fn.json</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-2">2. 認証情報の場所と優先順位</h2>
+
+    <p>AWS CLI は次の優先順位で認証情報を探します。<strong>上から見つかった瞬間に確定</strong>。</p>
+
+    <ol>
+      <li>コマンドラインオプション (<code>--profile</code>, <code>--region</code>)</li>
+      <li>環境変数 (<code>AWS_ACCESS_KEY_ID</code>, <code>AWS_SECRET_ACCESS_KEY</code>, <code>AWS_SESSION_TOKEN</code>, <code>AWS_PROFILE</code>, <code>AWS_REGION</code>)</li>
+      <li><code>~/.aws/credentials</code> の <code>[default]</code> または <code>[profile_name]</code></li>
+      <li><code>~/.aws/config</code> の <code>[default]</code> または <code>[profile profile_name]</code>（SSO や source_profile を含む）</li>
+      <li>コンテナクレデンシャル（ECS）/ EC2 IMDS / IRSA（EKS）など実行環境固有</li>
+    </ol>
+
+    <h3>認証情報ファイルの構造</h3>
+<pre><code># ~/.aws/credentials
+[default]
+aws_access_key_id     = AKIAxxxxxx
+aws_secret_access_key = xxxxxxxxxxxxxxxxxx
+
+[prod]
+aws_access_key_id     = AKIAyyyyyy
+aws_secret_access_key = yyyyyyyyyyyyyyyyyy
+
+# ~/.aws/config
+[default]
+region = ap-northeast-1
+output = json
+
+[profile prod]
+region = ap-northeast-1
+output = json
+
+[profile dev-sso]
+sso_session            = my-sso
+sso_account_id         = 123456789012
+sso_role_name          = AdministratorAccess
+region                 = ap-northeast-1
+
+[profile prod-assume]
+role_arn       = arn:aws:iam::222233334444:role/AdminAccess
+source_profile = default
+mfa_serial     = arn:aws:iam::111122223333:mfa/iigtn
+
+[sso-session my-sso]
+sso_start_url  = https://my-sso.awsapps.com/start
+sso_region     = ap-northeast-1
+sso_registration_scopes = sso:account:access</code></pre>
+    <div class="callout warn">
+      <strong>セキュリティ:</strong> <code>aws_access_key_id</code> / <code>aws_secret_access_key</code> をプレーンテキストで保存するのは
+      個人マシンだけにとどめ、CI ではすべて OIDC（短命の AssumeRole）に切り替えることを強く推奨。
+      <a href="/blog/12-github-oidc.html">GitHub Actions OIDC</a> の解説記事も合わせて。
+    </div>
+
+    <h3>環境変数で認証を上書き</h3>
+<pre><code>export AWS_PROFILE=prod
+aws sts get-caller-identity              # prod 扱いで実行
+
+export AWS_ACCESS_KEY_ID=AKIA...
+export AWS_SECRET_ACCESS_KEY=...
+export AWS_SESSION_TOKEN=...
+export AWS_REGION=ap-northeast-1
+aws s3 ls                                # 環境変数の認証で実行
+
+# 1 コマンドだけ別認証
+AWS_PROFILE=dev aws s3 ls
+
+# unset で初期化
+unset AWS_PROFILE AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_REGION</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-3">3. configure — プロファイル管理</h2>
+
+<pre><code># 対話で default プロファイル設定
+aws configure
+# AWS Access Key ID [None]: AKIA...
+# AWS Secret Access Key [None]: ...
+# Default region name [None]: ap-northeast-1
+# Default output format [None]: json
+
+# 名前付きプロファイル
+aws configure --profile dev
+aws configure --profile prod
+
+# 個別の値だけ設定
+aws configure set region ap-northeast-1 --profile prod
+aws configure set output json --profile prod
+aws configure set role_arn arn:aws:iam::xxx:role/Admin --profile cross
+aws configure set source_profile default --profile cross
+aws configure set mfa_serial arn:aws:iam::xxx:mfa/me --profile cross
+
+# 設定値の確認
+aws configure list                       # 現在のプロファイルの設定（マスク表示）
+aws configure list --profile prod
+aws configure list-profiles              # プロファイル名一覧
+aws configure get region --profile prod
+aws configure get role_arn --profile prod-assume
+
+# プロファイル削除（ファイルから手動 or sed で）
+sed -i '/^\[prod\]$/,/^\[/d' ~/.aws/credentials
+sed -i '/^\[profile prod\]$/,/^\[/d' ~/.aws/config</code></pre>
+    <div class="callout info">
+      <code>aws configure list</code> はキーを <code>****</code> でマスクして表示してくれるので、画面共有中の確認に安全。
+      ただしどのプロファイルに環境変数で上書きされているかも分かるので、原因切り分けの第一手として使うのが定番。
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-4">4. SSO (IAM Identity Center)</h2>
+
+    <p>AWS Organizations + IAM Identity Center（旧 AWS SSO）を使うアカウント運用は CLI v2 でフルサポート。
+    アクセスキーを完全に持たない運用に切り替えられます。</p>
+
+<pre><code># 対話で SSO プロファイル作成 (推奨)
+aws configure sso
+# SSO start URL [None]: https://my-sso.awsapps.com/start
+# SSO Region [None]: ap-northeast-1
+# (ブラウザが開いて承認)
+# その後アカウント・ロールを選択して名前を付ける
+
+# 既存 SSO セッションでログイン（トークン取得）
+aws sso login --profile dev-sso
+aws sso login --sso-session my-sso       # session 指定
+
+# トークン状況確認・ログアウト
+aws sso list-accounts --profile dev-sso
+aws sso list-account-roles --account-id 123456789012 --profile dev-sso
+aws sso logout                           # 全 SSO セッションのトークン削除
+
+# 実際の AWS API 呼出し
+aws s3 ls --profile dev-sso
+aws sts get-caller-identity --profile dev-sso</code></pre>
+
+    <h3>SSO トークンキャッシュの場所</h3>
+<pre><code>ls -la ~/.aws/sso/cache/                 # SSO アクセストークン
+ls -la ~/.aws/cli/cache/                 # AssumeRole / SSO セッショントークン
+# 期限切れトラブルの時、cache を消すと再発行される
+rm -rf ~/.aws/cli/cache/*</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-5">5. STS — 一時認証情報・AssumeRole・MFA</h2>
+
+    <h3>get-caller-identity — 「今、誰として動いてるか」</h3>
+<pre><code>aws sts get-caller-identity
+# Account / UserId / Arn が出力される。最初に必ず叩く。
+aws sts get-caller-identity --profile prod
+aws sts get-caller-identity --query 'Account' --output text     # アカウント ID だけ</code></pre>
+
+    <h3>assume-role — 別アカウント / 別 Role に切り替え</h3>
+<pre><code># 手動で assume role して環境変数にセット
+RESP=$(aws sts assume-role \
+  --role-arn arn:aws:iam::222233334444:role/AdminAccess \
+  --role-session-name my-session \
+  --duration-seconds 3600)
+
+export AWS_ACCESS_KEY_ID=$(echo "$RESP" | jq -r .Credentials.AccessKeyId)
+export AWS_SECRET_ACCESS_KEY=$(echo "$RESP" | jq -r .Credentials.SecretAccessKey)
+export AWS_SESSION_TOKEN=$(echo "$RESP" | jq -r .Credentials.SessionToken)
+
+aws sts get-caller-identity              # 切替後の確認
+
+# プロファイルベース（推奨）— ~/.aws/config に role_arn + source_profile 設定すれば
+aws s3 ls --profile prod-assume          # 自動で assume-role される</code></pre>
+
+    <h3>MFA を絡めた assume-role</h3>
+<pre><code># ~/.aws/config 側
+# [profile prod-mfa]
+# role_arn       = arn:aws:iam::222233334444:role/AdminAccess
+# source_profile = default
+# mfa_serial     = arn:aws:iam::111122223333:mfa/iigtn
+
+aws s3 ls --profile prod-mfa
+# Enter MFA code for arn:aws:iam::xxx:mfa/iigtn:  (6 桁)
+
+# 1 セッション内で複数コマンド叩くなら手動で:
+RESP=$(aws sts get-session-token \
+  --serial-number arn:aws:iam::xxx:mfa/iigtn \
+  --token-code 123456 \
+  --duration-seconds 28800)
+export AWS_ACCESS_KEY_ID=$(echo "$RESP" | jq -r .Credentials.AccessKeyId)
+export AWS_SECRET_ACCESS_KEY=$(echo "$RESP" | jq -r .Credentials.SecretAccessKey)
+export AWS_SESSION_TOKEN=$(echo "$RESP" | jq -r .Credentials.SessionToken)</code></pre>
+
+    <h3>OIDC で短命認証情報を取得 (CI 向け)</h3>
+<pre><code># GitHub Actions OIDC からの assume-role-with-web-identity
+# 通常は configure-aws-credentials アクションが裏で叩いてくれる
+aws sts assume-role-with-web-identity \
+  --role-arn arn:aws:iam::xxx:role/github-actions-deploy \
+  --role-session-name github-actions \
+  --web-identity-token "$OIDC_TOKEN" \
+  --duration-seconds 900</code></pre>
+
+    <h3>session 確認・破棄</h3>
+<pre><code>aws sts get-access-key-info --access-key-id AKIAxxxx     # キーがどのアカウント発行か
+aws sts decode-authorization-message --encoded-message ...  # 拒否レスポンスのデコード
+# 環境変数を全部消して default に戻す
+unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-6">6. 出力整形 (--query / --output)</h2>
+
+    <h3>--output の選択肢</h3>
+<pre><code>aws s3api list-buckets                              # デフォルト json
+aws s3api list-buckets --output yaml
+aws s3api list-buckets --output text
+aws s3api list-buckets --output table
+
+# テーブル表示は人間に優しいが、スクリプトでは text + --query が定番</code></pre>
+
+    <h3>--query (JMESPath) — 強力な抽出</h3>
+<pre><code># バケット名の配列だけ
+aws s3api list-buckets --query 'Buckets[].Name'
+
+# テキスト出力で 1 行 1 名前
+aws s3api list-buckets --query 'Buckets[].Name' --output text
+
+# 特定属性での絞り込み
+aws ec2 describe-instances \
+  --query 'Reservations[].Instances[?State.Name==`running`].[InstanceId,InstanceType]' \
+  --output table
+
+# Tag 名でフィルタ
+aws ec2 describe-instances \
+  --query 'Reservations[].Instances[?Tags[?Key==`Env`].Value | [0]==`prod`].InstanceId' \
+  --output text
+
+# 配列の長さ
+aws lambda list-functions --query 'length(Functions[])' --output text
+
+# JSON ネスト → フラット化
+aws iam list-policies \
+  --query 'Policies[*].{Name:PolicyName, Arn:Arn}' \
+  --output table</code></pre>
+    <div class="callout info">
+      JMESPath は jq とは別言語ですが、AWS CLI はネイティブサポート。
+      jq 中継が無い分高速。<a href="https://jmespath.org/">jmespath.org</a> に対話デバッガがあります。
+    </div>
+
+    <h3>jq との組み合わせ（より複雑な処理）</h3>
+<pre><code># JMESPath で取れない複雑処理は jq に投げる
+aws ec2 describe-instances \
+  | jq -r '.Reservations[].Instances[] | [.InstanceId, .InstanceType, (.Tags // [] | from_entries.Name)] | @tsv'
+
+# CSV 出力
+aws s3api list-buckets \
+  | jq -r '.Buckets[] | [.Name, .CreationDate] | @csv' \
+  &gt; buckets.csv</code></pre>
+
+    <h3>pager の制御</h3>
+<pre><code># デフォルトでは結果が less に流れる（v2）
+export AWS_PAGER=                        # ページャ無効
+aws s3 ls --no-cli-pager                 # 個別無効
+
+# あるいは ~/.aws/config に
+# [default]
+# cli_pager =</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-7">7. CI/CD・OIDC との連携</h2>
+
+    <h3>GitHub Actions OIDC（推奨）</h3>
+<pre><code># .github/workflows/deploy.yml
+permissions:
+  id-token: write       # OIDC token 取得に必須
+  contents: read
+
+steps:
+  - uses: aws-actions/configure-aws-credentials@v4
+    with:
+      role-to-assume: arn:aws:iam::123456789012:role/github-actions-deploy
+      aws-region: ap-northeast-1
+      role-session-name: github-actions-${{ github.run_id }}
+
+  - run: aws sts get-caller-identity</code></pre>
+
+    <h3>EC2 / ECS / EKS の自動認証</h3>
+    <ul>
+      <li><strong>EC2</strong>: Instance Profile を attach すれば <code>aws</code> コマンドはノー設定で動く（IMDSv2）。</li>
+      <li><strong>ECS Task</strong>: Task Role が credential URI 経由で渡される（<code>AWS_CONTAINER_CREDENTIALS_RELATIVE_URI</code>）。</li>
+      <li><strong>EKS Pod</strong>: IRSA（IAM Roles for Service Accounts）で OIDC + ServiceAccount から自動取得。</li>
+      <li><strong>Lambda</strong>: 関数の Execution Role が自動で適用。</li>
+    </ul>
+
+<pre><code># EC2 で IMDSv2 トークン取得
+TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" \
+  -H "X-aws-ec2-metadata-token-ttl-seconds: 21600" -s)
+curl -H "X-aws-ec2-metadata-token: $TOKEN" \
+  http://169.254.169.254/latest/meta-data/iam/info -s
+
+# 何のロールが入ってるか
+curl -H "X-aws-ec2-metadata-token: $TOKEN" \
+  http://169.254.169.254/latest/meta-data/iam/security-credentials/ -s</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-8">8. よくあるエラーと対処</h2>
+
+    <h3>Unable to locate credentials</h3>
+    <p>認証情報が見つからない。原因は次のいずれか。</p>
+    <ul>
+      <li><code>~/.aws/credentials</code> が存在しないか <code>[default]</code> も <code>--profile</code> も指定されてない</li>
+      <li>環境変数の <code>AWS_PROFILE</code> がタイポ / 存在しないプロファイル名</li>
+      <li>SSO トークンの期限切れ → <code>aws sso login</code> で再ログイン</li>
+    </ul>
+<pre><code>aws configure list                       # どこから取ろうとしているか確認
+aws configure list-profiles              # プロファイル一覧
+aws sts get-caller-identity --debug      # 詳細ログで原因特定</code></pre>
+
+    <h3>AccessDenied</h3>
+    <p>認証は通っているが、対象 IAM Role/User に必要な権限がない。</p>
+<pre><code># どのアクションが拒否されたかをログから抽出
+aws &lt;cmd&gt; --debug 2&gt;&amp;1 | grep -A5 'AccessDenied'
+
+# IAM Policy Simulator で予測
+aws iam simulate-principal-policy \
+  --policy-source-arn arn:aws:iam::xxx:user/iigtn \
+  --action-names s3:PutObject \
+  --resource-arns arn:aws:s3:::my-bucket/*</code></pre>
+
+    <h3>ExpiredToken</h3>
+<pre><code># 一時認証情報の有効期限切れ。SSO は再ログイン
+aws sso login --profile dev-sso
+# AssumeRole 系はキャッシュ削除
+rm -rf ~/.aws/cli/cache/*</code></pre>
+
+    <h3>ThrottlingException / RequestLimitExceeded</h3>
+    <p>API 制限。CLI は自動で exponential backoff で再試行する。多発するなら <code>--cli-read-timeout</code> 等を伸ばすか、
+    並列実行を抑える。</p>
+<pre><code>export AWS_RETRY_MODE=adaptive       # adaptive 再試行
+export AWS_MAX_ATTEMPTS=10           # 最大試行回数</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="cookbook">よく使うレシピ</h2>
+
+    <h3>レシピ 1 — 「今、自分はどのアカウントの何の Role か」</h3>
+<pre><code>aws sts get-caller-identity --output table
+# プロファイル名は環境変数 AWS_PROFILE / コマンドラインオプションで決まる</code></pre>
+
+    <h3>レシピ 2 — 全リージョン横断でリソース確認</h3>
+<pre><code>for r in $(aws ec2 describe-regions --query 'Regions[].RegionName' --output text); do
+  count=$(aws ec2 describe-instances --region $r --query 'length(Reservations[].Instances[])' --output text)
+  echo "$r  instances=$count"
+done</code></pre>
+
+    <h3>レシピ 3 — マルチアカウント間で同じ操作</h3>
+<pre><code>for p in dev stg prod; do
+  echo "=== $p ==="
+  aws sts get-caller-identity --profile $p --output text
+  aws s3 ls --profile $p
+done</code></pre>
+
+    <h3>レシピ 4 — 巨大リストを paginate で全件取得</h3>
+<pre><code># デフォルトでも paginate される（CLI v2）が、明示的に
+aws s3api list-objects-v2 --bucket big-bucket --max-items 100000 \
+  --query 'Contents[].Key' --output text | tr '\t' '\n' | wc -l
+
+# あるいは jq で連結
+aws ec2 describe-images --owners self \
+  --query 'Images[].[ImageId,Name,CreationDate]' --output text \
+  | sort -k3</code></pre>
+
+    <h3>レシピ 5 — 短命 SSO セッションを CI/手元で使い分け</h3>
+<pre><code># ~/.aws/config
+# [profile dev-sso]
+# sso_session = my-sso
+# ...
+#
+# [sso-session my-sso]
+# sso_start_url = https://my-sso.awsapps.com/start
+# sso_region    = ap-northeast-1
+# sso_registration_scopes = sso:account:access
+
+aws sso login --sso-session my-sso       # 全 SSO プロファイルで使えるトークン取得
+AWS_PROFILE=dev-sso aws s3 ls
+AWS_PROFILE=prod-sso aws s3 ls</code></pre>
+
+    <!-- ========================================================== -->
+    <h2>コマンド早見表</h2>
+<pre><code># 認証確認
+aws sts get-caller-identity
+aws configure list
+aws configure list-profiles
+
+# プロファイル設定
+aws configure --profile prod
+aws configure set region ap-northeast-1 --profile prod
+
+# SSO
+aws configure sso
+aws sso login --profile dev-sso
+aws sso logout
+
+# AssumeRole
+aws sts assume-role --role-arn arn:... --role-session-name s
+# あるいは config に role_arn + source_profile を書いて --profile で透過利用
+
+# 出力整形
+aws s3api list-buckets --query 'Buckets[].Name' --output text
+
+# CI トラブル
+aws sts get-caller-identity --debug 2&gt;&amp;1 | head -50
+rm -rf ~/.aws/cli/cache/*
+
+# OIDC リフレッシュ
+aws sts assume-role-with-web-identity --role-arn ... --web-identity-token "$T"</code></pre>
+
+    <!-- ========================================================== -->
+    <section class="post-glossary" id="glossary">
+      <h2>用語集</h2>
+      <dl>
+        <dt>AWS CLI v1 / v2</dt>
+        <dd>v1 (Python) は EOL。v2 はネイティブ実行ファイル化、SSO ネイティブサポート、ページャがデフォルト有効など多数改善。実用は v2 一択。</dd>
+
+        <dt>~/.aws/credentials</dt>
+        <dd>長期アクセスキーの保存場所。プロファイル名を <code>[name]</code> で書く。</dd>
+
+        <dt>~/.aws/config</dt>
+        <dd>region / output / SSO 設定 / role_arn / source_profile 等を保存。プロファイル名は <code>[profile name]</code> 形式（default を除く）。</dd>
+
+        <dt>プロファイル</dt>
+        <dd>名前付きの認証セット。<code>--profile</code> または <code>AWS_PROFILE</code> で選択。マルチアカウント運用には必須。</dd>
+
+        <dt>IAM Identity Center (旧 AWS SSO)</dt>
+        <dd>AWS Organizations 配下のアカウント間で統一ログインできる Single Sign-On 機能。CLI v2 の <code>aws configure sso</code> でネイティブ対応。</dd>
+
+        <dt>STS (Security Token Service)</dt>
+        <dd>一時認証情報を発行する AWS のサービス。<code>assume-role</code>, <code>assume-role-with-web-identity</code>, <code>get-session-token</code> 等のエンドポイント。</dd>
+
+        <dt>AssumeRole</dt>
+        <dd>別アカウントや別 Role の権限を一時的に借りる仕組み。返却された <code>AccessKeyId/SecretAccessKey/SessionToken</code> を使って API 呼び出し。</dd>
+
+        <dt>OIDC (OpenID Connect)</dt>
+        <dd>外部 ID プロバイダ (GitHub Actions, GitLab 等) が発行する JWT を AWS に提示して短命認証情報を得る仕組み。長期アクセスキーを使わない CI/CD の鍵技術。</dd>
+
+        <dt>MFA (Multi-Factor Authentication)</dt>
+        <dd>パスワード以外に 2 つめの要素（TOTP コード等）で認証強化。AssumeRole 時に <code>mfa_serial</code> + 6 桁コードで利用。</dd>
+
+        <dt>JMESPath</dt>
+        <dd>JSON クエリ言語。AWS CLI の <code>--query</code> で内蔵採用。<code>Reservations[].Instances[?State.Name==`running`].InstanceId</code> のような書き方ができる。</dd>
+
+        <dt>IMDSv2</dt>
+        <dd>EC2 のインスタンスメタデータサービス v2。トークンベースで SSRF 攻撃に強い。Instance Profile による自動認証に使われる。</dd>
+
+        <dt>IRSA (IAM Roles for Service Accounts)</dt>
+        <dd>EKS Pod が ServiceAccount + OIDC 経由で IAM Role を引き受ける仕組み。Pod 単位の最小権限を実現。</dd>
+
+        <dt>Instance Profile / Task Role / Execution Role</dt>
+        <dd>EC2 / ECS Task / Lambda がそれぞれ自動で引き受ける IAM Role の名称。コードに認証情報を書かずに済む。</dd>
+
+        <dt>Adaptive retry</dt>
+        <dd>API のレート制限に対して、CLI/SDK が自動でバックオフ + ジッターしながら再試行する機能。<code>AWS_RETRY_MODE=adaptive</code> で有効化。</dd>
+
+        <dt>--generate-cli-skeleton / --cli-input-json</dt>
+        <dd>引数の雛形 JSON を出力 → 編集 → <code>--cli-input-json file://x</code> で投入。複雑なコマンドの入力管理に最適。</dd>
+
+        <dt>cli_pager / AWS_PAGER</dt>
+        <dd>CLI v2 のデフォルト ページャ設定。スクリプトでは無効化推奨。</dd>
+      </dl>
+    </section>
+
+    <footer class="post-footer">
+      <a href="/blog/ref/10-gh-cli.html">← #ref-10 GitHub CLI</a>
+      <a href="/blog/ref/">シリーズ目次</a>
+    </footer>
+
+  </div>
+</article>
+
+</body>
+</html>

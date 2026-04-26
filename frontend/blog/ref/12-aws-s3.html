@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#ref-12 AWS S3 コマンド徹底解説 | 現場コマンドリファレンス | iigtn</title>
+<meta name="description" content="aws s3 cp / sync / ls / rm / mv と aws s3api put-object / get-object / list-objects-v2 / head-object / put-bucket-policy など、AWS S3 関連 50+ コマンドを 7 カテゴリで深掘り解説。静的サイト・データ転送・バックアップに。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/ref/12-aws-s3.html">
+<meta property="og:title" content="#ref-12 AWS S3 コマンド徹底解説">
+<meta property="og:description" content="aws s3 / s3api 50+ コマンドを 7 カテゴリで深掘り。静的サイト・データ転送・バックアップに。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/ref/12-aws-s3.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="#ref-12 AWS S3 コマンド徹底解説">
+<meta name="twitter:description" content="aws s3 / s3api 50+ コマンドを 7 カテゴリで深掘り。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="stylesheet" href="/blog/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "#ref-12 AWS S3 コマンド徹底解説",
+  "description": "aws s3 / s3api 50+ コマンドを 7 カテゴリで深掘り。",
+  "datePublished": "2026-04-26",
+  "author": { "@type": "Person", "name": "iigtn", "url": "https://lab.iigtn.com/" },
+  "publisher": { "@type": "Person", "name": "iigtn" },
+  "url": "https://lab.iigtn.com/blog/ref/12-aws-s3.html",
+  "mainEntityOfPage": "https://lab.iigtn.com/blog/ref/12-aws-s3.html",
+  "image": "https://lab.iigtn.com/assets/icon.svg",
+  "inLanguage": "ja",
+  "isPartOf": { "@id": "https://lab.iigtn.com/blog/ref/#blog" }
+}
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="/" class="logo" aria-label="iigtn">
+      <img src="/assets/logo.svg" alt="iigtn" height="32">
+    </a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/" class="active">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+      <li><a href="/learn.html">解説書</a></li>
+    </ul>
+  </nav>
+</header>
+
+<article class="post">
+
+  <header class="post-header">
+    <p class="post-meta">2026-04-26 · 現場コマンドリファレンス · #ref-12</p>
+    <h1>AWS S3 コマンド徹底解説 — 50+ コマンドを 7 カテゴリで</h1>
+  </header>
+
+  <div class="post-body">
+
+    <p>
+      AWS S3 は静的サイト配信、ログ保管、Terraform state、バックアップ、データレイクまで広く使われる中核ストレージ。
+      CLI には高水準の <code>aws s3</code> と低水準の <code>aws s3api</code> があり、状況により使い分けます。
+      本記事は両方をカバーして 50+ コマンドを整理。
+    </p>
+
+    <div class="callout info">
+      <strong>使い分け:</strong>
+      <ul style="margin: 0.4rem 0 0;">
+        <li><code>aws s3</code> = ファイル操作・同期に最適化。<code>cp</code>/<code>sync</code>/<code>ls</code>/<code>rm</code>。</li>
+        <li><code>aws s3api</code> = 1 オブジェクト単位 / バケット設定。<code>put-object</code>/<code>head-object</code>/<code>put-bucket-policy</code>。</li>
+      </ul>
+    </div>
+
+    <h2>目次</h2>
+    <ol>
+      <li><a href="#sec-1">バケット操作 (mb / rb / ls / list-buckets)</a></li>
+      <li><a href="#sec-2">ファイル操作 (cp / mv / rm / sync)</a></li>
+      <li><a href="#sec-3">オブジェクト詳細 (s3api put-object / get-object / head-object)</a></li>
+      <li><a href="#sec-4">バケット設定 (policy / public access / encryption / versioning / lifecycle)</a></li>
+      <li><a href="#sec-5">presigned URL / マルチパートアップロード</a></li>
+      <li><a href="#sec-6">レプリケーション・ストレージクラス</a></li>
+      <li><a href="#sec-7">静的サイト・CloudFront 連携</a></li>
+      <li><a href="#cookbook">運用レシピ</a></li>
+      <li><a href="#glossary">用語集</a></li>
+    </ol>
+
+    <h2 id="sec-1">1. バケット操作</h2>
+
+<pre><code># バケット一覧
+aws s3 ls
+aws s3api list-buckets --query 'Buckets[].Name' --output text
+
+# 作成
+aws s3 mb s3://my-bucket --region ap-northeast-1
+aws s3api create-bucket --bucket my-bucket --region ap-northeast-1 \
+  --create-bucket-configuration LocationConstraint=ap-northeast-1
+
+# 削除（空であること必須、強制は --force）
+aws s3 rb s3://my-bucket
+aws s3 rb s3://my-bucket --force                       # 中身ごと削除（注意）
+
+# バケット存在確認
+aws s3api head-bucket --bucket my-bucket               # 200 = 存在 + 権限あり
+
+# リージョン確認
+aws s3api get-bucket-location --bucket my-bucket</code></pre>
+
+    <div class="callout warn">
+      バケット名は <strong>AWS 全体でグローバル一意</strong>。被ると "BucketAlreadyExists"。命名は <code>company-purpose-env-account-id</code> のようにアカウント ID を入れる派が多い。
+    </div>
+
+    <h2 id="sec-2">2. ファイル操作 (cp / mv / rm / sync)</h2>
+
+<pre><code># コピー（ローカル ↔ S3）
+aws s3 cp file.txt s3://bucket/path/
+aws s3 cp s3://bucket/path/file.txt ./
+aws s3 cp s3://src-bucket/file.txt s3://dst-bucket/file.txt   # S3 → S3
+
+# 再帰
+aws s3 cp ./dir/ s3://bucket/path/ --recursive
+
+# 一覧
+aws s3 ls s3://bucket/path/                    # 1 階層
+aws s3 ls s3://bucket/ --recursive             # 全配下
+aws s3 ls s3://bucket/ --recursive --human-readable --summarize  # サイズ集計
+
+# 移動
+aws s3 mv s3://bucket/old.txt s3://bucket/new.txt
+
+# 削除
+aws s3 rm s3://bucket/file.txt
+aws s3 rm s3://bucket/path/ --recursive
+aws s3 rm s3://bucket/path/ --recursive --exclude '*' --include '*.log'
+
+# 同期 (差分のみ転送)
+aws s3 sync ./dist/ s3://web-bucket/                  # ローカル → S3
+aws s3 sync s3://web-bucket/ ./local/                 # S3 → ローカル
+aws s3 sync ./dist/ s3://web-bucket/ --delete         # ターゲット側の余分を消す（完全ミラー）
+aws s3 sync ./ s3://bucket/ --exclude '*' --include '*.html'
+aws s3 sync ./ s3://bucket/ --dryrun                  # 確認のみ
+aws s3 sync ./ s3://bucket/ --acl public-read         # ACL 指定
+aws s3 sync ./ s3://bucket/ --cache-control 'max-age=3600' --content-type 'text/html'</code></pre>
+
+    <h3>転送オプション</h3>
+<pre><code># 転送並列数 (デフォルト 10)
+aws configure set default.s3.max_concurrent_requests 50
+aws configure set default.s3.multipart_chunksize 64MB
+aws configure set default.s3.multipart_threshold 64MB
+
+# 中断後のレジューム ─ aws s3 cp/sync は基本対応している（マルチパート）
+
+# 帯域制限なし。本番中の運用で遅延が問題なら並列数を絞るかアプリ側でジョブ調整</code></pre>
+
+    <h2 id="sec-3">3. オブジェクト詳細 (s3api)</h2>
+
+<pre><code># メタ情報取得（HEAD 相当）
+aws s3api head-object --bucket b --key path/file.txt
+
+# get-object はファイル出力先を引数で渡す（v2 仕様）
+aws s3api get-object --bucket b --key path/file.txt /tmp/out.txt
+
+# put-object（メタ・ストレージクラス指定可）
+aws s3api put-object --bucket b --key index.html \
+  --body index.html \
+  --content-type 'text/html; charset=utf-8' \
+  --cache-control 'no-cache' \
+  --metadata environment=prod \
+  --storage-class INTELLIGENT_TIERING
+
+# delete-object / delete-objects (一括)
+aws s3api delete-object --bucket b --key path/file.txt
+aws s3api delete-objects --bucket b --delete '{
+  "Objects":[{"Key":"a.txt"},{"Key":"b.txt"}]
+}'
+
+# list-objects-v2（pagination 対応）
+aws s3api list-objects-v2 --bucket b --prefix logs/ \
+  --query 'Contents[?Size&gt;`1048576`].[Key,Size]' --output table
+
+# 全件カウント（ETag 取得用）
+aws s3api list-objects-v2 --bucket b --output json --query 'length(Contents)'
+
+# バージョン一覧（versioning 有効時）
+aws s3api list-object-versions --bucket b --prefix path/file.txt</code></pre>
+
+    <h2 id="sec-4">4. バケット設定</h2>
+
+    <h3>Public Access Block（公開ブロック）</h3>
+<pre><code># 公開を構造的にブロック（推奨デフォルト）
+aws s3api put-public-access-block --bucket b --public-access-block-configuration '{
+  "BlockPublicAcls": true,
+  "IgnorePublicAcls": true,
+  "BlockPublicPolicy": true,
+  "RestrictPublicBuckets": true
+}'
+
+aws s3api get-public-access-block --bucket b</code></pre>
+
+    <h3>Bucket Policy</h3>
+<pre><code># 取得
+aws s3api get-bucket-policy --bucket b --query Policy --output text | jq
+
+# 設定
+aws s3api put-bucket-policy --bucket b --policy file://policy.json
+
+# 削除
+aws s3api delete-bucket-policy --bucket b</code></pre>
+
+    <h3>Server-Side Encryption</h3>
+<pre><code># SSE-S3 (AES256) - AWS 管理キー
+aws s3api put-bucket-encryption --bucket b --server-side-encryption-configuration '{
+  "Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]
+}'
+
+# SSE-KMS - 顧客管理キー
+aws s3api put-bucket-encryption --bucket b --server-side-encryption-configuration '{
+  "Rules":[{"ApplyServerSideEncryptionByDefault":{
+    "SSEAlgorithm":"aws:kms",
+    "KMSMasterKeyID":"arn:aws:kms:ap-northeast-1:xxx:key/xxx"
+  }}]
+}'
+
+aws s3api get-bucket-encryption --bucket b</code></pre>
+
+    <h3>Versioning</h3>
+<pre><code>aws s3api put-bucket-versioning --bucket b \
+  --versioning-configuration Status=Enabled
+
+aws s3api get-bucket-versioning --bucket b</code></pre>
+
+    <h3>Lifecycle (古いオブジェクトを削除 / Glacier 移行)</h3>
+<pre><code>aws s3api put-bucket-lifecycle-configuration --bucket b --lifecycle-configuration '{
+  "Rules":[
+    {
+      "ID":"expire-old-logs",
+      "Status":"Enabled",
+      "Filter":{"Prefix":"logs/"},
+      "Expiration":{"Days":90}
+    },
+    {
+      "ID":"to-glacier",
+      "Status":"Enabled",
+      "Filter":{"Prefix":"archive/"},
+      "Transitions":[{"Days":30,"StorageClass":"GLACIER"}]
+    }
+  ]
+}'</code></pre>
+
+    <h3>CORS</h3>
+<pre><code>aws s3api put-bucket-cors --bucket b --cors-configuration '{
+  "CORSRules":[{
+    "AllowedOrigins":["https://lab.iigtn.com"],
+    "AllowedMethods":["GET","HEAD"],
+    "AllowedHeaders":["*"],
+    "MaxAgeSeconds":3000
+  }]
+}'</code></pre>
+
+    <h3>タグ・ロギング</h3>
+<pre><code>aws s3api put-bucket-tagging --bucket b --tagging '{
+  "TagSet":[{"Key":"Env","Value":"prod"},{"Key":"App","Value":"iigtn-lab"}]
+}'
+
+aws s3api put-bucket-logging --bucket b --bucket-logging-status '{
+  "LoggingEnabled":{
+    "TargetBucket":"my-log-bucket",
+    "TargetPrefix":"access-logs/"
+  }
+}'</code></pre>
+
+    <h2 id="sec-5">5. presigned URL / マルチパートアップロード</h2>
+
+    <h3>presigned URL</h3>
+<pre><code># GET (15 分有効)
+aws s3 presign s3://b/path/file.txt --expires-in 900
+
+# PUT 用は s3api で（より細かく）
+aws s3api generate-presigned-url \
+  --bucket b --key uploads/file.txt --expires-in 900 \
+  --client-method put_object</code></pre>
+
+    <h3>マルチパートアップロード（手動）</h3>
+<pre><code># 通常は s3 cp / sync が透過的に処理。手動で叩くシーン:
+# 1) マルチパート開始
+aws s3api create-multipart-upload --bucket b --key big.bin
+# 2) パート アップロード（PartNumber 1 〜）
+aws s3api upload-part --bucket b --key big.bin --upload-id ID \
+  --part-number 1 --body part1.bin
+# 3) 完了通知
+aws s3api complete-multipart-upload --bucket b --key big.bin \
+  --upload-id ID --multipart-upload file://parts.json
+
+# 中断したアップロードのクリーン
+aws s3api list-multipart-uploads --bucket b
+aws s3api abort-multipart-upload --bucket b --key K --upload-id ID</code></pre>
+
+    <h2 id="sec-6">6. レプリケーション・ストレージクラス</h2>
+
+<pre><code># Replication 設定（クロスリージョン）
+aws s3api put-bucket-replication --bucket src --replication-configuration file://repl.json
+
+# ストレージクラス変更（既存オブジェクト）
+aws s3 cp s3://b/path/file s3://b/path/file --storage-class GLACIER --metadata-directive COPY
+
+# Storage Classes (主要)
+# STANDARD / STANDARD_IA / ONEZONE_IA / INTELLIGENT_TIERING /
+# GLACIER_IR (Instant Retrieval) / GLACIER (Flexible) / DEEP_ARCHIVE</code></pre>
+
+    <h2 id="sec-7">7. 静的サイト・CloudFront 連携</h2>
+
+<pre><code># 静的 Web ホスティング有効化（OAC + CloudFront 構成では使わない）
+aws s3 website s3://my-bucket/ --index-document index.html --error-document 404.html
+
+# OAC + CloudFront のキャッシュクリア（CloudFront 側）
+aws cloudfront create-invalidation --distribution-id E2NCZxxx --paths '/*'
+
+# デプロイの定番パターン
+aws s3 sync ./dist/ s3://web-bucket/ --delete \
+  --cache-control 'public, max-age=3600' \
+  --exclude '*.html' \
+  &amp;&amp; aws s3 sync ./dist/ s3://web-bucket/ \
+        --cache-control 'no-cache' \
+        --exclude '*' --include '*.html' \
+  &amp;&amp; aws cloudfront create-invalidation --distribution-id E2NCZxxx --paths '/*'</code></pre>
+
+    <h2 id="cookbook">運用レシピ</h2>
+
+    <h3>レシピ 1 — バケットの総容量 / オブジェクト数</h3>
+<pre><code>aws s3 ls s3://b --recursive --human-readable --summarize | tail -n 3
+# あるいは CloudWatch
+aws cloudwatch get-metric-statistics \
+  --namespace AWS/S3 --metric-name BucketSizeBytes \
+  --dimensions Name=BucketName,Value=b Name=StorageType,Value=StandardStorage \
+  --start-time 2026-04-25T00:00:00Z --end-time 2026-04-26T00:00:00Z \
+  --period 86400 --statistics Average</code></pre>
+
+    <h3>レシピ 2 — 大量オブジェクトを一括削除</h3>
+<pre><code># 全削除
+aws s3 rm s3://b --recursive
+
+# prefix 指定
+aws s3 rm s3://b/logs/ --recursive
+
+# バージョニング有効バケットは古いバージョンも削除しないと容量残る
+# Lifecycle で NoncurrentVersionExpiration をかけるか、手動 list-object-versions + delete-objects</code></pre>
+
+    <h3>レシピ 3 — 別アカウントの S3 へクロス AssumeRole コピー</h3>
+<pre><code># Profile を 2 つ用意して直接 cp
+aws s3 cp s3://src-bucket/file.txt s3://dst-bucket/file.txt --profile cross-acct
+# 受け側 Bucket Policy で書込み権限が必要</code></pre>
+
+    <h3>レシピ 4 — オブジェクトのアクセスログを集計</h3>
+<pre><code># 別バケットに access logs を貯めて、Athena で SQL クエリ
+# あるいは ローカルに落として grep + awk
+aws s3 sync s3://my-log-bucket/access-logs/2026-04-26/ ./logs/
+zcat ./logs/*.gz | awk '{ print $11 }' | sort | uniq -c | sort -rn | head</code></pre>
+
+    <h3>レシピ 5 — Terraform state バケットの安全設定</h3>
+<pre><code># 必ずやる 4 点
+# 1) Public Access Block 全 true
+# 2) Versioning Enabled
+# 3) SSE-S3 or SSE-KMS
+# 4) Bucket Policy で TLS 必須
+aws s3api put-bucket-policy --bucket tfstate-b --policy '{
+  "Version":"2012-10-17",
+  "Statement":[{
+    "Effect":"Deny",
+    "Principal":"*",
+    "Action":"s3:*",
+    "Resource":["arn:aws:s3:::tfstate-b","arn:aws:s3:::tfstate-b/*"],
+    "Condition":{"Bool":{"aws:SecureTransport":"false"}}
+  }]
+}'</code></pre>
+
+    <h2>コマンド早見表</h2>
+<pre><code># 一覧
+aws s3 ls / aws s3 ls s3://b --recursive --summarize
+
+# コピー
+aws s3 cp src dst (--recursive) (--storage-class GLACIER)
+aws s3 sync src dst (--delete) (--exclude '*' --include '*.html')
+
+# オブジェクト
+aws s3api head-object --bucket b --key K
+aws s3api put-object --bucket b --key K --body file --cache-control '...'
+
+# バケット安全設定
+aws s3api put-public-access-block --bucket b ...
+aws s3api put-bucket-versioning --bucket b --versioning-configuration Status=Enabled
+aws s3api put-bucket-encryption --bucket b ...
+
+# CloudFront
+aws cloudfront create-invalidation --distribution-id ID --paths '/*'
+
+# presigned URL
+aws s3 presign s3://b/K --expires-in 900</code></pre>
+
+    <section class="post-glossary" id="glossary">
+      <h2>用語集</h2>
+      <dl>
+        <dt>aws s3 vs aws s3api</dt>
+        <dd>s3 = 高水準（cp/sync/ls/rm、ファイル単位の楽な操作）。s3api = 低水準（1 オブジェクト単位、バケット設定の細かいパラメータ）。</dd>
+
+        <dt>Bucket Policy</dt>
+        <dd>バケット全体に対するリソースベースのアクセス許可定義。Principal / Action / Resource / Condition を JSON で書く。</dd>
+
+        <dt>Public Access Block</dt>
+        <dd>バケット単位 / アカウント単位で「公開設定そのものを構造的に禁止」する 4 つのスイッチ。誤公開事故防止の鉄則。</dd>
+
+        <dt>SSE-S3 / SSE-KMS</dt>
+        <dd>サーバ側暗号化。SSE-S3 は AWS 管理キー (AES256)、SSE-KMS は KMS の顧客管理キーを使う。法定要件があれば KMS。</dd>
+
+        <dt>Versioning</dt>
+        <dd>同じキーへの上書き / 削除でも旧バージョンが残る機能。誤削除復旧、Terraform state 保護に必須。</dd>
+
+        <dt>Lifecycle Rule</dt>
+        <dd>オブジェクトを「N 日後に削除」「N 日後に Glacier へ移行」と自動ルール化する機能。コスト最適化の基本。</dd>
+
+        <dt>presigned URL</dt>
+        <dd>「この URL を持っている人だけ一時的に GET/PUT できる」短命 URL。アップロードフォームやダウンロード提供で頻出。</dd>
+
+        <dt>マルチパートアップロード</dt>
+        <dd>大容量ファイルを複数パートに分けて並列アップロードする S3 機能。<code>aws s3 cp</code> がデフォルトで 8MB チャンクで自動利用。</dd>
+
+        <dt>Storage Classes</dt>
+        <dd>STANDARD / IA / Intelligent-Tiering / Glacier IR / Glacier / Deep Archive。アクセス頻度とコスト・取り出しレイテンシのトレードオフ。</dd>
+
+        <dt>OAC (Origin Access Control)</dt>
+        <dd>CloudFront からだけ S3 を読めるようにする仕組み。OAI の後継、KMS バケットや S3 以外の origin にも対応。</dd>
+
+        <dt>CloudFront Invalidation</dt>
+        <dd>CloudFront のキャッシュを強制失効させる操作。デプロイ後に <code>/*</code> で全パージするのが定番。</dd>
+
+        <dt>aws:SecureTransport (Bucket Policy)</dt>
+        <dd>Condition で「TLS 通信のみ許可」する条件キー。state バケット等で必須化推奨。</dd>
+
+        <dt>Replication (CRR/SRR)</dt>
+        <dd>Cross/Same Region Replication。バックアップ・DR・地域別配信の基盤。</dd>
+
+        <dt>list-objects-v2</dt>
+        <dd>v1 の改良版（推奨）。pagination 対応、ContinuationToken 経由で大量オブジェクト取得。</dd>
+
+        <dt>head-object / head-bucket</dt>
+        <dd>HEAD リクエスト相当。メタデータ・存在確認のみで本体ダウンロードしない軽量な確認手段。</dd>
+      </dl>
+    </section>
+
+    <footer class="post-footer">
+      <a href="/blog/ref/11-aws-cli-basics.html">← #ref-11 AWS CLI 基本</a>
+      <a href="/blog/ref/">シリーズ目次</a>
+    </footer>
+
+  </div>
+</article>
+
+</body>
+</html>

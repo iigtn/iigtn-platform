@@ -22,7 +22,6 @@
 <link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
 <link rel="stylesheet" href="/blog/style.css">
 <style>
-  /* シリーズインデックス用の追加スタイル */
   .ref-tier {
     margin: 2.5rem 0 1rem;
     padding-bottom: 0.4rem;
@@ -34,25 +33,6 @@
     color: var(--c-muted);
     font-size: 0.88rem;
     margin: 0 0 1rem;
-  }
-  .post-list-index .coming-soon {
-    color: var(--c-muted);
-    font-style: italic;
-  }
-  .post-list-index .coming-soon::after {
-    content: ' （準備中）';
-    font-size: 0.78rem;
-    background: #f3f3f3;
-    color: var(--c-muted);
-    padding: 1px 6px;
-    border-radius: 3px;
-    margin-left: 0.4rem;
-    font-style: normal;
-    letter-spacing: 0;
-  }
-  .post-list-index li:has(.coming-soon) {
-    border-style: dashed;
-    background: #fafafa;
   }
   .ref-cmd-count {
     background: var(--c-accent-light);
@@ -100,7 +80,7 @@
   <h1>現場コマンドリファレンス</h1>
   <p class="lead">
     フリーランス・インフラエンジニアが現場で日常的に使うコマンドを <strong>サービス別 1 記事</strong> で深掘りするリファレンス・シリーズ。
-    全 19 記事・800+ コマンド予定。各コマンドに <em>説明 / 主要オプション / 使用例 / 落とし穴</em> を併記、末尾に用語集付き。
+    全 19 記事・800+ コマンド完結。各コマンドに <em>説明 / 主要オプション / 使用例 / 落とし穴</em> を併記、末尾に用語集付き。
   </p>
   <p style="font-size: 0.88rem; color: var(--c-muted); margin: 0 0 1rem;">
     ↩ <a href="/blog/">構築日誌シリーズはこちら</a>
@@ -109,26 +89,26 @@
   <h2 class="ref-tier">Tier 1 / OS・基盤（6 記事）</h2>
   <p class="ref-tier-desc">Linux / ネットワーク / SSH — 案件種別を問わず必ず使う土台。</p>
   <ol class="post-list-index" start="1">
-    <li><a href="/blog/ref/01-linux-files.html"><span class="post-num">#ref-01</span>Linux ファイル操作徹底解説<span class="ref-cmd-count">60+</span></a>
+    <li><a href="/blog/ref/01-linux-files.html"><span class="post-num">#ref-01</span>Linux ファイル操作徹底解説<span class="ref-cmd-count">70+</span></a>
       <span class="post-summary">ls / cp / mv / rm / find / tar / chmod / chown / ln / stat / du / df ほか</span></li>
     <li><a href="/blog/ref/02-text-processing.html"><span class="post-num">#ref-02</span>テキスト処理コマンド完全ガイド<span class="ref-cmd-count">50+</span></a>
       <span class="post-summary">grep / sed / awk / cut / sort / uniq / tr / head / tail / wc / paste / join / diff / comm</span></li>
     <li><a href="/blog/ref/03-network.html"><span class="post-num">#ref-03</span>ネットワーク診断コマンド集<span class="ref-cmd-count">50+</span></a>
       <span class="post-summary">curl / wget / dig / nslookup / host / ss / netstat / tcpdump / traceroute / ping / mtr / nc / openssl</span></li>
-    <li><span class="coming-soon"><span class="post-num">#ref-04</span>プロセス・リソース監視<span class="ref-cmd-count">40+</span></span>
+    <li><a href="/blog/ref/04-process-resource.html"><span class="post-num">#ref-04</span>プロセス・リソース監視<span class="ref-cmd-count">50+</span></a>
       <span class="post-summary">ps / top / htop / kill / pkill / pgrep / lsof / strace / vmstat / iostat / free / uptime</span></li>
-    <li><span class="coming-soon"><span class="post-num">#ref-05</span>systemd と journalctl 運用<span class="ref-cmd-count">30+</span></span>
-      <span class="post-summary">systemctl / journalctl / loginctl / systemd-analyze / systemd-cgls</span></li>
-    <li><span class="coming-soon"><span class="post-num">#ref-06</span>SSH と鍵管理・rsync<span class="ref-cmd-count">35+</span></span>
-      <span class="post-summary">ssh / scp / rsync / ssh-keygen / ssh-agent / ssh-add / sshfs と ~/.ssh/config</span></li>
+    <li><a href="/blog/ref/05-systemd.html"><span class="post-num">#ref-05</span>systemd と journalctl 運用<span class="ref-cmd-count">40+</span></a>
+      <span class="post-summary">systemctl / journalctl / loginctl / systemd-analyze / timer</span></li>
+    <li><a href="/blog/ref/06-ssh-rsync.html"><span class="post-num">#ref-06</span>SSH と鍵管理・rsync<span class="ref-cmd-count">40+</span></a>
+      <span class="post-summary">ssh / scp / rsync / ssh-keygen / ssh-agent / sshfs と ~/.ssh/config + ProxyJump</span></li>
   </ol>
 
   <h2 class="ref-tier">Tier 2 / データ処理（2 記事）</h2>
   <p class="ref-tier-desc">AWS CLI / kubectl の出力を扱うのに必須の JSON / YAML 処理。</p>
   <ol class="post-list-index" start="7">
-    <li><span class="coming-soon"><span class="post-num">#ref-07</span>jq 完全ガイド — AWS CLI 出力を自在に扱う<span class="ref-cmd-count">50+</span></span>
+    <li><a href="/blog/ref/07-jq.html"><span class="post-num">#ref-07</span>jq 完全ガイド — AWS CLI 出力を自在に扱う<span class="ref-cmd-count">50+</span></a>
       <span class="post-summary">フィルタ / select / map / group_by / reduce / to_entries / 配列・オブジェクト操作</span></li>
-    <li><span class="coming-soon"><span class="post-num">#ref-08</span>yq で YAML を扱う — k8s / GitHub Actions 用<span class="ref-cmd-count">30+</span></span>
+    <li><a href="/blog/ref/08-yq.html"><span class="post-num">#ref-08</span>yq で YAML を扱う — k8s / GitHub Actions 用<span class="ref-cmd-count">30+</span></a>
       <span class="post-summary">yq の jq モード / 直接編集モード / multi-document / k8s manifest 操作例</span></li>
   </ol>
 
@@ -144,34 +124,34 @@
   <h2 class="ref-tier">Tier 4 / AWS CLI（6 記事）</h2>
   <p class="ref-tier-desc">サービス別に深掘り。Lambda 案件・運用案件で頻出のものから。</p>
   <ol class="post-list-index" start="11">
-    <li><span class="coming-soon"><span class="post-num">#ref-11</span>AWS CLI 基本構文・認証・プロファイル<span class="ref-cmd-count">30+</span></span>
+    <li><a href="/blog/ref/11-aws-cli-basics.html"><span class="post-num">#ref-11</span>AWS CLI 基本構文・認証・プロファイル<span class="ref-cmd-count">50+</span></a>
       <span class="post-summary">configure / sso / sts / --query / --output / --profile / MFA</span></li>
-    <li><span class="coming-soon"><span class="post-num">#ref-12</span>AWS S3 コマンド徹底解説<span class="ref-cmd-count">50+</span></span>
-      <span class="post-summary">s3 cp / sync / ls / rm / mv と s3api put / get / list-objects / head / policy</span></li>
-    <li><span class="coming-soon"><span class="post-num">#ref-13</span>AWS EC2 + VPC コマンド<span class="ref-cmd-count">50+</span></span>
-      <span class="post-summary">run-instances / describe / start / stop / terminate と describe-vpcs / sg / subnet / rt</span></li>
-    <li><span class="coming-soon"><span class="post-num">#ref-14</span>AWS IAM + STS 運用コマンド<span class="ref-cmd-count">40+</span></span>
-      <span class="post-summary">create-user / role / policy / attach / get-caller-identity / assume-role</span></li>
-    <li><span class="coming-soon"><span class="post-num">#ref-15</span>AWS Lambda + API GW + DynamoDB<span class="ref-cmd-count">50+</span></span>
-      <span class="post-summary">lambda invoke / update / list と apigatewayv2 と dynamodb get / put / query / scan</span></li>
-    <li><span class="coming-soon"><span class="post-num">#ref-16</span>CloudWatch + CloudWatch Logs<span class="ref-cmd-count">40+</span></span>
-      <span class="post-summary">logs tail / filter / get-events と cloudwatch get-metric-data / put-metric-alarm</span></li>
+    <li><a href="/blog/ref/12-aws-s3.html"><span class="post-num">#ref-12</span>AWS S3 コマンド徹底解説<span class="ref-cmd-count">50+</span></a>
+      <span class="post-summary">s3 cp/sync/ls/rm + s3api / Public Access Block / Versioning / Lifecycle / OAC</span></li>
+    <li><a href="/blog/ref/13-aws-ec2-vpc.html"><span class="post-num">#ref-13</span>AWS EC2 + VPC コマンド<span class="ref-cmd-count">50+</span></a>
+      <span class="post-summary">EC2 / AMI / EBS / SG / VPC / Subnet / Route / IGW / NAT / Endpoint / SSM</span></li>
+    <li><a href="/blog/ref/14-aws-iam-sts.html"><span class="post-num">#ref-14</span>AWS IAM + STS 運用コマンド<span class="ref-cmd-count">40+</span></a>
+      <span class="post-summary">User / Role / Policy / Group / 権限境界 / STS assume-role / OIDC</span></li>
+    <li><a href="/blog/ref/15-aws-lambda-apigw-ddb.html"><span class="post-num">#ref-15</span>AWS Lambda + API GW + DynamoDB<span class="ref-cmd-count">50+</span></a>
+      <span class="post-summary">lambda invoke / update / Permission + apigatewayv2 + dynamodb get/put/query/scan</span></li>
+    <li><a href="/blog/ref/16-cloudwatch.html"><span class="post-num">#ref-16</span>CloudWatch + CloudWatch Logs<span class="ref-cmd-count">40+</span></a>
+      <span class="post-summary">logs tail / filter / Insights + cloudwatch get-metric-data / put-metric-alarm + SNS</span></li>
   </ol>
 
   <h2 class="ref-tier">Tier 5 / コンテナ・IaC（3 記事）</h2>
   <p class="ref-tier-desc">案件単価が伸びやすい領域。</p>
   <ol class="post-list-index" start="17">
-    <li><span class="coming-soon"><span class="post-num">#ref-17</span>Docker + Docker Compose 完全リファレンス<span class="ref-cmd-count">60+</span></span>
-      <span class="post-summary">build / run / ps / exec / logs / inspect / network / volume と compose up / down / logs / exec</span></li>
-    <li><span class="coming-soon"><span class="post-num">#ref-18</span>Kubernetes (kubectl) 徹底解説<span class="ref-cmd-count">60+</span></span>
-      <span class="post-summary">get / describe / apply / delete / logs / exec / port-forward / rollout / scale / top と kubens / kubectx</span></li>
-    <li><span class="coming-soon"><span class="post-num">#ref-19</span>Terraform 応用 — state / import / workspace<span class="ref-cmd-count">50+</span></span>
-      <span class="post-summary">init / plan / apply 以外: state mv / rm / list / show / import / taint / refresh / output / console / workspace / fmt / validate</span></li>
+    <li><a href="/blog/ref/17-docker.html"><span class="post-num">#ref-17</span>Docker + Docker Compose 完全リファレンス<span class="ref-cmd-count">60+</span></a>
+      <span class="post-summary">build / run / ps / exec / logs / inspect / network / volume / ECR + compose up/down/logs/exec</span></li>
+    <li><a href="/blog/ref/18-kubectl.html"><span class="post-num">#ref-18</span>Kubernetes (kubectl) 徹底解説<span class="ref-cmd-count">60+</span></a>
+      <span class="post-summary">get / describe / apply / delete / logs / exec / port-forward / rollout / scale / top + kubens / kubectx</span></li>
+    <li><a href="/blog/ref/19-terraform-advanced.html"><span class="post-num">#ref-19</span>Terraform 応用 — state / import / workspace<span class="ref-cmd-count">50+</span></a>
+      <span class="post-summary">init/plan/apply 以外: state mv/rm/list/show / import block / replace / workspace / fmt / validate / moved/removed</span></li>
   </ol>
 
   <p style="margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--c-border); color: var(--c-muted); font-size: 0.88rem;">
-    全 19 記事・800+ コマンド予定。順次公開中（需要が高いものから書きます）。<br>
-    更新日: 2026-04-26
+    全 19 記事 · 800+ コマンド · 完結<br>
+    シリーズ完結: 2026-04-26
   </p>
 
 </div>

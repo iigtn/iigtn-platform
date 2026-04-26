@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#ref-19 Terraform 応用 — state / import / workspace | 現場コマンドリファレンス | iigtn</title>
+<meta name="description" content="terraform init / plan / apply 以外の応用コマンド state mv / rm / list / show / pull / push / import / taint / refresh / output / console / workspace / fmt / validate ほか 50+ コマンドを 8 カテゴリで深掘り解説。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/ref/19-terraform-advanced.html">
+<meta property="og:title" content="#ref-19 Terraform 応用 — state / import / workspace">
+<meta property="og:description" content="state mv / rm / import / taint / workspace / console / fmt ほか 50+ コマンドを 8 カテゴリで深掘り。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/ref/19-terraform-advanced.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="#ref-19 Terraform 応用 — state / import / workspace">
+<meta name="twitter:description" content="state mv / rm / import / taint / workspace / console / fmt ほか 50+ コマンドを 8 カテゴリで深掘り。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="stylesheet" href="/blog/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "#ref-19 Terraform 応用 — state / import / workspace",
+  "description": "state / import / taint / workspace / console / fmt 50+ コマンドを 8 カテゴリで深掘り。",
+  "datePublished": "2026-04-26",
+  "author": { "@type": "Person", "name": "iigtn", "url": "https://lab.iigtn.com/" },
+  "publisher": { "@type": "Person", "name": "iigtn" },
+  "url": "https://lab.iigtn.com/blog/ref/19-terraform-advanced.html",
+  "mainEntityOfPage": "https://lab.iigtn.com/blog/ref/19-terraform-advanced.html",
+  "image": "https://lab.iigtn.com/assets/icon.svg",
+  "inLanguage": "ja",
+  "isPartOf": { "@id": "https://lab.iigtn.com/blog/ref/#blog" }
+}
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="/" class="logo" aria-label="iigtn">
+      <img src="/assets/logo.svg" alt="iigtn" height="32">
+    </a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/" class="active">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+      <li><a href="/learn.html">解説書</a></li>
+    </ul>
+  </nav>
+</header>
+
+<article class="post">
+
+  <header class="post-header">
+    <p class="post-meta">2026-04-26 · 現場コマンドリファレンス · #ref-19</p>
+    <h1>Terraform 応用 — state / import / workspace ほか 50+ コマンドを 8 カテゴリで</h1>
+  </header>
+
+  <div class="post-body">
+
+    <p>
+      Terraform の <code>init / plan / apply</code> は誰でも使える。差が出るのは <strong>state 操作・既存リソース import・モジュール再構成</strong>のような「壊れない手順で構成変更ができるか」。
+      本記事は応用 50+ コマンドと、現場頻出のリファクタリング手順を整理します。
+    </p>
+
+    <div class="callout warn">
+      <strong>state 操作は常に危険:</strong> リモート state はチーム共有、操作の前に
+      <code>terraform state pull &gt; backup-$(date +%s).tfstate</code> でバックアップを取り、別ブランチで実験してから本番適用すること。
+    </div>
+
+    <h2>目次</h2>
+    <ol>
+      <li><a href="#sec-1">init / plan / apply の応用オプション</a></li>
+      <li><a href="#sec-2">state コマンド — 真の主役</a></li>
+      <li><a href="#sec-3">既存リソース import</a></li>
+      <li><a href="#sec-4">refresh / taint / replace</a></li>
+      <li><a href="#sec-5">workspace</a></li>
+      <li><a href="#sec-6">fmt / validate / console</a></li>
+      <li><a href="#sec-7">output / show / providers</a></li>
+      <li><a href="#sec-8">moved / removed ブロック</a></li>
+      <li><a href="#cookbook">リファクタリング・移行レシピ</a></li>
+      <li><a href="#glossary">用語集</a></li>
+    </ol>
+
+    <h2 id="sec-1">1. init / plan / apply の応用オプション</h2>
+
+<pre><code># init
+terraform init                                           # 初期化
+terraform init -upgrade                                  # provider バージョン更新を許可
+terraform init -reconfigure                              # backend 設定を強制再構成
+terraform init -migrate-state                            # backend 切替時の state 移行
+terraform init -backend-config=backend.hcl               # backend 設定をファイルで
+terraform init -backend=false                            # backend 初期化スキップ（CI 検証）
+
+# plan
+terraform plan
+terraform plan -out=plan.tfplan                          # 計画ファイル保存
+terraform plan -var 'env=prod' -var-file=prod.tfvars
+terraform plan -target='module.vpc.aws_vpc.main'         # 対象限定（緊急時のみ）
+terraform plan -refresh=false                            # state refresh をスキップ
+terraform plan -destroy                                   # destroy のプレビュー
+terraform plan -compact-warnings
+
+# apply
+terraform apply plan.tfplan                              # plan ファイルを適用（推奨）
+terraform apply -auto-approve                            # CI で
+terraform apply -parallelism=20                          # 並列度（デフォルト 10）
+
+# destroy
+terraform destroy
+terraform destroy -target='module.vpc.aws_vpc.main'      # 対象限定</code></pre>
+
+    <div class="callout info">
+      <code>plan -out</code> + <code>apply plan.tfplan</code> の 2 段階は本番運用の鉄則。「plan 時の世界観のまま apply」が保証される。
+    </div>
+
+    <h2 id="sec-2">2. state コマンド</h2>
+
+<pre><code># state 一覧 (アドレス確認の起点)
+terraform state list
+terraform state list 'module.vpc.*'
+terraform state list -id i-xxxxxxxx                      # AWS リソース ID で逆引き
+
+# 特定リソースの中身
+terraform state show 'module.vpc.aws_vpc.main'
+
+# リネーム / モジュール移動 (state mv)
+terraform state mv aws_s3_bucket.old aws_s3_bucket.new
+terraform state mv 'aws_instance.web' 'module.web.aws_instance.this'
+terraform state mv 'module.old_vpc' 'module.new_vpc'
+
+# state から削除（実リソースは消えない、Terraform 管理外に）
+terraform state rm 'aws_s3_bucket.legacy'
+
+# state を別 backend へコピー
+terraform state pull &gt; current.tfstate
+terraform state push current.tfstate                     # 復旧 / 移行
+
+# replace-provider（provider 変更）
+terraform state replace-provider \
+  registry.terraform.io/-/aws \
+  registry.terraform.io/hashicorp/aws</code></pre>
+
+    <h2 id="sec-3">3. 既存リソース import</h2>
+
+    <h3>レガシー: import コマンド（CLI 引数）</h3>
+<pre><code># まず HCL で resource ブロックだけ書いておく
+# resource "aws_s3_bucket" "imported" { bucket = "my-existing-bucket" }
+
+terraform import aws_s3_bucket.imported my-existing-bucket
+terraform import 'module.web.aws_instance.this' i-1234567890abcdef0
+terraform import 'aws_dynamodb_table.users[0]' users-table</code></pre>
+
+    <h3>推奨: import block（Terraform 1.5+）</h3>
+<pre><code># import.tf
+import {
+  to = aws_s3_bucket.imported
+  id = "my-existing-bucket"
+}
+
+# plan / apply で取り込み（plan に「create」ではなく「import」と表示される）
+terraform plan
+terraform apply
+
+# Terraform 1.5+ は HCL も自動生成
+terraform plan -generate-config-out=generated.tf</code></pre>
+    <div class="callout info">
+      import block は <strong>HCL ファイル化された手順</strong>として PR でレビュー可能。CLI <code>import</code> は履歴に残らないので、
+      新規環境では import block を強く推奨。
+    </div>
+
+    <h2 id="sec-4">4. refresh / taint / replace</h2>
+
+<pre><code># refresh — 実リソースの現状で state を更新（plan 内で自動実行されるが、明示も可能）
+terraform refresh                                        # ※ 単体コマンドは v1.5+ で deprecated
+terraform apply -refresh-only                            # 推奨: refresh だけする apply
+
+# taint — 次回 apply で強制再作成（v0.15+ 非推奨、replace 推奨）
+terraform taint aws_instance.web
+terraform untaint aws_instance.web
+
+# replace（推奨）— 強制再作成
+terraform plan -replace='aws_instance.web'
+terraform apply -replace='aws_instance.web'
+terraform apply -replace='module.web.aws_instance.this'</code></pre>
+
+    <h2 id="sec-5">5. workspace</h2>
+
+    <p>1 つのコードベースで複数 state を持つ機能。dev/stg/prod の軽い分離に使えるが、本番では「環境別 envs ディレクトリ」のほうが推奨。</p>
+
+<pre><code>terraform workspace list
+terraform workspace show
+terraform workspace new dev
+terraform workspace new prod
+terraform workspace select prod
+terraform workspace delete dev
+
+# HCL から workspace 名を参照
+# locals {
+#   env = terraform.workspace
+# }</code></pre>
+
+    <h2 id="sec-6">6. fmt / validate / console</h2>
+
+<pre><code># フォーマット
+terraform fmt                                            # カレント
+terraform fmt -recursive                                 # 再帰
+terraform fmt -check                                     # CI 検証用（差分があれば exit 1）
+terraform fmt -diff                                      # 差分表示
+
+# 構文 / 型チェック
+terraform validate
+terraform validate -json                                 # JSON 形式
+
+# console — 対話シェル（式評価）
+terraform console
+&gt; var.env
+&gt; aws_s3_bucket.web.arn
+&gt; jsonencode({ env = "prod" })
+&gt; cidrsubnet("10.0.0.0/16", 8, 1)
+&gt; exit</code></pre>
+
+    <h2 id="sec-7">7. output / show / providers</h2>
+
+<pre><code># output
+terraform output                                         # 全 output
+terraform output -raw bucket_name                        # 単一値（クォート無し）
+terraform output -json | jq '.bucket_name.value'
+
+# show
+terraform show                                           # 現 state の人間可読表示
+terraform show -json                                     # JSON
+terraform show plan.tfplan                               # plan ファイルの内容
+
+# providers
+terraform providers                                      # 使用中 provider 一覧
+terraform providers schema -json | jq '.provider_schemas | keys'
+terraform providers lock -platform=darwin_amd64 -platform=linux_amd64
+
+# version
+terraform version
+terraform -version</code></pre>
+
+    <h2 id="sec-8">8. moved / removed ブロック</h2>
+
+    <p>state の手動 mv をしなくても、HCL で構成変更を表現できる。レビュー可能で安全。</p>
+
+<pre><code># リソース or モジュールの場所を変えた
+moved {
+  from = aws_s3_bucket.legacy
+  to   = aws_s3_bucket.web
+}
+moved {
+  from = module.old_vpc
+  to   = module.new_vpc
+}
+
+# Terraform 1.7+ : リソースを管理から外す
+removed {
+  from = aws_s3_bucket.legacy
+  lifecycle {
+    destroy = false                       # 実リソースは残す
+  }
+}
+
+# plan で「moved」「removed」が認識される</code></pre>
+
+    <h2 id="cookbook">リファクタリング・移行レシピ</h2>
+
+    <h3>レシピ 1 — リソースを別モジュールに移動</h3>
+<pre><code># 1) コードを書き換え（resource を新モジュール内に移す）
+# 2) moved ブロックを追加
+moved {
+  from = aws_instance.web
+  to   = module.web.aws_instance.this
+}
+# 3) plan で「No changes」になれば成功
+terraform plan
+# 4) moved ブロックは残しておくか、十分時間が経ってから削除</code></pre>
+
+    <h3>レシピ 2 — 既存 AWS リソースを取り込む</h3>
+<pre><code># 1) HCL の resource ブロックだけ先に書く（属性は仮で OK）
+# 2) import ブロックを追加
+import {
+  to = aws_s3_bucket.imported
+  id = "my-bucket-name"
+}
+# 3) plan -generate-config-out で属性を自動生成
+terraform plan -generate-config-out=generated.tf
+# 4) 生成された HCL を resource ブロックに反映
+# 5) apply で取り込み完了</code></pre>
+
+    <h3>レシピ 3 — backend を S3 に移行</h3>
+<pre><code># 1) backend "s3" {...} を terraform ブロックに追加
+# 2) init で移行を促される
+terraform init -migrate-state
+# Yes で local → S3 にコピー</code></pre>
+
+    <h3>レシピ 4 — provider バージョンアップ</h3>
+<pre><code># 1) required_providers で version 制約を更新
+# 2) lock ファイル更新
+terraform init -upgrade
+# 3) .terraform.lock.hcl の差分をコミット
+git diff .terraform.lock.hcl
+# 4) plan で破壊的変更がないか確認</code></pre>
+
+    <h3>レシピ 5 — 一部リソースだけ destroy & 再作成</h3>
+<pre><code>terraform plan -replace='aws_db_instance.main'
+terraform apply -replace='aws_db_instance.main'</code></pre>
+
+    <h3>レシピ 6 — state を緊急バックアップ</h3>
+<pre><code>terraform state pull &gt; "backup-$(date +%Y%m%d-%H%M%S).tfstate"
+
+# 何かあったら復旧
+terraform state push backup-20260426-093000.tfstate</code></pre>
+
+    <h3>レシピ 7 — drift 検出（実リソースが手動変更されてないか）</h3>
+<pre><code>terraform apply -refresh-only -auto-approve
+terraform plan                                # 差分が出れば手動変更が入った印</code></pre>
+
+    <h3>レシピ 8 — 重い plan の高速化（target で小さく）</h3>
+<pre><code>terraform plan -target='module.vpc'                 # 緊急時のみ。通常は使わない
+terraform plan -refresh=false                        # 既存 state に頼り refresh をスキップ</code></pre>
+
+    <h2>コマンド早見表</h2>
+<pre><code># 基本
+terraform init -upgrade
+terraform plan -out=plan.tfplan
+terraform apply plan.tfplan
+
+# state
+terraform state list
+terraform state mv FROM TO
+terraform state rm ADDR
+terraform state pull &gt; backup.tfstate
+
+# import
+import { to = X; id = "..." }   # block 推奨
+terraform plan -generate-config-out=gen.tf
+
+# 強制再作成
+terraform apply -replace=ADDR
+
+# refactor
+moved { from = X; to = Y }
+removed { from = X; lifecycle { destroy = false } }
+
+# console
+terraform console
+&gt; cidrsubnet("10.0.0.0/16", 8, 1)
+
+# fmt / validate
+terraform fmt -recursive -check
+terraform validate</code></pre>
+
+    <section class="post-glossary" id="glossary">
+      <h2>用語集</h2>
+      <dl>
+        <dt>state (terraform.tfstate)</dt>
+        <dd>Terraform が「実リソースと HCL の対応」を記録する JSON。Local / S3 / Remote 等の backend で保管。チーム共有では Lock 必須。</dd>
+
+        <dt>backend</dt>
+        <dd>state の保管先設定。S3 + DynamoDB Lock の組合わせが AWS 標準。</dd>
+
+        <dt>state lock</dt>
+        <dd>同時 apply 防止のためのロック。S3 backend では DynamoDB テーブル使用。Lock 残留時は <code>terraform force-unlock LOCK_ID</code>（極力使わない）。</dd>
+
+        <dt>provider</dt>
+        <dd>aws / google / kubernetes 等のリソース提供プラグイン。<code>required_providers</code> でバージョン固定、lock ファイルで再現性確保。</dd>
+
+        <dt>module</dt>
+        <dd>HCL の再利用単位。inputs (variables) → outputs の関数のように使う。modules / envs パターンが定番。</dd>
+
+        <dt>plan ファイル (.tfplan)</dt>
+        <dd><code>terraform plan -out</code> で生成されるバイナリ。apply 時にこれを渡せば「plan 時点の世界観で適用」が保証される。</dd>
+
+        <dt>state mv / state rm</dt>
+        <dd>state mv = state 内のアドレス変更（実リソース無変更）。state rm = state から外す（実リソース無変更、管理外に）。</dd>
+
+        <dt>import / import block</dt>
+        <dd>既存リソースを Terraform 管理下に取り込む操作。block 形式（v1.5+）が PR レビュー可能で推奨。</dd>
+
+        <dt>moved block</dt>
+        <dd>リソースの HCL 上のアドレス移動を宣言。state mv コマンド代替で、HCL に履歴が残る安全な方法。</dd>
+
+        <dt>removed block (v1.7+)</dt>
+        <dd>リソースを Terraform 管理外にする宣言。<code>lifecycle.destroy = false</code> で実リソースは残せる。</dd>
+
+        <dt>refresh / refresh-only apply</dt>
+        <dd>実リソースの現状で state を更新する操作。drift 検出に使う。<code>terraform refresh</code> 単独は非推奨、<code>apply -refresh-only</code> 推奨。</dd>
+
+        <dt>taint / replace</dt>
+        <dd>強制再作成。taint は v0.15+ 非推奨、<code>apply -replace=ADDR</code> 推奨。</dd>
+
+        <dt>workspace</dt>
+        <dd>1 コードベース複数 state の機能。dev/prod の軽い分離向け。本番運用は環境別ディレクトリ + 別 backend が推奨。</dd>
+
+        <dt>console</dt>
+        <dd>HCL 関数 / 変数 / リソース属性を対話評価するシェル。<code>cidrsubnet</code> や jsonencode の動作確認に。</dd>
+
+        <dt>drift</dt>
+        <dd>実リソースが Terraform 管理外で変更された差分。<code>apply -refresh-only</code> + <code>plan</code> で検出。</dd>
+
+        <dt>lifecycle ブロック</dt>
+        <dd>create_before_destroy / prevent_destroy / ignore_changes / replace_triggered_by。リソースのライフサイクル制御。</dd>
+
+        <dt>terraform.lock.hcl</dt>
+        <dd>provider のバージョン + ハッシュをロックするファイル。再現性のためコミット必須。</dd>
+      </dl>
+    </section>
+
+    <footer class="post-footer">
+      <a href="/blog/ref/18-kubectl.html">← #ref-18 kubectl</a>
+      <a href="/blog/ref/">シリーズ目次</a>
+    </footer>
+
+  </div>
+</article>
+
+</body>
+</html>

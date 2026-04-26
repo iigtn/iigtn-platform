@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#ref-08 yq で YAML を扱う — k8s / GitHub Actions 用 | 現場コマンドリファレンス | iigtn</title>
+<meta name="description" content="yq (mikefarah 版) で YAML を読み書き・更新する 30+ パターンを 5 カテゴリで深掘り解説。k8s manifest 編集 / GitHub Actions YAML 加工 / multi-document 処理に。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/ref/08-yq.html">
+<meta property="og:title" content="#ref-08 yq で YAML を扱う — k8s / GitHub Actions 用">
+<meta property="og:description" content="yq で YAML 読み書き・更新を 30+ パターンで深掘り。k8s manifest / GitHub Actions YAML 加工に。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/ref/08-yq.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="#ref-08 yq で YAML を扱う">
+<meta name="twitter:description" content="yq で YAML 読み書き・更新を 30+ パターンで深掘り。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="stylesheet" href="/blog/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "#ref-08 yq で YAML を扱う",
+  "description": "yq で YAML 読み書き・更新を 30+ パターンで深掘り。",
+  "datePublished": "2026-04-26",
+  "author": { "@type": "Person", "name": "iigtn", "url": "https://lab.iigtn.com/" },
+  "publisher": { "@type": "Person", "name": "iigtn" },
+  "url": "https://lab.iigtn.com/blog/ref/08-yq.html",
+  "mainEntityOfPage": "https://lab.iigtn.com/blog/ref/08-yq.html",
+  "image": "https://lab.iigtn.com/assets/icon.svg",
+  "inLanguage": "ja",
+  "isPartOf": { "@id": "https://lab.iigtn.com/blog/ref/#blog" }
+}
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="/" class="logo" aria-label="iigtn">
+      <img src="/assets/logo.svg" alt="iigtn" height="32">
+    </a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/" class="active">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+      <li><a href="/learn.html">解説書</a></li>
+    </ul>
+  </nav>
+</header>
+
+<article class="post">
+
+  <header class="post-header">
+    <p class="post-meta">2026-04-26 · 現場コマンドリファレンス · #ref-08</p>
+    <h1>yq で YAML を扱う — k8s / GitHub Actions 用 30+ パターン</h1>
+  </header>
+
+  <div class="post-body">
+
+    <p>
+      <strong>yq</strong> は YAML/JSON/XML を扱う CLI。<code>kubectl</code>・GitHub Actions YAML・Helm values・docker-compose
+      を編集する時に必須です。本記事は最も普及している <strong>mikefarah/yq (Go 製)</strong> を前提にします。
+      jq とほぼ同じ書き方で扱えるのが強み。
+    </p>
+
+    <div class="callout warn">
+      <strong>2 種類の yq に注意:</strong>
+      <ul style="margin: 0.4rem 0 0;">
+        <li><strong>mikefarah/yq</strong> (Go 製、本稿対象) — <code>yq -i '.x.y = "v"' file.yaml</code> 形式。最も普及。</li>
+        <li><strong>kislyuk/yq</strong> (Python 製) — jq のラッパで <code>yq '.x.y'</code> のみ、書き換えは別ツール。互換性なし。</li>
+      </ul>
+      ディストリのパッケージマネージャによってはどちらが入るか異なる。<code>yq --version</code> で確認。
+    </div>
+
+    <h2>目次</h2>
+    <ol>
+      <li><a href="#sec-1">読み取り（jq とほぼ同じ）</a></li>
+      <li><a href="#sec-2">in-place 更新 (-i)</a></li>
+      <li><a href="#sec-3">multi-document YAML</a></li>
+      <li><a href="#sec-4">YAML ↔ JSON 変換</a></li>
+      <li><a href="#sec-5">k8s / Compose / Actions レシピ</a></li>
+      <li><a href="#glossary">用語集</a></li>
+    </ol>
+
+    <p>サンプル YAML として下記を仮定:</p>
+<pre><code># app.yaml
+apiVersion: v1
+kind: Deployment
+metadata:
+  name: web
+  labels:
+    app: web
+    env: prod
+spec:
+  replicas: 3
+  template:
+    spec:
+      containers:
+        - name: web
+          image: nginx:1.25
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi</code></pre>
+
+    <h2 id="sec-1">1. 読み取り</h2>
+
+<pre><code># 全表示（フォーマット維持）
+yq . app.yaml
+
+# 値取得
+yq '.spec.replicas' app.yaml             # 3
+yq -r '.metadata.name' app.yaml          # web (raw 出力、クォート無し)
+
+# 配列展開
+yq '.spec.template.spec.containers[]' app.yaml
+yq '.spec.template.spec.containers[].image' app.yaml
+
+# 条件抽出
+yq '.spec.template.spec.containers[] | select(.name == "web")' app.yaml
+
+# キー一覧
+yq '.metadata | keys' app.yaml
+
+# 型確認
+yq '.spec.replicas | type' app.yaml      # !!int
+
+# 長さ
+yq '.spec.template.spec.containers | length' app.yaml</code></pre>
+
+    <h2 id="sec-2">2. in-place 更新 (-i)</h2>
+
+    <p>jq と決定的に違うのが、yq は<strong>ファイルの直接編集</strong> (<code>-i</code>) ができる点。
+    YAML のコメントや順序を維持したまま値だけ書き換えられる。</p>
+
+<pre><code># 値を更新
+yq -i '.spec.replicas = 5' app.yaml
+yq -i '.metadata.labels.env = "stg"' app.yaml
+
+# 環境変数からの注入
+yq -i ".spec.replicas = $REPLICAS" app.yaml
+yq -i '.spec.replicas = env(REPLICAS)' app.yaml      # 型推論あり (env())
+yq -i '.image = strenv(IMAGE)' app.yaml              # 強制 string (strenv)
+
+# 配列要素の更新（ index 指定）
+yq -i '.spec.template.spec.containers[0].image = "nginx:1.27"' app.yaml
+
+# 全要素一括変更
+yq -i '.spec.template.spec.containers[].imagePullPolicy = "IfNotPresent"' app.yaml
+
+# select で絞ってから更新
+yq -i '(.spec.template.spec.containers[] | select(.name == "web") | .image) = "nginx:1.27"' app.yaml
+
+# キー追加
+yq -i '.metadata.annotations.maintainer = "iigtn"' app.yaml
+
+# キー削除
+yq -i 'del(.metadata.labels.env)' app.yaml
+
+# 配列要素追加
+yq -i '.spec.template.spec.containers += [{"name":"sidecar","image":"busybox"}]' app.yaml
+
+# マージ（既存に追記、配列は連結）
+yq -i '. *= load("override.yaml")' base.yaml
+
+# 全 file 一括（複数ファイル対象）
+yq -i '.metadata.namespace = "prod"' k8s/*.yaml</code></pre>
+
+    <h2 id="sec-3">3. multi-document YAML</h2>
+
+    <p>k8s manifest は <code>---</code> で複数ドキュメントを 1 ファイルに含めることが多い。yq は標準対応。</p>
+
+<pre><code># すべての document を表示
+yq 'select(documentIndex &gt;= 0)' multi.yaml
+
+# 特定 document のみ（0 始まり）
+yq 'select(documentIndex == 0)' multi.yaml
+
+# kind == Deployment の document だけ
+yq 'select(.kind == "Deployment")' multi.yaml
+
+# 全 document の name 一覧
+yq '[.metadata.name]' multi.yaml             # 各 document が個別出力
+yq -o=json '.metadata.name' multi.yaml | jq -s
+
+# 各 document に共通フィールド追加
+yq -i '.metadata.labels.team = "platform"' multi.yaml
+
+# document 結合 (multi → single 配列)
+yq ea '[.]' multi.yaml                       # ea = eval-all
+
+# 別ファイルの document を merge
+yq ea '. as $item ireduce ({}; . * $item)' base.yaml override.yaml</code></pre>
+
+    <h2 id="sec-4">4. YAML ↔ JSON 変換</h2>
+
+<pre><code># YAML → JSON
+yq -o=json '.' app.yaml
+yq -o=json '.' app.yaml &gt; app.json
+
+# JSON → YAML
+yq -p=json '.' data.json
+cat data.json | yq -p=json -o=yaml
+
+# YAML → CSV / TSV / Properties
+yq -o=csv '[.users[]]' data.yaml
+yq -o=props '.config' app.yaml
+
+# 入力フォーマット指定（拡張子が無い時）
+cat foo | yq -p=yaml '.x'
+cat foo | yq -p=json '.x'
+cat foo | yq -p=xml  '.x'</code></pre>
+
+    <h2 id="sec-5">5. k8s / Compose / Actions レシピ</h2>
+
+    <h3>レシピ 1 — k8s Deployment の image を更新</h3>
+<pre><code>yq -i '
+  (.spec.template.spec.containers[] | select(.name == "web") | .image) = "nginx:1.27"
+' k8s/web-deployment.yaml
+
+# ConfigMap の値を更新
+yq -i '.data.LOG_LEVEL = "debug"' k8s/configmap.yaml</code></pre>
+
+    <h3>レシピ 2 — multi-document manifest の特定 kind だけ操作</h3>
+<pre><code># すべての Deployment の replicas を 5 に
+yq -i 'select(.kind == "Deployment").spec.replicas = 5' k8s/all.yaml
+
+# 特定 namespace を全 document に注入
+yq -i '.metadata.namespace = "prod"' k8s/all.yaml</code></pre>
+
+    <h3>レシピ 3 — docker-compose の image tag を環境変数で書き換え</h3>
+<pre><code>IMAGE_TAG=v1.2.3 yq -i '.services.web.image = "myapp:" + strenv(IMAGE_TAG)' compose.yaml</code></pre>
+
+    <h3>レシピ 4 — GitHub Actions YAML から workflow 名一覧</h3>
+<pre><code>for f in .github/workflows/*.yml; do
+  echo "$f: $(yq -r '.name' $f)"
+done</code></pre>
+
+    <h3>レシピ 5 — Helm values.yaml の値を上書き</h3>
+<pre><code># 配列内の対象要素を更新
+yq -i '
+  (.deployments[] | select(.name == "api") | .replicas) = 4
+' values.yaml
+
+# 別ファイルとマージ
+yq -i '. *= load("values-prod.yaml")' values.yaml</code></pre>
+
+    <h3>レシピ 6 — kubectl 出力を yq で整形</h3>
+<pre><code>kubectl get pods -o yaml \
+  | yq '.items[] | {name: .metadata.name, status: .status.phase, ip: .status.podIP}'
+
+# JSON 出力経由でもいい (jq でも処理可能)
+kubectl get pods -o json | yq -p=json '.items[].metadata.name'</code></pre>
+
+    <h3>レシピ 7 — env ファイルの自動生成（YAML → .env）</h3>
+<pre><code># config.yaml: { app: { port: 8080, log_level: info } }
+yq -r '.app | to_entries[] | "\(.key | upcase)=\(.value)"' config.yaml
+# 出力: PORT=8080
+#       LOG_LEVEL=info</code></pre>
+
+    <h2>コマンド早見表</h2>
+<pre><code># 読取
+yq '.x.y' file.yaml
+yq -r '.metadata.name' file.yaml
+
+# 更新 (in-place)
+yq -i '.spec.replicas = 5' file.yaml
+yq -i '.image = strenv(IMG)' file.yaml
+yq -i 'del(.metadata.labels.env)' file.yaml
+
+# 条件 + 更新
+yq -i '(.spec.template.spec.containers[] | select(.name == "web") | .image) = "..."' file.yaml
+
+# multi-document
+yq 'select(.kind == "Deployment")' multi.yaml
+yq ea '. as $i ireduce ({}; . * $i)' base.yaml override.yaml
+
+# 変換
+yq -o=json '.' file.yaml
+yq -p=json '.' file.json</code></pre>
+
+    <section class="post-glossary" id="glossary">
+      <h2>用語集</h2>
+      <dl>
+        <dt>yq (mikefarah)</dt>
+        <dd>Go 製の YAML/JSON/XML 処理 CLI。jq とほぼ互換の式言語、ただし in-place 更新可能。最も普及。</dd>
+
+        <dt>yq (kislyuk)</dt>
+        <dd>Python 製、jq のラッパ。読み取り専用。mikefarah 版とは互換性なし。<code>yq --version</code> で見分ける。</dd>
+
+        <dt>in-place 更新 (-i)</dt>
+        <dd>ファイルを直接書き換える機能。コメントや書式を維持したまま値だけ更新。</dd>
+
+        <dt>env() vs strenv()</dt>
+        <dd>環境変数の取り込み。env() は型推論あり（数値は number 化）、strenv() は強制 string。設定ファイルの version などは strenv 推奨。</dd>
+
+        <dt>multi-document YAML</dt>
+        <dd>1 ファイルに <code>---</code> で区切った複数 YAML ドキュメントを含める書式。k8s manifest の標準形。</dd>
+
+        <dt>documentIndex</dt>
+        <dd>multi-doc 時の各 document インデックス。<code>select(documentIndex == 0)</code> で先頭だけ取れる。</dd>
+
+        <dt>eval-all (ea)</dt>
+        <dd>全 document を 1 つのストリームとして処理するモード。複数 document 横断の集計に必要。</dd>
+
+        <dt>load("file")</dt>
+        <dd>別 YAML/JSON ファイルを式の中で読み込む関数。merge やテンプレ展開に使う。</dd>
+
+        <dt>マージ (*=)</dt>
+        <dd>オブジェクトを再帰的にマージ。配列は要素を上書きせず連結する挙動（オプションで変更可）。</dd>
+
+        <dt>-o / -p</dt>
+        <dd>-o = output format（yaml/json/csv/props/xml）、-p = input format。拡張子が無い入力で必要。</dd>
+
+        <dt>jq との違い</dt>
+        <dd>jq は JSON 専用・read-only、yq は YAML/JSON/XML 対応・in-place 編集可能。jq 構文をほぼ流用できる。</dd>
+
+        <dt>k8s manifest</dt>
+        <dd>Kubernetes リソース定義 YAML。Deployment / Service / ConfigMap / Secret 等。multi-document で 1 ファイルにまとめることが多い。</dd>
+
+        <dt>Helm values.yaml</dt>
+        <dd>Helm Chart の設定ファイル。yq で環境別オーバーレイを生成・更新する用途で頻出。</dd>
+      </dl>
+    </section>
+
+    <footer class="post-footer">
+      <a href="/blog/ref/07-jq.html">← #ref-07 jq</a>
+      <a href="/blog/ref/">シリーズ目次</a>
+    </footer>
+
+  </div>
+</article>
+
+</body>
+</html>

@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#ref-13 AWS EC2 + VPC コマンド | 現場コマンドリファレンス | iigtn</title>
+<meta name="description" content="aws ec2 run-instances / describe-instances / start / stop / terminate と describe-vpcs / sg / subnet / route-table / NAT / IGW など、EC2 と VPC まわりの 50+ コマンドを 8 カテゴリで深掘り解説。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/ref/13-aws-ec2-vpc.html">
+<meta property="og:title" content="#ref-13 AWS EC2 + VPC コマンド">
+<meta property="og:description" content="EC2 / VPC / SG / Subnet / Route Table / NAT / IGW 50+ コマンドを 8 カテゴリで深掘り。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/ref/13-aws-ec2-vpc.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="#ref-13 AWS EC2 + VPC コマンド">
+<meta name="twitter:description" content="EC2 / VPC / SG / Subnet / Route Table 50+ コマンドを 8 カテゴリで深掘り。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="stylesheet" href="/blog/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "#ref-13 AWS EC2 + VPC コマンド",
+  "description": "EC2 / VPC / SG / Subnet / Route Table 50+ コマンドを 8 カテゴリで深掘り。",
+  "datePublished": "2026-04-26",
+  "author": { "@type": "Person", "name": "iigtn", "url": "https://lab.iigtn.com/" },
+  "publisher": { "@type": "Person", "name": "iigtn" },
+  "url": "https://lab.iigtn.com/blog/ref/13-aws-ec2-vpc.html",
+  "mainEntityOfPage": "https://lab.iigtn.com/blog/ref/13-aws-ec2-vpc.html",
+  "image": "https://lab.iigtn.com/assets/icon.svg",
+  "inLanguage": "ja",
+  "isPartOf": { "@id": "https://lab.iigtn.com/blog/ref/#blog" }
+}
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="/" class="logo" aria-label="iigtn">
+      <img src="/assets/logo.svg" alt="iigtn" height="32">
+    </a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/" class="active">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+      <li><a href="/learn.html">解説書</a></li>
+    </ul>
+  </nav>
+</header>
+
+<article class="post">
+
+  <header class="post-header">
+    <p class="post-meta">2026-04-26 · 現場コマンドリファレンス · #ref-13</p>
+    <h1>AWS EC2 + VPC コマンド — 50+ コマンドを 8 カテゴリで</h1>
+  </header>
+
+  <div class="post-body">
+
+    <p>
+      EC2 と VPC は AWS の基礎ネットワーク。サーバレス案件ですら VPC + Subnet + SG の理解は要求されます。
+      Console を使わず CLI で完結できると障害対応が早くなります。
+    </p>
+
+    <h2>目次</h2>
+    <ol>
+      <li><a href="#sec-1">EC2 インスタンス操作</a></li>
+      <li><a href="#sec-2">AMI / Snapshot / Volume</a></li>
+      <li><a href="#sec-3">Security Group</a></li>
+      <li><a href="#sec-4">VPC / Subnet / Route Table</a></li>
+      <li><a href="#sec-5">IGW / NAT / VPC Endpoint</a></li>
+      <li><a href="#sec-6">Elastic IP / Network Interface</a></li>
+      <li><a href="#sec-7">SSM / Session Manager</a></li>
+      <li><a href="#sec-8">EBS / Tag</a></li>
+      <li><a href="#cookbook">運用レシピ</a></li>
+      <li><a href="#glossary">用語集</a></li>
+    </ol>
+
+    <h2 id="sec-1">1. EC2 インスタンス操作</h2>
+
+<pre><code># 一覧
+aws ec2 describe-instances
+aws ec2 describe-instances --instance-ids i-xxx
+aws ec2 describe-instances --filters 'Name=instance-state-name,Values=running'
+aws ec2 describe-instances --filters 'Name=tag:Env,Values=prod' \
+  --query 'Reservations[].Instances[].[InstanceId,InstanceType,PrivateIpAddress,State.Name]' \
+  --output table
+
+# 起動 / 停止 / 再起動 / 終了
+aws ec2 start-instances --instance-ids i-xxx
+aws ec2 stop-instances --instance-ids i-xxx
+aws ec2 stop-instances --instance-ids i-xxx --hibernate         # ヒバネート（要設定）
+aws ec2 reboot-instances --instance-ids i-xxx
+aws ec2 terminate-instances --instance-ids i-xxx                # 終了 (削除)
+
+# 状態待機
+aws ec2 wait instance-running --instance-ids i-xxx
+aws ec2 wait instance-stopped --instance-ids i-xxx
+
+# 起動 (run-instances)
+aws ec2 run-instances \
+  --image-id ami-xxx \
+  --instance-type t3.micro \
+  --key-name my-key \
+  --subnet-id subnet-xxx \
+  --security-group-ids sg-xxx \
+  --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=web-01},{Key=Env,Value=prod}]' \
+  --user-data file://user-data.sh \
+  --iam-instance-profile Name=my-instance-profile
+
+# インスタンスタイプ変更（停止中のみ）
+aws ec2 modify-instance-attribute --instance-id i-xxx --instance-type 't3.medium'
+
+# コンソール出力（起動失敗の調査）
+aws ec2 get-console-output --instance-id i-xxx --output text</code></pre>
+
+    <h2 id="sec-2">2. AMI / Snapshot / Volume</h2>
+
+<pre><code># AMI 一覧（自分所有）
+aws ec2 describe-images --owners self \
+  --query 'Images[].[ImageId,Name,CreationDate]' --output table
+
+# 公式 Amazon Linux 2023 を検索
+aws ec2 describe-images --owners amazon \
+  --filters 'Name=name,Values=al2023-ami-*-x86_64' 'Name=state,Values=available' \
+  --query 'sort_by(Images, &amp;CreationDate)[-1].[ImageId,Name]' --output text
+
+# AMI 作成（実行中インスタンスから）
+aws ec2 create-image --instance-id i-xxx --name 'my-ami-2026-04-26' \
+  --no-reboot
+
+# AMI 削除（紐づくスナップショットも忘れず）
+aws ec2 deregister-image --image-id ami-xxx
+aws ec2 delete-snapshot --snapshot-id snap-xxx
+
+# EBS Volume
+aws ec2 describe-volumes
+aws ec2 describe-volumes --filters 'Name=status,Values=available'   # 未アタッチ（コスト発生）
+aws ec2 create-volume --availability-zone ap-northeast-1a --size 30 --volume-type gp3
+aws ec2 attach-volume --volume-id vol-xxx --instance-id i-xxx --device /dev/sdf
+aws ec2 detach-volume --volume-id vol-xxx
+aws ec2 delete-volume --volume-id vol-xxx
+
+# Snapshot
+aws ec2 create-snapshot --volume-id vol-xxx --description 'backup'
+aws ec2 describe-snapshots --owner-ids self
+aws ec2 delete-snapshot --snapshot-id snap-xxx</code></pre>
+
+    <h2 id="sec-3">3. Security Group</h2>
+
+<pre><code># 一覧
+aws ec2 describe-security-groups
+aws ec2 describe-security-groups --filters 'Name=vpc-id,Values=vpc-xxx'
+aws ec2 describe-security-groups --group-ids sg-xxx \
+  --query 'SecurityGroups[].IpPermissions' --output json
+
+# 作成
+aws ec2 create-security-group --vpc-id vpc-xxx \
+  --group-name web-sg --description 'web servers'
+
+# Inbound 追加
+aws ec2 authorize-security-group-ingress --group-id sg-xxx \
+  --protocol tcp --port 443 --cidr 0.0.0.0/0
+aws ec2 authorize-security-group-ingress --group-id sg-xxx \
+  --protocol tcp --port 22 --cidr 10.0.0.0/8                    # SSH を社内から
+aws ec2 authorize-security-group-ingress --group-id sg-xxx \
+  --protocol tcp --port 5432 --source-group sg-app              # 別 SG からの参照（推奨パターン）
+
+# Inbound 削除
+aws ec2 revoke-security-group-ingress --group-id sg-xxx \
+  --protocol tcp --port 22 --cidr 0.0.0.0/0
+
+# Outbound
+aws ec2 authorize-security-group-egress --group-id sg-xxx \
+  --protocol tcp --port 443 --cidr 0.0.0.0/0
+
+# 削除
+aws ec2 delete-security-group --group-id sg-xxx</code></pre>
+
+    <div class="callout warn">
+      SG への <code>0.0.0.0/0</code> 付き 22/3389 開放は事故の元。SSM Session Manager か bastion + ProxyJump で代替を。
+    </div>
+
+    <h2 id="sec-4">4. VPC / Subnet / Route Table</h2>
+
+<pre><code># VPC
+aws ec2 describe-vpcs
+aws ec2 create-vpc --cidr-block 10.0.0.0/16 --tag-specifications 'ResourceType=vpc,Tags=[{Key=Name,Value=main}]'
+aws ec2 modify-vpc-attribute --vpc-id vpc-xxx --enable-dns-hostnames
+aws ec2 delete-vpc --vpc-id vpc-xxx
+
+# Subnet
+aws ec2 describe-subnets --filters 'Name=vpc-id,Values=vpc-xxx'
+aws ec2 create-subnet --vpc-id vpc-xxx --cidr-block 10.0.10.0/24 \
+  --availability-zone ap-northeast-1a
+aws ec2 modify-subnet-attribute --subnet-id subnet-xxx --map-public-ip-on-launch  # public sub
+aws ec2 delete-subnet --subnet-id subnet-xxx
+
+# Route Table
+aws ec2 describe-route-tables --filters 'Name=vpc-id,Values=vpc-xxx'
+aws ec2 create-route-table --vpc-id vpc-xxx
+aws ec2 create-route --route-table-id rtb-xxx --destination-cidr-block 0.0.0.0/0 --gateway-id igw-xxx
+aws ec2 create-route --route-table-id rtb-xxx --destination-cidr-block 0.0.0.0/0 --nat-gateway-id nat-xxx
+aws ec2 associate-route-table --route-table-id rtb-xxx --subnet-id subnet-xxx
+aws ec2 delete-route --route-table-id rtb-xxx --destination-cidr-block 0.0.0.0/0</code></pre>
+
+    <h2 id="sec-5">5. IGW / NAT / VPC Endpoint</h2>
+
+<pre><code># Internet Gateway
+aws ec2 create-internet-gateway
+aws ec2 attach-internet-gateway --internet-gateway-id igw-xxx --vpc-id vpc-xxx
+aws ec2 detach-internet-gateway --internet-gateway-id igw-xxx --vpc-id vpc-xxx
+aws ec2 delete-internet-gateway --internet-gateway-id igw-xxx
+
+# NAT Gateway（プライベート Subnet からの outbound）
+aws ec2 allocate-address --domain vpc                                  # EIP 確保
+aws ec2 create-nat-gateway --subnet-id subnet-public-xxx --allocation-id eipalloc-xxx
+aws ec2 describe-nat-gateways
+aws ec2 delete-nat-gateway --nat-gateway-id nat-xxx
+
+# VPC Endpoint（S3 / DynamoDB は Gateway、その他は Interface）
+aws ec2 create-vpc-endpoint --vpc-id vpc-xxx --vpc-endpoint-type Gateway \
+  --service-name com.amazonaws.ap-northeast-1.s3 \
+  --route-table-ids rtb-xxx
+
+aws ec2 create-vpc-endpoint --vpc-id vpc-xxx --vpc-endpoint-type Interface \
+  --service-name com.amazonaws.ap-northeast-1.ssm \
+  --subnet-ids subnet-xxx --security-group-ids sg-xxx
+
+aws ec2 describe-vpc-endpoints
+aws ec2 delete-vpc-endpoints --vpc-endpoint-ids vpce-xxx</code></pre>
+
+    <h2 id="sec-6">6. Elastic IP / Network Interface</h2>
+
+<pre><code>aws ec2 allocate-address --domain vpc                       # EIP 確保
+aws ec2 associate-address --instance-id i-xxx --allocation-id eipalloc-xxx
+aws ec2 disassociate-address --association-id eipassoc-xxx
+aws ec2 release-address --allocation-id eipalloc-xxx       # 解放（未使用は時間課金）
+
+aws ec2 describe-addresses
+aws ec2 describe-network-interfaces --filters 'Name=status,Values=available'</code></pre>
+
+    <h2 id="sec-7">7. SSM / Session Manager（鍵不要 SSH 代替）</h2>
+
+<pre><code># SSM Agent が動いていれば鍵不要で shell に入れる（推奨）
+aws ssm start-session --target i-xxx
+aws ssm start-session --target i-xxx --document-name AWS-StartPortForwardingSession \
+  --parameters '{"portNumber":["80"],"localPortNumber":["8080"]}'
+
+# 一時的に SSH キーを注入（EC2 Instance Connect）
+aws ec2-instance-connect send-ssh-public-key \
+  --instance-id i-xxx --availability-zone ap-northeast-1a \
+  --instance-os-user ec2-user --ssh-public-key file://~/.ssh/id_ed25519.pub
+
+# Run Command（複数インスタンスにスクリプト実行）
+aws ssm send-command \
+  --document-name 'AWS-RunShellScript' \
+  --targets 'Key=tag:Env,Values=prod' \
+  --parameters 'commands=["uptime","df -h"]'</code></pre>
+
+    <h2 id="sec-8">8. EBS / Tag</h2>
+
+<pre><code># 全リソースに Tag
+aws ec2 create-tags --resources i-xxx vol-xxx --tags Key=Env,Value=prod Key=Owner,Value=iigtn
+
+# Tag 削除
+aws ec2 delete-tags --resources i-xxx --tags Key=Env
+
+# Tag によるリソース検索
+aws resourcegroupstaggingapi get-resources \
+  --tag-filters 'Key=Env,Values=prod' \
+  --resource-type-filters 'ec2:instance'</code></pre>
+
+    <h2 id="cookbook">運用レシピ</h2>
+
+    <h3>レシピ 1 — 全リージョン横断で running インスタンス確認</h3>
+<pre><code>for r in $(aws ec2 describe-regions --query 'Regions[].RegionName' --output text); do
+  count=$(aws ec2 describe-instances --region $r \
+    --filters 'Name=instance-state-name,Values=running' \
+    --query 'length(Reservations[].Instances[])' --output text)
+  echo "$r  running=$count"
+done</code></pre>
+
+    <h3>レシピ 2 — 未アタッチ EBS（コスト食い）一覧</h3>
+<pre><code>aws ec2 describe-volumes --filters 'Name=status,Values=available' \
+  --query 'Volumes[].[VolumeId,Size,CreateTime]' --output table</code></pre>
+
+    <h3>レシピ 3 — EIP の課金確認（未使用は $4/月）</h3>
+<pre><code>aws ec2 describe-addresses \
+  --query 'Addresses[?AssociationId==null].[PublicIp,AllocationId]' --output table</code></pre>
+
+    <h3>レシピ 4 — SG 設定がガバガバ（0.0.0.0/0 への 22 開放）を検出</h3>
+<pre><code>aws ec2 describe-security-groups \
+  --query 'SecurityGroups[?IpPermissions[?ToPort==`22` &amp;&amp; IpRanges[?CidrIp==`0.0.0.0/0`]]].[GroupId,GroupName]' \
+  --output table</code></pre>
+
+    <h3>レシピ 5 — Tag 一括追加</h3>
+<pre><code>for id in $(aws ec2 describe-instances --filters 'Name=tag:Env,Values=prod' \
+            --query 'Reservations[].Instances[].InstanceId' --output text); do
+  aws ec2 create-tags --resources $id --tags Key=Project,Value=iigtn-platform
+done</code></pre>
+
+    <h2>コマンド早見表</h2>
+<pre><code>aws ec2 describe-instances --filters 'Name=tag:Env,Values=prod'
+aws ec2 start/stop/reboot/terminate-instances --instance-ids i-xxx
+aws ec2 wait instance-running --instance-ids i-xxx
+
+aws ec2 describe-volumes --filters 'Name=status,Values=available'
+aws ec2 describe-addresses
+
+aws ec2 authorize-security-group-ingress --group-id sg-xxx --protocol tcp --port 443 --cidr 0.0.0.0/0
+aws ec2 describe-route-tables --filters 'Name=vpc-id,Values=vpc-xxx'
+
+aws ssm start-session --target i-xxx
+aws ec2-instance-connect send-ssh-public-key ...</code></pre>
+
+    <section class="post-glossary" id="glossary">
+      <h2>用語集</h2>
+      <dl>
+        <dt>EC2 (Elastic Compute Cloud)</dt>
+        <dd>AWS の仮想マシンサービス。t3/m6i/c6g などの Instance Type で CPU・メモリ・ネットワーク性能を選ぶ。</dd>
+
+        <dt>AMI (Amazon Machine Image)</dt>
+        <dd>EC2 起動のテンプレート。OS + 初期設定 + 必要ソフトを含むスナップショット。</dd>
+
+        <dt>EBS (Elastic Block Store)</dt>
+        <dd>EC2 にアタッチするブロックストレージ。gp3 / io2 / st1 / sc1。インスタンス停止しても残るが、未アタッチでも課金。</dd>
+
+        <dt>Snapshot</dt>
+        <dd>EBS の時点コピー。S3 にバックアップされる。</dd>
+
+        <dt>VPC (Virtual Private Cloud)</dt>
+        <dd>AWS の仮想プライベートネットワーク。CIDR ブロック (10.0.0.0/16 等) を持つ。</dd>
+
+        <dt>Subnet</dt>
+        <dd>VPC を AZ 単位で分割した小ネットワーク。Public / Private で分けるのが定番。</dd>
+
+        <dt>Route Table</dt>
+        <dd>「この CIDR への通信はどのゲートウェイへ送るか」のルール集。Subnet ごとに紐付ける。</dd>
+
+        <dt>IGW (Internet Gateway)</dt>
+        <dd>VPC をインターネットに接続する出入口。Public Subnet の Route Table に <code>0.0.0.0/0 → igw</code> を書く。</dd>
+
+        <dt>NAT Gateway</dt>
+        <dd>Private Subnet からインターネット方向に出るためのマネージド NAT。EIP と組み合わせて使う。時間課金 + データ転送課金。</dd>
+
+        <dt>VPC Endpoint</dt>
+        <dd>AWS サービスへの接続を VPC 内から直接行う仕組み。Gateway 型 (S3/DynamoDB) と Interface 型 (その他) がある。NAT 不要化 / セキュリティ向上。</dd>
+
+        <dt>Security Group (SG)</dt>
+        <dd>EC2 に紐付けるステートフルなネットワーク ACL。Inbound/Outbound ルールを書く。SG 同士の参照（source-group）が推奨パターン。</dd>
+
+        <dt>NACL (Network ACL)</dt>
+        <dd>Subnet レベルのステートレス ACL。SG より粒度が粗い、補助的に使う。</dd>
+
+        <dt>EIP (Elastic IP)</dt>
+        <dd>静的なパブリック IPv4 アドレス。確保したら未使用でも時間課金。終了後の release 忘れに注意。</dd>
+
+        <dt>Instance Profile / IAM Role</dt>
+        <dd>EC2 に IAM Role を渡す仕組み。EC2 内で <code>aws</code> コマンドが鍵なしで動く。</dd>
+
+        <dt>SSM Session Manager</dt>
+        <dd>SSM Agent + IAM 経由で EC2 のシェルに入る機能。SSH 鍵・SG の 22 開放が不要。</dd>
+
+        <dt>EC2 Instance Connect</dt>
+        <dd>SSH 公開鍵を 60 秒だけインスタンスに注入する機能。鍵紛失時の救済に有効。</dd>
+      </dl>
+    </section>
+
+    <footer class="post-footer">
+      <a href="/blog/ref/12-aws-s3.html">← #ref-12 AWS S3</a>
+      <a href="/blog/ref/">シリーズ目次</a>
+    </footer>
+
+  </div>
+</article>
+
+</body>
+</html>

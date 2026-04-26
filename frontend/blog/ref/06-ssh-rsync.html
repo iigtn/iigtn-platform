@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#ref-06 SSH と鍵管理・rsync | 現場コマンドリファレンス | iigtn</title>
+<meta name="description" content="ssh / scp / rsync / ssh-keygen / ssh-agent / ssh-add / sshfs ほか、SSH と鍵管理・ファイル転送で使う 40+ コマンドを 6 カテゴリで深掘り解説。~/.ssh/config 設計と踏み台越え・ProxyJump も。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/ref/06-ssh-rsync.html">
+<meta property="og:title" content="#ref-06 SSH と鍵管理・rsync">
+<meta property="og:description" content="ssh / scp / rsync / ssh-keygen / ssh-agent / sshfs ほか 40+ コマンドを 6 カテゴリで深掘り。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/ref/06-ssh-rsync.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="#ref-06 SSH と鍵管理・rsync">
+<meta name="twitter:description" content="ssh / scp / rsync / ssh-keygen / ssh-agent / sshfs ほか 40+ コマンドを 6 カテゴリで深掘り。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="stylesheet" href="/blog/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "#ref-06 SSH と鍵管理・rsync",
+  "description": "ssh / scp / rsync / ssh-keygen / ssh-agent / sshfs ほか 40+ コマンドを 6 カテゴリで深掘り。",
+  "datePublished": "2026-04-26",
+  "author": { "@type": "Person", "name": "iigtn", "url": "https://lab.iigtn.com/" },
+  "publisher": { "@type": "Person", "name": "iigtn" },
+  "url": "https://lab.iigtn.com/blog/ref/06-ssh-rsync.html",
+  "mainEntityOfPage": "https://lab.iigtn.com/blog/ref/06-ssh-rsync.html",
+  "image": "https://lab.iigtn.com/assets/icon.svg",
+  "inLanguage": "ja",
+  "isPartOf": { "@id": "https://lab.iigtn.com/blog/ref/#blog" }
+}
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="/" class="logo" aria-label="iigtn">
+      <img src="/assets/logo.svg" alt="iigtn" height="32">
+    </a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/" class="active">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+      <li><a href="/learn.html">解説書</a></li>
+    </ul>
+  </nav>
+</header>
+
+<article class="post">
+
+  <header class="post-header">
+    <p class="post-meta">2026-04-26 · 現場コマンドリファレンス · #ref-06</p>
+    <h1>SSH と鍵管理・rsync — 40+ コマンドを 6 カテゴリで</h1>
+  </header>
+
+  <div class="post-body">
+
+    <p>
+      SSH は EC2 / オンプレ / Git / コンテナ exec の入口で日常的に使う基礎。
+      <code>~/.ssh/config</code> の設計と <code>ProxyJump</code> による踏み台越え、<code>rsync</code> による高速差分同期は、案件入った時にすぐ要求される技術です。
+    </p>
+
+    <h2>目次</h2>
+    <ol>
+      <li><a href="#sec-1">SSH 基本接続 (ssh)</a></li>
+      <li><a href="#sec-2">鍵生成・管理 (ssh-keygen / ssh-agent / ssh-add)</a></li>
+      <li><a href="#sec-3">~/.ssh/config と ProxyJump</a></li>
+      <li><a href="#sec-4">ファイル転送 (scp / sftp / sshfs)</a></li>
+      <li><a href="#sec-5">rsync — 差分同期</a></li>
+      <li><a href="#sec-6">サーバ側設定 (sshd_config)</a></li>
+      <li><a href="#cookbook">よく使うレシピ</a></li>
+      <li><a href="#glossary">用語集</a></li>
+    </ol>
+
+    <h2 id="sec-1">1. SSH 基本接続 (ssh)</h2>
+
+<pre><code>ssh user@host                            # 基本
+ssh -p 2222 user@host                    # ポート指定
+ssh -i ~/.ssh/aws.pem ec2-user@host      # 鍵指定
+ssh user@host 'ls -la /var/log'          # 1 コマンド実行
+ssh -t user@host 'sudo systemctl status nginx'   # 擬似端末割り当て (sudo 等で必要)
+ssh -L 8080:localhost:80 user@host       # ローカルポート転送（手元 8080 → host:80）
+ssh -R 9000:localhost:9000 user@host     # リモートポート転送
+ssh -D 1080 user@host                    # SOCKS プロキシ
+ssh -J bastion-host user@target          # 踏み台越え (ProxyJump)
+ssh -A user@host                         # ssh-agent 転送
+ssh -X user@host                         # X11 転送
+ssh -v user@host                         # verbose（接続トラブル時に必須）
+ssh -vvv user@host                       # 超詳細</code></pre>
+
+    <div class="callout warn">
+      <code>ssh -A</code> (agent forwarding) は中継サーバ管理者に鍵 利用権限を委譲することになる。信頼できないホストでは使わず、<code>ProxyJump</code> を使う。
+    </div>
+
+    <h2 id="sec-2">2. 鍵生成・管理</h2>
+
+    <h3>ssh-keygen — 鍵生成</h3>
+<pre><code># ed25519（推奨）
+ssh-keygen -t ed25519 -C 'iigtn@laptop' -f ~/.ssh/id_ed25519
+
+# RSA 4096（古い環境互換）
+ssh-keygen -t rsa -b 4096 -C 'iigtn@laptop' -f ~/.ssh/id_rsa
+
+# パスフレーズなし（CI 用、鍵自体の管理に注意）
+ssh-keygen -t ed25519 -N '' -f ./deploy_key
+
+# 公開鍵を表示
+cat ~/.ssh/id_ed25519.pub
+
+# fingerprint
+ssh-keygen -lf ~/.ssh/id_ed25519
+ssh-keygen -lf ~/.ssh/id_ed25519.pub
+
+# 既存鍵のパスフレーズ変更
+ssh-keygen -p -f ~/.ssh/id_ed25519
+
+# 公開鍵抽出（秘密鍵から）
+ssh-keygen -y -f ~/.ssh/id_ed25519 &gt; ~/.ssh/id_ed25519.pub
+
+# サーバの host key を取得（known_hosts へ事前登録）
+ssh-keyscan -t ed25519 host &gt;&gt; ~/.ssh/known_hosts</code></pre>
+
+    <h3>ssh-agent / ssh-add</h3>
+<pre><code># agent 起動（ログインシェルで自動起動が一般的）
+eval "$(ssh-agent -s)"
+
+# 鍵を追加（パスフレーズを 1 度だけ入力）
+ssh-add ~/.ssh/id_ed25519
+
+# 一覧
+ssh-add -l
+ssh-add -L            # 公開鍵全文
+
+# 削除
+ssh-add -d ~/.ssh/id_ed25519
+ssh-add -D            # 全削除
+
+# 寿命指定
+ssh-add -t 1h ~/.ssh/id_ed25519     # 1 時間で自動削除</code></pre>
+
+    <h3>公開鍵をリモートに登録</h3>
+<pre><code>ssh-copy-id user@host                                   # 楽
+ssh-copy-id -i ~/.ssh/id_ed25519.pub user@host
+
+# 手動: リモートに直接書く
+cat ~/.ssh/id_ed25519.pub | ssh user@host 'mkdir -p ~/.ssh &amp;&amp; cat &gt;&gt; ~/.ssh/authorized_keys &amp;&amp; chmod 700 ~/.ssh &amp;&amp; chmod 600 ~/.ssh/authorized_keys'</code></pre>
+
+    <h2 id="sec-3">3. ~/.ssh/config と ProxyJump</h2>
+
+    <p>頻繁に使う接続情報は <code>~/.ssh/config</code> にまとめる。これを書くと現場の生産性が桁違い。</p>
+
+<pre><code># ~/.ssh/config
+# グローバルデフォルト
+Host *
+  ServerAliveInterval 60
+  ServerAliveCountMax 3
+  AddKeysToAgent yes
+  IdentitiesOnly yes               # 指定した鍵のみ送る（不要鍵が大量にあると認証失敗の原因）
+  HashKnownHosts yes
+
+# 個別ホスト
+Host bastion
+  HostName bastion.example.com
+  User iigtn
+  Port 22
+  IdentityFile ~/.ssh/id_ed25519
+
+Host web-prod
+  HostName 10.0.10.5
+  User ec2-user
+  IdentityFile ~/.ssh/aws-prod.pem
+  ProxyJump bastion              # 踏み台越え
+
+# パターン
+Host *.internal.example.com
+  User iigtn
+  ProxyJump bastion
+
+# Git ホスト用
+Host github.com
+  HostName github.com
+  User git
+  IdentityFile ~/.ssh/git_ed25519
+
+# 接続テスト
+ssh -T git@github.com
+ssh web-prod 'hostname'           # config の Host エイリアスで接続</code></pre>
+
+    <div class="callout info">
+      <code>Host alias</code> を書いておくと <code>ssh alias</code> だけで接続可能。<code>scp</code> / <code>rsync</code> も同じエイリアス使える。
+      <code>ProxyJump</code> で多段踏み台 (<code>ProxyJump bastion1,bastion2</code>) も書ける。
+    </div>
+
+    <h2 id="sec-4">4. ファイル転送 (scp / sftp / sshfs)</h2>
+
+    <h3>scp — 古典的だが今も現役</h3>
+<pre><code>scp file user@host:/tmp/                    # 送信
+scp user@host:/tmp/file ./                  # 受信
+scp -r dir/ user@host:/tmp/                 # ディレクトリ再帰
+scp -P 2222 file user@host:/tmp/            # ポート指定 (大文字 P)
+scp -i key.pem file user@host:/tmp/         # 鍵指定
+scp -p file user@host:/tmp/                 # 属性保持
+scp web-prod:/var/log/nginx/access.log .    # config の Host alias 利用</code></pre>
+    <div class="callout warn">
+      OpenSSH 9.0+ では <code>scp</code> がデフォルトで SFTP プロトコル使用に変わった（互換性問題があれば <code>-O</code> で旧 scp プロトコル）。
+      新規開発では <code>rsync</code> を推奨。
+    </div>
+
+    <h3>sftp — 対話的ファイル転送</h3>
+<pre><code>sftp user@host
+# プロンプト内で:
+#   ls / cd / get file / put file / mget *.log / mput *.txt / quit
+
+sftp -b cmds.txt user@host                 # バッチ実行
+echo "get /var/log/app.log" | sftp -b - user@host</code></pre>
+
+    <h3>sshfs — リモートをローカルにマウント</h3>
+<pre><code>mkdir ~/mnt/server
+sshfs user@host:/var/www ~/mnt/server      # マウント
+fusermount -u ~/mnt/server                 # アンマウント
+# ~/.ssh/config の Host alias もそのまま使える
+sshfs web-prod:/var/log ~/mnt/web</code></pre>
+
+    <h2 id="sec-5">5. rsync — 差分同期</h2>
+
+    <p>scp と違い<strong>差分のみ転送</strong>。大量ファイル・繰り返しデプロイ・バックアップで必須。</p>
+
+<pre><code># 基本: src/ → dst/ にミラー
+rsync -avz src/ user@host:/var/www/site/
+
+# よく使うフラグ:
+#   -a  archive (-rlptgoD: 再帰 + シンボリックリンク + 権限 + タイムスタンプ + 所有者保持)
+#   -v  verbose
+#   -z  圧縮
+#   -P  --partial --progress（中断後の再開 + 進捗表示）
+#   -h  人間可読サイズ
+#   --delete  ソースに無いファイルを宛先から削除（完全ミラー）
+#   --dry-run / -n  実行せず確認
+
+# よく使う黄金パターン
+rsync -avzP --delete src/ user@host:/dest/
+rsync -avz --dry-run src/ user@host:/dest/      # まず確認
+
+# 除外
+rsync -avz --exclude='node_modules' --exclude='.git' src/ user@host:/dest/
+rsync -avz --exclude-from=excludes.txt src/ user@host:/dest/
+
+# 受信側を rsync で
+rsync -avzP user@host:/var/log/ ./logs/
+
+# 同一ホスト内コピー
+rsync -avP /src/ /dest/
+
+# SSH 経由で別ポート / 鍵指定
+rsync -avzP -e 'ssh -p 2222 -i ~/.ssh/key' src/ user@host:/dest/
+
+# 帯域制限（運用中のサーバから取得する時）
+rsync -avzP --bwlimit=10000 src/ user@host:/dest/   # 10000 KB/s = 10 MB/s
+
+# 差分だけ pull
+rsync -avzP --update user@host:/var/log/ ./logs/    # 新しい方を残す</code></pre>
+
+    <h2 id="sec-6">6. サーバ側設定 (sshd_config)</h2>
+
+<pre><code># /etc/ssh/sshd_config (主要設定)
+Port 22                              # ポート変更で機械的攻撃を多少回避
+PermitRootLogin no                   # root 直ログイン無効（必須）
+PasswordAuthentication no            # 鍵認証のみに（必須）
+PubkeyAuthentication yes
+ChallengeResponseAuthentication no
+UsePAM yes
+AllowUsers iigtn deploy              # 限定したユーザのみ許可
+AllowGroups ssh-users                # グループでも可
+MaxAuthTries 3                       # ブルートフォース対策
+ClientAliveInterval 300
+ClientAliveCountMax 2
+
+# 設定変更後
+sudo sshd -t                         # 構文チェック (必須、これしないと締め出される)
+sudo systemctl reload sshd
+
+# fail2ban を入れて自動 BAN（ブルートフォース対策の追加層）
+sudo apt install fail2ban
+sudo systemctl enable --now fail2ban
+sudo fail2ban-client status sshd</code></pre>
+
+    <div class="callout warn">
+      sshd 設定ミスで自分が締め出される事故は鉄板。<strong>必ず別の SSH セッションを開いたまま</strong> reload して、新セッションで動作確認するまで元のセッションを切らない。
+    </div>
+
+    <h2 id="cookbook">よく使うレシピ</h2>
+
+    <h3>レシピ 1 — 鍵をなくしたサーバへの緊急アクセス</h3>
+<pre><code># EC2 なら EC2 Instance Connect / SSM Session Manager 経由
+aws ec2-instance-connect send-ssh-public-key \
+  --instance-id i-xxx --availability-zone ap-northeast-1a \
+  --instance-os-user ec2-user --ssh-public-key file://~/.ssh/id_ed25519.pub
+
+aws ssm start-session --target i-xxx       # 鍵なしで shell（要 SSM Agent + Role）</code></pre>
+
+    <h3>レシピ 2 — 多段踏み台</h3>
+<pre><code># ~/.ssh/config に書けば一発
+Host bastion
+  HostName bastion.example.com
+  User iigtn
+
+Host db-prod
+  HostName 10.0.20.10
+  User postgres
+  ProxyJump bastion
+
+ssh db-prod                                # bastion 経由で接続</code></pre>
+
+    <h3>レシピ 3 — local → remote → 別ホストの DB を覗く</h3>
+<pre><code># local 5433 → bastion → 10.0.20.10:5432
+ssh -L 5433:10.0.20.10:5432 bastion
+# 別ターミナルで
+psql -h 127.0.0.1 -p 5433 -U app dbname</code></pre>
+
+    <h3>レシピ 4 — 大量ファイルを高速にデプロイ</h3>
+<pre><code>rsync -avzP --delete \
+  --exclude='node_modules' --exclude='.git' \
+  ./dist/ deploy@web-prod:/var/www/myapp/
+
+# 確認
+ssh web-prod 'ls -la /var/www/myapp/'</code></pre>
+
+    <h3>レシピ 5 — known_hosts エラー復旧</h3>
+<pre><code># ホストの公開鍵が変わった (再構築・別 IP 流用) 時
+ssh-keygen -R hostname                     # 該当エントリ削除
+ssh-keyscan -t ed25519 hostname &gt;&gt; ~/.ssh/known_hosts
+ssh hostname</code></pre>
+
+    <h2>コマンド早見表</h2>
+<pre><code># 接続
+ssh user@host / -p 2222 / -i key.pem / -J bastion / -L 8080:localhost:80
+
+# 鍵
+ssh-keygen -t ed25519
+ssh-add ~/.ssh/id_ed25519
+ssh-copy-id user@host
+
+# 転送
+rsync -avzP --delete src/ user@host:/dest/
+scp -r dir user@host:/tmp/
+sftp user@host
+
+# config
+~/.ssh/config に Host alias + ProxyJump
+
+# サーバ
+sudo sshd -t (構文チェック必須)
+sudo systemctl reload sshd</code></pre>
+
+    <section class="post-glossary" id="glossary">
+      <h2>用語集</h2>
+      <dl>
+        <dt>公開鍵認証</dt>
+        <dd>秘密鍵を手元、公開鍵をサーバに置く認証方式。パスワード認証より安全で、CI 含め一般的な方式。</dd>
+
+        <dt>ed25519 vs RSA 4096</dt>
+        <dd>ed25519 は新しい楕円曲線アルゴリズム、短く速く安全。RSA 4096 は古い環境互換性が必要な時に。新規鍵は ed25519 推奨。</dd>
+
+        <dt>fingerprint</dt>
+        <dd>鍵のハッシュ値。<code>ssh-keygen -lf</code> で表示。GitHub/GitLab に登録した公開鍵と手元の鍵が同一か確認に使う。</dd>
+
+        <dt>~/.ssh/authorized_keys</dt>
+        <dd>サーバ側の「ログイン許可する公開鍵」リスト。1 行 1 公開鍵。パーミッション 600 + ディレクトリ 700 必須。</dd>
+
+        <dt>~/.ssh/known_hosts</dt>
+        <dd>クライアント側の「過去に接続したサーバの公開鍵」リスト。MITM 検出に使う。サーバ再構築で鍵が変わると警告が出る。</dd>
+
+        <dt>ssh-agent</dt>
+        <dd>パスフレーズ付き秘密鍵をメモリに保持するデーモン。1 度パスフレーズを入れれば連続使用が楽になる。</dd>
+
+        <dt>ProxyJump (-J)</dt>
+        <dd>踏み台越えを 1 行で書ける機能。<code>~/.ssh/config</code> に <code>ProxyJump bastion</code> と書けば <code>ssh target</code> だけで踏み台経由できる。</dd>
+
+        <dt>ポートフォワード (-L / -R / -D)</dt>
+        <dd>-L = ローカル→リモート、-R = リモート→ローカル、-D = SOCKS プロキシ。DB 直接接続や開発サーバ閲覧に使う。</dd>
+
+        <dt>agent forwarding (-A)</dt>
+        <dd>SSH セッション先で手元の ssh-agent を使えるようにする機能。便利だが中継サーバ管理者に鍵利用権限を渡すリスクあり。</dd>
+
+        <dt>IdentitiesOnly</dt>
+        <dd>ssh が config で指定した鍵 のみ送る設定。鍵が大量にあると相手サーバの認証回数制限を超えて失敗する事故を防ぐ。</dd>
+
+        <dt>scp vs rsync</dt>
+        <dd>scp は単純コピー、rsync は差分転送 + 属性保持 + 圧縮 + レジューム。大量ファイルや繰り返しデプロイは rsync 一択。</dd>
+
+        <dt>sshfs / FUSE</dt>
+        <dd>SSH 経由でリモート FS をローカルにマウントする FUSE ツール。エディタからリモートを直接編集できる。</dd>
+
+        <dt>EC2 Instance Connect / SSM Session Manager</dt>
+        <dd>AWS の鍵不要 SSH 代替。Instance Connect は短命公開鍵注入、SSM はエージェント経由のシェル。鍵紛失時の救命綱。</dd>
+
+        <dt>fail2ban</dt>
+        <dd>ログ監視で SSH ブルートフォース等を検知して自動で iptables BAN するツール。本番サーバ標準装備推奨。</dd>
+
+        <dt>sshd_config の reload 注意点</dt>
+        <dd>設定ミスで自分が締め出される事故が鉄板。<code>sudo sshd -t</code> で構文確認 + 別セッション接続成功確認まで元セッションを切らない。</dd>
+      </dl>
+    </section>
+
+    <footer class="post-footer">
+      <a href="/blog/ref/05-systemd.html">← #ref-05 systemd</a>
+      <a href="/blog/ref/">シリーズ目次</a>
+    </footer>
+
+  </div>
+</article>
+
+</body>
+</html>

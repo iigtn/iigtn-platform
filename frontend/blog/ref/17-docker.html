@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#ref-17 Docker + Docker Compose 完全リファレンス | 現場コマンドリファレンス | iigtn</title>
+<meta name="description" content="docker build / run / ps / exec / logs / inspect / network / volume / image と docker compose up / down / logs / exec / build ほか、Docker と Compose の 60+ コマンドを 8 カテゴリで深掘り解説。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/ref/17-docker.html">
+<meta property="og:title" content="#ref-17 Docker + Docker Compose 完全リファレンス">
+<meta property="og:description" content="Docker / Compose 60+ コマンドを 8 カテゴリで深掘り。ビルド・実行・ネットワーク・ボリューム・トラブル対応。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/ref/17-docker.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="#ref-17 Docker + Docker Compose 完全リファレンス">
+<meta name="twitter:description" content="Docker / Compose 60+ コマンドを 8 カテゴリで深掘り。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="stylesheet" href="/blog/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "#ref-17 Docker + Docker Compose 完全リファレンス",
+  "description": "Docker / Compose 60+ コマンドを 8 カテゴリで深掘り。",
+  "datePublished": "2026-04-26",
+  "author": { "@type": "Person", "name": "iigtn", "url": "https://lab.iigtn.com/" },
+  "publisher": { "@type": "Person", "name": "iigtn" },
+  "url": "https://lab.iigtn.com/blog/ref/17-docker.html",
+  "mainEntityOfPage": "https://lab.iigtn.com/blog/ref/17-docker.html",
+  "image": "https://lab.iigtn.com/assets/icon.svg",
+  "inLanguage": "ja",
+  "isPartOf": { "@id": "https://lab.iigtn.com/blog/ref/#blog" }
+}
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="/" class="logo" aria-label="iigtn">
+      <img src="/assets/logo.svg" alt="iigtn" height="32">
+    </a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/" class="active">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+      <li><a href="/learn.html">解説書</a></li>
+    </ul>
+  </nav>
+</header>
+
+<article class="post">
+
+  <header class="post-header">
+    <p class="post-meta">2026-04-26 · 現場コマンドリファレンス · #ref-17</p>
+    <h1>Docker + Docker Compose 完全リファレンス — 60+ コマンドを 8 カテゴリで</h1>
+  </header>
+
+  <div class="post-body">
+
+    <p>
+      コンテナ案件では Docker は前提知識。AWS 案件でも ECR / ECS / EKS / Lambda コンテナイメージ等で必須です。
+      開発時の Compose 操作と、本番の image ビルド / push を中心に整理します。
+    </p>
+
+    <h2>目次</h2>
+    <ol>
+      <li><a href="#sec-1">image ビルドと管理</a></li>
+      <li><a href="#sec-2">コンテナ起動・操作</a></li>
+      <li><a href="#sec-3">ログ・状態確認</a></li>
+      <li><a href="#sec-4">ネットワーク</a></li>
+      <li><a href="#sec-5">ボリューム</a></li>
+      <li><a href="#sec-6">ECR push / pull</a></li>
+      <li><a href="#sec-7">docker compose</a></li>
+      <li><a href="#sec-8">クリーンアップ・トラブル対応</a></li>
+      <li><a href="#cookbook">レシピ集</a></li>
+      <li><a href="#glossary">用語集</a></li>
+    </ol>
+
+    <h2 id="sec-1">1. image ビルドと管理</h2>
+
+<pre><code>docker build -t myapp:latest .
+docker build -t myapp:1.0 -f Dockerfile.prod .
+docker build --no-cache -t myapp .
+docker build --build-arg VERSION=1.2.3 -t myapp:1.2.3 .
+docker build --target builder -t myapp:builder .             # multi-stage の特定 stage
+docker build --platform linux/amd64,linux/arm64 -t myapp .   # マルチアーキ（buildx）
+
+# image 一覧
+docker images
+docker images -a                                              # 中間 image 含む
+docker images --filter 'dangling=true'                        # tag なし image
+
+# tag / push
+docker tag myapp:latest 123456789012.dkr.ecr.ap-northeast-1.amazonaws.com/myapp:1.0
+docker push 123456789012.dkr.ecr.ap-northeast-1.amazonaws.com/myapp:1.0
+
+# pull
+docker pull nginx:1.27-alpine
+docker pull amazon/aws-cli
+
+# image 削除
+docker rmi myapp:latest
+docker rmi $(docker images -q --filter dangling=true)         # 中間 image 一括
+
+# image 詳細
+docker inspect nginx:1.27-alpine
+docker history nginx:1.27-alpine                              # レイヤごとのコマンド・サイズ</code></pre>
+
+    <h2 id="sec-2">2. コンテナ起動・操作</h2>
+
+<pre><code># 起動
+docker run nginx                                              # foreground
+docker run -d nginx                                            # detached
+docker run -d --name web -p 8080:80 nginx                      # ポートマッピング
+docker run -d -e KEY=value -e DB_URL=... myapp                 # 環境変数
+docker run --env-file .env -d myapp                            # ファイルから
+docker run -d -v $(pwd):/app -w /app node:22 npm test          # ボリューム + 作業ディレクトリ
+docker run --rm -it ubuntu bash                                # 1 回限り（終了で削除）+ 対話
+docker run --network host nginx                                # ホストネットワーク
+docker run --restart unless-stopped -d nginx                   # 再起動ポリシー
+docker run --memory 512m --cpus 1.0 myapp                      # リソース制限
+docker run --user 1000:1000 myapp                              # 非 root で実行
+docker run --read-only --tmpfs /tmp myapp                      # ルート FS 読み取り専用 + 書き込み /tmp 限定
+
+# プロセス管理
+docker ps                                                       # 起動中
+docker ps -a                                                    # 全コンテナ
+docker ps --filter 'status=exited'
+docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+
+docker start web / docker stop web / docker restart web
+docker pause web / docker unpause web
+docker kill web                                                 # SIGKILL
+docker rm web                                                   # 削除（停止後）
+docker rm -f web                                                # 強制削除
+
+# 中で操作
+docker exec -it web bash
+docker exec web ls /etc/nginx
+docker exec -u root web apt-get update
+
+# ファイル コピー
+docker cp ./local.txt web:/app/
+docker cp web:/var/log/nginx/access.log ./</code></pre>
+
+    <h2 id="sec-3">3. ログ・状態確認</h2>
+
+<pre><code>docker logs web
+docker logs -f web                                              # tail -f
+docker logs --tail 100 web
+docker logs --since 10m web
+docker logs --until 5m web
+
+# CPU / メモリ使用量
+docker stats                                                     # リアルタイム全コンテナ
+docker stats web                                                 # 1 つだけ
+docker stats --no-stream                                         # 1 回スナップショット
+
+# プロセス
+docker top web
+docker inspect web                                               # 設定全部 (JSON)
+docker inspect web --format '{{.NetworkSettings.IPAddress}}'
+docker inspect web --format '{{json .State.Health}}' | jq
+
+# イベント追跡
+docker events
+docker events --filter 'event=die'</code></pre>
+
+    <h2 id="sec-4">4. ネットワーク</h2>
+
+<pre><code>docker network ls
+docker network create mynet
+docker network create --subnet 172.20.0.0/16 mynet
+docker network inspect mynet
+docker network connect mynet web                                 # 既存コンテナを別 NW に
+docker network disconnect mynet web
+docker network rm mynet
+docker network prune                                              # 未使用削除
+
+# 起動時に NW 指定
+docker run -d --network mynet --name app1 myapp
+docker run -d --network mynet --name app2 myapp
+# app1 → http://app2:8080 で名前解決できる（Compose 同様）</code></pre>
+
+    <h2 id="sec-5">5. ボリューム</h2>
+
+<pre><code>docker volume ls
+docker volume create mydata
+docker volume inspect mydata
+docker volume rm mydata
+docker volume prune
+
+# 名前付きボリューム
+docker run -d -v mydata:/var/lib/postgresql/data postgres:16
+
+# bind mount（ホストパスを直接マウント）
+docker run -d -v $(pwd)/data:/data myapp
+docker run -d --mount type=bind,source=$(pwd),target=/app myapp
+
+# tmpfs（メモリ FS）
+docker run -d --tmpfs /tmp myapp</code></pre>
+
+    <h2 id="sec-6">6. ECR push / pull</h2>
+
+<pre><code># ECR ログイン（CLI v2）
+aws ecr get-login-password --region ap-northeast-1 \
+  | docker login --username AWS --password-stdin 123456789012.dkr.ecr.ap-northeast-1.amazonaws.com
+
+# Repository 作成（CLI 側）
+aws ecr create-repository --repository-name myapp \
+  --image-scanning-configuration scanOnPush=true
+
+# tag + push
+docker tag myapp:latest 123456789012.dkr.ecr.ap-northeast-1.amazonaws.com/myapp:1.0
+docker push 123456789012.dkr.ecr.ap-northeast-1.amazonaws.com/myapp:1.0
+
+# pull
+docker pull 123456789012.dkr.ecr.ap-northeast-1.amazonaws.com/myapp:1.0
+
+# image 一覧 (ECR)
+aws ecr list-images --repository-name myapp
+aws ecr describe-images --repository-name myapp \
+  --query 'sort_by(imageDetails, &amp;imagePushedAt)[-5:].[imageTags[0],imageSizeInBytes,imagePushedAt]' \
+  --output table
+
+# 古い image を削除（lifecycle policy 推奨）
+aws ecr put-lifecycle-policy --repository-name myapp \
+  --lifecycle-policy-text file://lifecycle.json</code></pre>
+
+    <h2 id="sec-7">7. docker compose</h2>
+
+<pre><code># 起動
+docker compose up                                                # foreground
+docker compose up -d                                              # detached
+docker compose up -d --build                                      # 再ビルドして起動
+docker compose up -d --force-recreate                             # コンテナ作り直し
+docker compose up -d --scale web=3                                # スケール
+
+# 停止 / 削除
+docker compose down                                               # コンテナ + NW 削除
+docker compose down -v                                            # ボリュームも削除
+docker compose down --rmi all                                     # image も削除
+
+# 操作
+docker compose ps
+docker compose logs -f
+docker compose logs -f web                                        # 特定サービスのみ
+docker compose exec web bash
+docker compose run --rm web npm test                              # 1 回限り
+docker compose stop web / start web / restart web
+
+# ビルド
+docker compose build
+docker compose build --no-cache web
+
+# 設定確認・検証
+docker compose config                                             # 統合した最終 YAML
+docker compose config --services
+docker compose images
+
+# 環境ファイル指定
+docker compose --env-file .env.prod up -d
+docker compose -f compose.yaml -f compose.override.yaml up -d</code></pre>
+
+    <h3>compose.yaml サンプル</h3>
+<pre><code>services:
+  web:
+    build: ./web
+    image: myapp:dev
+    ports: ["8080:80"]
+    environment:
+      - DB_URL=postgresql://db:5432/app
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+  db:
+    image: postgres:16
+    environment:
+      - POSTGRES_PASSWORD=secret
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready"]
+      interval: 5s
+      retries: 10
+
+volumes:
+  dbdata:</code></pre>
+
+    <h2 id="sec-8">8. クリーンアップ・トラブル対応</h2>
+
+<pre><code># 不要リソース削除
+docker system prune                                              # 停止コンテナ + 中間 image + 未使用 NW
+docker system prune -a                                           # 全未使用 image も
+docker system prune -a --volumes                                 # ボリュームも（破壊的）
+docker system df                                                 # 使用容量
+
+# image 個別削除
+docker image prune                                                # dangling のみ
+docker image prune -a                                             # 未使用全部
+
+# コンテナ全削除
+docker rm $(docker ps -aq)
+docker rm -f $(docker ps -aq)
+
+# トラブル時
+docker logs --tail 200 web
+docker inspect web --format '{{json .State}}' | jq
+docker exec web ps aux
+docker run --rm -it busybox sh                                    # 別の軽量コンテナで NW 確認
+docker run --rm --network container:web busybox netstat -tlnp     # 同 NW 名前空間で確認
+
+# DNS 確認
+docker exec web getent hosts db
+docker exec web nslookup db</code></pre>
+
+    <h2 id="cookbook">レシピ集</h2>
+
+    <h3>レシピ 1 — Dockerfile マルチステージビルド</h3>
+<pre><code># Dockerfile
+FROM node:22-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM node:22-alpine
+WORKDIR /app
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+USER node
+EXPOSE 3000
+CMD ["node", "dist/server.js"]
+
+# image サイズが激減（builder 層を捨てる）</code></pre>
+
+    <h3>レシピ 2 — ホストの Docker socket 経由で Docker を操作</h3>
+<pre><code>docker run --rm -v /var/run/docker.sock:/var/run/docker.sock docker:cli ps
+# 注: socket をマウント = root 権限相当。信頼できないコンテナでは絶対禁止</code></pre>
+
+    <h3>レシピ 3 — 中の状態を全部覗く</h3>
+<pre><code>docker exec -it web bash
+# 入った後:
+ps aux            # プロセス
+ss -tlnp          # listen ポート
+env               # 環境変数
+df -h /           # ディスク使用</code></pre>
+
+    <h3>レシピ 4 — 巨大 image をスリム化</h3>
+<pre><code># dive ツールでレイヤ分析
+dive myapp:latest
+
+# あるいは docker history
+docker history myapp:latest
+
+# 改善: alpine ベース、multi-stage、.dockerignore で不要ファイル除外</code></pre>
+
+    <h3>レシピ 5 — Compose で DB を初期化して立ち上げ</h3>
+<pre><code>services:
+  db:
+    image: postgres:16
+    environment:
+      - POSTGRES_PASSWORD=secret
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports: ["5432:5432"]</code></pre>
+
+    <h2>コマンド早見表</h2>
+<pre><code># build / push
+docker build -t name:tag .
+docker tag name:tag REGISTRY/name:tag
+docker push REGISTRY/name:tag
+
+# 起動
+docker run -d --name N -p 8080:80 -v $(pwd):/app --restart unless-stopped IMAGE
+
+# 確認
+docker ps / docker logs -f N / docker stats / docker inspect N
+docker exec -it N bash
+
+# Compose
+docker compose up -d --build
+docker compose logs -f
+docker compose down -v
+
+# クリーン
+docker system prune -a --volumes
+docker system df</code></pre>
+
+    <section class="post-glossary" id="glossary">
+      <h2>用語集</h2>
+      <dl>
+        <dt>image / コンテナ</dt>
+        <dd>image = 不変のテンプレート（layered FS）。コンテナ = image から起動した実行インスタンス。</dd>
+
+        <dt>Dockerfile</dt>
+        <dd>image をビルドする手順を記述したテキスト。FROM / RUN / COPY / CMD 等の命令を順次レイヤ化。</dd>
+
+        <dt>multi-stage build</dt>
+        <dd><code>FROM ... AS builder</code> でビルド用と最小ランタイム用を分離。最終 image を劇的にスリム化できる。</dd>
+
+        <dt>.dockerignore</dt>
+        <dd>build context から除外するパターン。<code>node_modules</code>, <code>.git</code> を除外しないと巨大 image になる。</dd>
+
+        <dt>レイヤキャッシュ</dt>
+        <dd>Dockerfile の各命令ごとにキャッシュされる。COPY → RUN の順番工夫でビルド時間が大きく変わる。</dd>
+
+        <dt>buildx</dt>
+        <dd>Docker の拡張ビルダ。マルチアーキ build、cache export/import、QEMU エミュレーション等が可能。</dd>
+
+        <dt>volume / bind mount / tmpfs</dt>
+        <dd>volume = Docker 管理の永続ストレージ。bind = ホストパス直接マウント。tmpfs = メモリ FS（消える）。</dd>
+
+        <dt>docker network bridge / host / none</dt>
+        <dd>bridge = デフォルト隔離 NW、host = ホストの NW を直接利用、none = NW なし。Compose は内部 bridge を自動作成。</dd>
+
+        <dt>healthcheck</dt>
+        <dd>image / Compose で定義する自動ヘルスチェック。Compose の <code>depends_on: condition: service_healthy</code> で順序制御に使える。</dd>
+
+        <dt>restart policy</dt>
+        <dd>no / on-failure / always / unless-stopped。本番は <code>unless-stopped</code> が無難。</dd>
+
+        <dt>ECR</dt>
+        <dd>AWS のコンテナ registry。<code>aws ecr get-login-password</code> で docker login。lifecycle policy で古い tag を自動削除。</dd>
+
+        <dt>Compose v1 vs v2</dt>
+        <dd>v1: <code>docker-compose</code>（Python 製、EOL）。v2: <code>docker compose</code>（Go 製、Docker CLI プラグイン）。新規は v2 一択。</dd>
+
+        <dt>compose.yaml override</dt>
+        <dd>複数 compose ファイルを <code>-f</code> で重ね、後勝ちでマージできる。<code>compose.override.yaml</code> はデフォルトで自動マージ。</dd>
+
+        <dt>docker system prune</dt>
+        <dd>不要リソース（停止コンテナ、dangling image、未使用 NW）の一括削除。<code>--volumes</code> 指定は破壊的なので注意。</dd>
+
+        <dt>Docker socket</dt>
+        <dd><code>/var/run/docker.sock</code>。コンテナ内にマウントすると Docker を制御可能 = root 権限相当。セキュリティ要注意。</dd>
+      </dl>
+    </section>
+
+    <footer class="post-footer">
+      <a href="/blog/ref/16-cloudwatch.html">← #ref-16 CloudWatch</a>
+      <a href="/blog/ref/">シリーズ目次</a>
+    </footer>
+
+  </div>
+</article>
+
+</body>
+</html>
