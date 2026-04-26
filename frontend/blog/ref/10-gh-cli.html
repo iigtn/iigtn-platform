@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#ref-10 GitHub CLI (gh) リファレンス | 現場コマンドリファレンス | iigtn</title>
+<meta name="description" content="gh auth / repo / pr / issue / run / workflow / release / api ほか、GitHub CLI (gh) で日常的に使う 50+ コマンドを 8 カテゴリに分けて、自動化レシピつきで深掘り解説します。CI/CD 運用・PR レビュー効率化に。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/ref/10-gh-cli.html">
+<meta property="og:title" content="#ref-10 GitHub CLI (gh) リファレンス">
+<meta property="og:description" content="gh auth / repo / pr / issue / run / workflow / release / api ほか 50+ コマンドを 8 カテゴリで深掘り。CI/CD 運用・PR レビュー効率化に。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/ref/10-gh-cli.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="#ref-10 GitHub CLI (gh) リファレンス">
+<meta name="twitter:description" content="gh auth / repo / pr / issue / run / workflow / release / api ほか 50+ コマンドを 8 カテゴリで深掘り。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="stylesheet" href="/blog/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "#ref-10 GitHub CLI (gh) リファレンス",
+  "description": "gh auth / repo / pr / issue / run / workflow / release / api ほか 50+ コマンドを 8 カテゴリで深掘り。",
+  "datePublished": "2026-04-26",
+  "author": { "@type": "Person", "name": "iigtn", "url": "https://lab.iigtn.com/" },
+  "publisher": { "@type": "Person", "name": "iigtn" },
+  "url": "https://lab.iigtn.com/blog/ref/10-gh-cli.html",
+  "mainEntityOfPage": "https://lab.iigtn.com/blog/ref/10-gh-cli.html",
+  "image": "https://lab.iigtn.com/assets/icon.svg",
+  "inLanguage": "ja",
+  "isPartOf": { "@id": "https://lab.iigtn.com/blog/ref/#blog" }
+}
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="/" class="logo" aria-label="iigtn">
+      <img src="/assets/logo.svg" alt="iigtn" height="32">
+    </a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/" class="active">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+      <li><a href="/learn.html">解説書</a></li>
+    </ul>
+  </nav>
+</header>
+
+<article class="post">
+
+  <header class="post-header">
+    <p class="post-meta">2026-04-26 · 現場コマンドリファレンス · #ref-10</p>
+    <h1>GitHub CLI (gh) リファレンス — 50+ コマンドを 8 カテゴリで</h1>
+  </header>
+
+  <div class="post-body">
+
+    <p>
+      <strong>GitHub CLI (gh)</strong> は GitHub Web UI でできる作業のほぼ全部をターミナルから実行できる公式 CLI です。
+      PR 作成・レビュー・マージ、Issue 管理、Actions ログ確認、Release 公開、Webhook 経由の API 操作まで。
+      ブラウザ往復が消えるだけで現場の生産性は跳ね上がります。
+    </p>
+    <p>
+      本記事は <code>gh</code> の主要 50+ コマンドを 8 カテゴリに整理し、最後に CI/CD 運用での自動化レシピを載せました。
+      AWS との組み合わせ（OIDC 認証経由の deploy 確認など）でも頻出します。
+    </p>
+
+    <div class="callout info">
+      <strong>インストール:</strong> 公式 <a href="https://cli.github.com">cli.github.com</a> から各 OS 用パッケージ取得。
+      Windows なら <code>winget install GitHub.cli</code>、macOS なら <code>brew install gh</code>、Linux ディストリは公式 repo を追加。
+    </div>
+
+    <h2>目次</h2>
+    <ol>
+      <li><a href="#sec-1">認証・設定 (auth / config / status)</a></li>
+      <li><a href="#sec-2">リポジトリ操作 (repo)</a></li>
+      <li><a href="#sec-3">プルリクエスト (pr)</a></li>
+      <li><a href="#sec-4">Issue 管理 (issue)</a></li>
+      <li><a href="#sec-5">Actions / Workflow (run / workflow)</a></li>
+      <li><a href="#sec-6">Release / Tag (release)</a></li>
+      <li><a href="#sec-7">Gist / Codespaces / Project</a></li>
+      <li><a href="#sec-8">REST/GraphQL API (api)</a></li>
+      <li><a href="#cookbook">CI/CD 運用レシピ</a></li>
+      <li><a href="#glossary">用語集</a></li>
+    </ol>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-1">1. 認証・設定 (auth / config / status)</h2>
+
+    <h3>auth — 認証管理</h3>
+<pre><code>gh auth login                          # 対話式ログイン (GitHub.com 推奨設定)
+gh auth login --hostname github.example.com   # GHE Server
+gh auth login --with-token &lt; token.txt # トークン直接指定
+gh auth status                         # 現在のログイン状態確認
+gh auth refresh -s read:org            # スコープ追加で再認証
+gh auth refresh -h github.com -s repo,workflow   # 複数スコープ
+gh auth logout                         # ログアウト
+gh auth setup-git                      # git の credential helper として gh を設定</code></pre>
+    <div class="callout warn">
+      初回 <code>gh auth login</code> で <strong>HTTPS / SSH</strong>, <strong>Web 認証 / トークン</strong> を聞かれる。
+      個人マシンは Web 認証 + HTTPS 推奨。CI 環境ではトークン (<code>GH_TOKEN</code> 環境変数) を使う。
+    </div>
+
+    <h3>config — 設定</h3>
+<pre><code>gh config list                         # 全設定表示
+gh config get editor                   # エディタ設定取得
+gh config set editor 'code --wait'     # エディタを VS Code に
+gh config set git_protocol ssh         # クローン時のプロトコル
+gh config set browser firefox          # ブラウザ起動コマンド
+gh config set prompt disabled          # 対話プロンプトを無効化（CI 向け）</code></pre>
+
+    <h3>status — 自分の状態スナップショット</h3>
+<pre><code>gh status                              # 自分宛 PR・Issue・mention の概観
+gh status --org acme                   # 特定組織のみ</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-2">2. リポジトリ操作 (repo)</h2>
+
+<pre><code># clone
+gh repo clone iigtn/iigtn-platform
+gh repo clone iigtn/iigtn-platform local-dir   # クローン先指定
+gh repo clone iigtn/iigtn-platform -- --depth 1   # git 引数を渡す
+
+# create
+gh repo create my-app --public --clone          # 新規 + ローカルにクローン
+gh repo create acme/api --private --description 'API server'
+gh repo create my-app --template iigtn/template # テンプレートから作成
+gh repo create --source=. --public --push       # 既存ローカルを push 込みで作成
+
+# fork
+gh repo fork upstream/repo --clone
+gh repo sync owner/forked-repo                  # fork を upstream と同期
+
+# view
+gh repo view                                    # 現リポの README 表示
+gh repo view iigtn/iigtn-platform --web         # ブラウザで開く
+gh repo view iigtn/iigtn-platform --json url,description,stargazerCount
+
+# list
+gh repo list iigtn --limit 50
+gh repo list --visibility private --limit 100
+
+# 編集・設定
+gh repo edit --description 'new desc'
+gh repo edit --visibility private
+gh repo edit --add-topic terraform --add-topic aws
+gh repo edit --enable-issues=false              # Issue 無効化
+gh repo set-default                             # デフォルトリポを対話設定（複数 origin 時）
+
+# delete
+gh repo delete iigtn/throwaway --yes            # 削除（要 delete_repo スコープ）
+
+# rename
+gh repo rename new-name</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-3">3. プルリクエスト (pr)</h2>
+
+    <h3>create / list / view</h3>
+<pre><code># 現在のブランチから PR 作成（タイトル・本文をエディタで）
+gh pr create
+
+# 引数指定で一発作成
+gh pr create --title 'Add Lambda function' --body 'detail...' --base main
+
+# Draft PR
+gh pr create --draft --title 'WIP: ...' --body '...'
+
+# テンプレ + ラベル + reviewer + assignee
+gh pr create --label bug --reviewer alice,bob --assignee @me \
+  --milestone 'v1.2' --project 'Q2 sprint'
+
+# 標準入力から本文（heredoc）
+gh pr create --title 'fix' --body "$(cat &lt;&lt;'EOF'
+## Summary
+- Fix race condition in worker
+EOF
+)"
+
+# 一覧
+gh pr list                               # オープンな PR
+gh pr list --state all --limit 50
+gh pr list --author '@me'
+gh pr list --search 'is:open review-requested:@me'
+gh pr list --label bug --label needs-triage
+gh pr list --json number,title,author --jq '.[].title'
+
+# 詳細
+gh pr view 42                            # 本文 + ステータス表示
+gh pr view 42 --comments                 # コメント込み
+gh pr view 42 --web                      # ブラウザで開く
+gh pr view 42 --json title,reviewDecision,statusCheckRollup</code></pre>
+
+    <h3>checkout / status / diff</h3>
+<pre><code>gh pr checkout 42                        # PR 番号 / URL でチェックアウト
+gh pr checkout 42 --recurse-submodules
+gh pr status                             # 自分関連 PR の現状ビュー
+gh pr diff 42                            # PR の diff
+gh pr diff 42 --name-only</code></pre>
+
+    <h3>review / merge / close</h3>
+<pre><code># レビュー（comment / approve / request-changes）
+gh pr review 42 --approve --body 'LGTM'
+gh pr review 42 --request-changes --body 'Please fix X'
+gh pr review 42 --comment --body 'Question on Y'
+
+# マージ
+gh pr merge 42 --squash --delete-branch  # squash merge してブランチ削除
+gh pr merge 42 --rebase
+gh pr merge 42 --merge                   # 通常 merge コミット
+gh pr merge 42 --auto --squash           # ステータスチェック完了で自動マージ
+
+# 編集
+gh pr edit 42 --title '...' --body '...' --add-label hotfix --remove-label needs-triage
+gh pr edit 42 --add-reviewer alice --remove-assignee bob
+
+# クローズ / 再オープン
+gh pr close 42 --comment 'superseded by #50'
+gh pr reopen 42
+gh pr ready 42                           # Draft → Ready</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-4">4. Issue 管理 (issue)</h2>
+
+<pre><code># 作成
+gh issue create --title 'Bug in /api/contact' --body 'details...' \
+  --label bug --label area/backend --assignee @me
+
+# テンプレートから（.github/ISSUE_TEMPLATE）
+gh issue create --template bug_report.md
+
+# 一覧
+gh issue list                            # オープンな Issue
+gh issue list --state all --limit 50
+gh issue list --label bug
+gh issue list --assignee '@me'
+gh issue list --search 'is:open author:@me sort:created-desc'
+gh issue list --json number,title,labels --jq '.[] | [.number, .title] | @tsv'
+
+# 詳細・編集
+gh issue view 12
+gh issue view 12 --comments
+gh issue view 12 --web
+
+gh issue edit 12 --title '...' --body '...' \
+  --add-label needs-triage --remove-label backlog \
+  --add-assignee alice --milestone 'v1.2'
+
+gh issue close 12 --reason 'completed' --comment 'fixed by #50'
+gh issue close 12 --reason 'not_planned'
+gh issue reopen 12
+
+# サブタスク的な使い方（コメント追加）
+gh issue comment 12 --body 'Workaround applied.'
+
+# Pin / Unpin（リポジトリの注目 Issue にする）
+gh issue pin 12
+gh issue unpin 12</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-5">5. Actions / Workflow (run / workflow)</h2>
+
+    <h3>run — 実行履歴の確認・再実行</h3>
+<pre><code># 一覧
+gh run list                              # 直近の実行
+gh run list --limit 5
+gh run list --workflow frontend-deploy.yml
+gh run list --workflow frontend-deploy.yml --status failure
+gh run list --branch main --status success
+gh run list --json databaseId,conclusion,headBranch --jq '.[] | select(.conclusion == "failure")'
+
+# 詳細
+gh run view                              # 対話的に選択
+gh run view 12345                        # 特定 run
+gh run view 12345 --log                  # 全ジョブのログ
+gh run view 12345 --log-failed           # 失敗ジョブのログだけ（デバッグ高速化）
+gh run view 12345 --job 67890            # 特定 job
+
+# ライブ ウォッチ
+gh run watch                             # 最新 run の進捗を待機表示
+gh run watch 12345
+
+# 再実行
+gh run rerun 12345                       # 全ジョブ再実行
+gh run rerun 12345 --failed              # 失敗ジョブのみ再実行
+gh run rerun 12345 --job 67890           # 特定ジョブ再実行
+
+# キャンセル
+gh run cancel 12345
+
+# 削除
+gh run delete 12345
+
+# Artifact ダウンロード
+gh run download 12345
+gh run download 12345 -n my-artifact     # 名前指定
+gh run download 12345 -D out/            # 出力先指定</code></pre>
+
+    <h3>workflow — ワークフロー管理</h3>
+<pre><code>gh workflow list                         # 登録ワークフロー一覧
+gh workflow view frontend-deploy.yml
+gh workflow view frontend-deploy.yml --yaml    # YAML 表示
+
+# 手動トリガー (workflow_dispatch)
+gh workflow run frontend-deploy.yml
+gh workflow run frontend-deploy.yml --ref develop
+gh workflow run deploy.yml -f env=prod -f tag=v1.2.3   # input 指定
+
+# 有効化 / 無効化
+gh workflow enable frontend-deploy.yml
+gh workflow disable frontend-deploy.yml</code></pre>
+
+    <h3>secret / variable — Actions 用シークレット</h3>
+<pre><code># シークレット
+gh secret list
+gh secret set MY_KEY --body 'value'
+gh secret set MY_KEY &lt; secret.txt
+gh secret set MY_KEY --env prod                # 環境別シークレット
+gh secret set MY_KEY --org my-org --visibility selected --repos repo1,repo2
+gh secret delete MY_KEY
+
+# 変数 (非機密)
+gh variable list
+gh variable set MY_VAR --body 'value'
+gh variable set MY_VAR --env prod
+gh variable delete MY_VAR</code></pre>
+    <div class="callout info">
+      AWS OIDC を使う場合、長期 AccessKey をシークレットに置く必要はないので <code>gh secret</code> はほぼ空のまま運用できます。
+      代わりに「IAM Role ARN」「region」などは <code>gh variable</code> で管理する派が増えています。
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-6">6. Release / Tag (release)</h2>
+
+<pre><code># 作成
+gh release create v1.2.3                          # 対話モード
+gh release create v1.2.3 --title 'v1.2.3' --notes 'changelog text'
+gh release create v1.2.3 --notes-file CHANGELOG.md
+gh release create v1.2.3 --generate-notes        # 自動 changelog（推奨）
+gh release create v1.2.3 --draft --prerelease
+gh release create v1.2.3 ./dist/*.zip ./dist/checksums.txt   # アセット添付
+gh release create v1.2.3 --target develop        # branch を指定（タグの起点）
+
+# 一覧 / 詳細
+gh release list --limit 20
+gh release view v1.2.3
+gh release view v1.2.3 --web
+gh release view --json tagName,publishedAt --jq '.tagName'
+
+# 編集
+gh release edit v1.2.3 --notes 'updated notes'
+gh release edit v1.2.3 --draft=false             # Draft → 公開
+
+# アセット追加
+gh release upload v1.2.3 new-asset.zip
+gh release upload v1.2.3 *.tar.gz --clobber      # 既存上書き
+
+# ダウンロード
+gh release download v1.2.3                       # 全アセット
+gh release download v1.2.3 --pattern '*.zip'
+gh release download v1.2.3 --output-dir dist/
+
+gh release delete v1.2.3 --yes</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-7">7. Gist / Codespaces / Project</h2>
+
+    <h3>gist</h3>
+<pre><code>gh gist create file.txt                      # ファイル → 非公開 gist
+gh gist create file.txt --public --desc 'demo'
+echo 'hello' | gh gist create --filename note.md
+gh gist list
+gh gist view abc123
+gh gist clone abc123
+gh gist edit abc123
+gh gist delete abc123 --yes</code></pre>
+
+    <h3>codespace（Codespaces 利用時）</h3>
+<pre><code>gh codespace list
+gh codespace create -r owner/repo -b main
+gh codespace ssh                             # 対話選択 or --codespace で指定
+gh codespace cp file.txt remote:~/work/      # ファイル転送
+gh codespace ports                           # ポート転送状況
+gh codespace stop --codespace name
+gh codespace delete --codespace name --force</code></pre>
+
+    <h3>project（GitHub Projects v2）</h3>
+<pre><code>gh project list --owner @me
+gh project view 5 --owner @me
+gh project item-list 5 --owner @me
+gh project item-add 5 --owner @me --url https://github.com/owner/repo/issues/12</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-8">8. REST/GraphQL API (api)</h2>
+
+    <p>gh のサブコマンドにない機能（Webhook、ブランチ保護、Settings 詳細など）は <code>gh api</code> で生 API を叩けます。
+    <strong>認証 / レート制限 / pagination が自動</strong>なので、<code>curl + Bearer</code> より圧倒的に楽。</p>
+
+    <h3>REST API</h3>
+<pre><code># GET（自分のユーザ情報）
+gh api user
+
+# 特定リポの情報
+gh api /repos/iigtn/iigtn-platform
+
+# JQ で抽出
+gh api /repos/iigtn/iigtn-platform --jq '.stargazers_count'
+gh api /repos/iigtn/iigtn-platform/branches --jq '.[] | .name'
+
+# pagination 自動（all pages を取得）
+gh api --paginate /repos/iigtn/iigtn-platform/issues
+
+# POST
+gh api -X POST /repos/iigtn/iigtn-platform/issues \
+  -f title='Bug report' -f body='details...' -f 'labels[]=bug'
+
+# PATCH（リポ設定変更）
+gh api -X PATCH /repos/iigtn/iigtn-platform \
+  -F has_issues=true -F has_wiki=false -F default_branch=main
+
+# DELETE
+gh api -X DELETE /repos/iigtn/throwaway
+
+# 別ホスト (GHE)
+gh api --hostname github.example.com /user</code></pre>
+
+    <h3>ブランチ保護ルール（よく使う API 例）</h3>
+<pre><code># 現状確認
+gh api /repos/iigtn/iigtn-platform/branches/main/protection --jq '.required_pull_request_reviews'
+
+# 作成 (require PR + 1 reviewer + dismiss stale)
+gh api -X PUT /repos/iigtn/iigtn-platform/branches/main/protection \
+  -F required_status_checks='null' \
+  -F enforce_admins=true \
+  -F restrictions='null' \
+  -f 'required_pull_request_reviews[required_approving_review_count]=1' \
+  -F required_pull_request_reviews[dismiss_stale_reviews]=true</code></pre>
+
+    <h3>GraphQL</h3>
+<pre><code>gh api graphql -f query='
+  query {
+    viewer {
+      login
+      repositories(first: 5) {
+        nodes { name stargazerCount }
+      }
+    }
+  }
+' --jq '.data.viewer.repositories.nodes'</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="cookbook">CI/CD 運用レシピ</h2>
+
+    <h3>レシピ 1 — 失敗ジョブのログだけ高速確認</h3>
+<pre><code># 直近の失敗 run の失敗ログを開く（PR 後の確認パターン）
+gh run list --status failure --limit 1 --json databaseId --jq '.[0].databaseId' \
+  | xargs -I {} gh run view {} --log-failed
+
+# あるいは alias 化
+gh alias set last-fail '!gh run list --status failure --limit 1 --json databaseId --jq ".[0].databaseId" | xargs -I {} gh run view {} --log-failed'
+gh last-fail</code></pre>
+
+    <h3>レシピ 2 — 全 PR を JSON で取得 → jq で集計</h3>
+<pre><code># この 1 ヶ月でマージされた PR のレビュー応答時間
+gh pr list --state merged --search 'merged:&gt;=2026-03-26' --limit 100 \
+  --json number,title,author,createdAt,mergedAt \
+  | jq -r '.[] | [.number, .title, (.mergedAt | fromdate) - (.createdAt | fromdate)] | @tsv'</code></pre>
+
+    <h3>レシピ 3 — リリース時にアセットをまとめて upload</h3>
+<pre><code># GitHub Actions 内で
+gh release create v1.2.3 \
+  --title "Release v1.2.3" \
+  --generate-notes \
+  ./dist/myapp-linux-amd64 \
+  ./dist/myapp-darwin-arm64 \
+  ./dist/myapp-windows-amd64.exe \
+  ./dist/checksums.txt</code></pre>
+
+    <h3>レシピ 4 — 複数リポへ一括 Issue 作成</h3>
+<pre><code>for repo in iigtn-platform hojokin-db autoST; do
+  gh issue create -R iigtn/$repo --title 'Update CI to Node 24' \
+    --body 'タスク詳細...' --label maintenance
+done</code></pre>
+
+    <h3>レシピ 5 — PR 自動マージ（チェック OK 後）</h3>
+<pre><code># 「ステータスチェック通ったら自動 squash merge してブランチ削除」
+gh pr merge --auto --squash --delete-branch</code></pre>
+
+    <h3>レシピ 6 — Workflow を CLI から手動トリガー</h3>
+<pre><code># 例: deploy.yml に env / tag 入力がある場合
+gh workflow run deploy.yml -f env=prod -f tag=v1.2.3
+
+# トリガ後の最新 run を即ウォッチ
+gh run watch $(gh run list --workflow deploy.yml --limit 1 --json databaseId --jq '.[0].databaseId')</code></pre>
+
+    <h3>レシピ 7 — Issue 一覧を CSV エクスポート</h3>
+<pre><code>gh issue list --state all --limit 1000 \
+  --json number,title,state,labels,createdAt,closedAt \
+  | jq -r '
+      ["number","title","state","labels","createdAt","closedAt"],
+      (.[] | [
+        .number, .title, .state,
+        (.labels | map(.name) | join(";")),
+        .createdAt, .closedAt
+      ])
+      | @csv' \
+  &gt; issues.csv</code></pre>
+
+    <h3>レシピ 8 — Dependabot PR をまとめて approve & merge</h3>
+<pre><code>gh pr list --search 'author:app/dependabot is:open' --json number --jq '.[].number' \
+  | while read pr; do
+      gh pr review $pr --approve
+      gh pr merge $pr --auto --squash
+    done</code></pre>
+
+    <!-- ========================================================== -->
+    <h2>コマンド早見表</h2>
+<pre><code># 認証
+gh auth login / status / refresh -s read:org
+
+# repo
+gh repo clone / create / view --web / list --limit 50
+
+# pr
+gh pr create / list / view 42 / checkout 42 / diff 42
+gh pr review 42 --approve / --request-changes
+gh pr merge 42 --squash --delete-branch
+gh pr merge --auto --squash --delete-branch
+
+# issue
+gh issue create / list --search '...' / view / close --reason completed
+
+# Actions
+gh run list --status failure
+gh run view --log-failed
+gh run watch / rerun --failed
+gh workflow run deploy.yml -f env=prod
+
+# release
+gh release create v1.2.3 --generate-notes ./dist/*
+
+# api
+gh api /repos/owner/repo --jq '.stargazers_count'
+gh api --paginate /repos/owner/repo/issues</code></pre>
+
+    <!-- ========================================================== -->
+    <section class="post-glossary" id="glossary">
+      <h2>用語集</h2>
+      <dl>
+        <dt>GitHub CLI (gh)</dt>
+        <dd>GitHub 公式の CLI ツール。Web UI でできる操作のほぼ全てをターミナルから実行できる。Go 製、クロスプラットフォーム。</dd>
+
+        <dt>OAuth スコープ</dt>
+        <dd>トークンに付与する権限の単位。<code>repo</code>, <code>workflow</code>, <code>read:org</code>, <code>delete_repo</code> など。<code>gh auth refresh -s SCOPE</code> で追加可能。</dd>
+
+        <dt>GH_TOKEN / GITHUB_TOKEN</dt>
+        <dd>環境変数で gh の認証トークンを渡す方法。CI で <code>secrets.GITHUB_TOKEN</code> や PAT を <code>GH_TOKEN</code> に渡すのが定番。</dd>
+
+        <dt>workflow_dispatch</dt>
+        <dd>GitHub Actions の手動トリガー機能。<code>gh workflow run</code> で起動できる。<code>inputs</code> 定義があれば <code>-f key=val</code> で渡せる。</dd>
+
+        <dt>auto-merge (--auto)</dt>
+        <dd>PR が必要な ステータスチェック・レビュー要件を満たした時点で自動的にマージする機能。<code>gh pr merge --auto</code> で有効化。</dd>
+
+        <dt>squash merge / rebase merge / merge commit</dt>
+        <dd>squash = 1 コミットに圧縮 / rebase = 履歴を直線化 / merge = マージコミットを残す。プロジェクトのポリシーで使い分け。</dd>
+
+        <dt>--jq オプション</dt>
+        <dd>gh の <code>--json</code> で取得した JSON を jq でフィルタするショートカット。<code>--jq '.[].name'</code> で配列の name フィールドだけ抽出など。</dd>
+
+        <dt>--paginate</dt>
+        <dd>GitHub API の分割レスポンスを自動で繰り返し取得する gh のオプション。100 件超のリスト取得で必須。</dd>
+
+        <dt>environments / 環境別シークレット</dt>
+        <dd>GitHub Actions の Environment 機能。デプロイ承認、環境別シークレット (<code>--env prod</code>)、保護ルールを設定できる。</dd>
+
+        <dt>artifact</dt>
+        <dd>Actions 実行中に生成・アップロードしたファイル群。<code>actions/upload-artifact</code> で保存、<code>gh run download</code> で取得。</dd>
+
+        <dt>annotation / step summary</dt>
+        <dd>Actions のジョブ出力に追加される注釈や Markdown サマリ。<code>gh run view --log</code> 等で確認できる。</dd>
+
+        <dt>GHE (GitHub Enterprise)</dt>
+        <dd>自社内に立てる GitHub。<code>gh auth login --hostname</code> や <code>gh api --hostname</code> で接続先を指定できる。</dd>
+
+        <dt>release notes 自動生成 (--generate-notes)</dt>
+        <dd>前のタグから今回までの PR タイトルを自動でリリースノートにまとめる機能。<code>.github/release.yml</code> でグループ化定義も可能。</dd>
+
+        <dt>Codespaces</dt>
+        <dd>GitHub のクラウド開発環境。<code>gh codespace</code> で作成・SSH・ファイル転送ができる。</dd>
+
+        <dt>GitHub Projects v2</dt>
+        <dd>新しいプロジェクト管理機能（Beta から GA 済み）。<code>gh project</code> で操作。Issue / PR を Field 付きで管理。</dd>
+      </dl>
+    </section>
+
+    <footer class="post-footer">
+      <a href="/blog/ref/09-git-advanced.html">← #ref-09 Git 応用</a>
+      <a href="/blog/ref/">シリーズ目次</a>
+    </footer>
+
+  </div>
+</article>
+
+</body>
+</html>
