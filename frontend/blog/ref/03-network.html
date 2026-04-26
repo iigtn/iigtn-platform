@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#ref-03 ネットワーク診断コマンド集 | 現場コマンドリファレンス | iigtn</title>
+<meta name="description" content="curl / wget / dig / nslookup / host / ss / netstat / tcpdump / traceroute / mtr / ping / nc / iptables / openssl ほか、ネットワーク診断と障害切り分けで使う 50+ コマンドを 6 カテゴリに分けて、実例とパターン集つきで深掘り解説します。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/ref/03-network.html">
+<meta property="og:title" content="#ref-03 ネットワーク診断コマンド集">
+<meta property="og:description" content="curl / wget / dig / nslookup / ss / tcpdump / traceroute / mtr / ping / nc / iptables / openssl ほか 50+ コマンドを 6 カテゴリで深掘り。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/ref/03-network.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="#ref-03 ネットワーク診断コマンド集">
+<meta name="twitter:description" content="curl / wget / dig / nslookup / ss / tcpdump / traceroute / mtr / ping / nc / iptables / openssl ほか 50+ コマンドを 6 カテゴリで深掘り。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="stylesheet" href="/blog/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "#ref-03 ネットワーク診断コマンド集",
+  "description": "curl / wget / dig / nslookup / ss / tcpdump / traceroute / mtr / ping / nc / iptables / openssl ほか 50+ コマンドを 6 カテゴリで深掘り。",
+  "datePublished": "2026-04-26",
+  "author": { "@type": "Person", "name": "iigtn", "url": "https://lab.iigtn.com/" },
+  "publisher": { "@type": "Person", "name": "iigtn" },
+  "url": "https://lab.iigtn.com/blog/ref/03-network.html",
+  "mainEntityOfPage": "https://lab.iigtn.com/blog/ref/03-network.html",
+  "image": "https://lab.iigtn.com/assets/icon.svg",
+  "inLanguage": "ja",
+  "isPartOf": { "@id": "https://lab.iigtn.com/blog/ref/#blog" }
+}
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="/" class="logo" aria-label="iigtn">
+      <img src="/assets/logo.svg" alt="iigtn" height="32">
+    </a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/" class="active">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+      <li><a href="/learn.html">解説書</a></li>
+    </ul>
+  </nav>
+</header>
+
+<article class="post">
+
+  <header class="post-header">
+    <p class="post-meta">2026-04-26 · 現場コマンドリファレンス · #ref-03</p>
+    <h1>ネットワーク診断コマンド集 — 50+ コマンドを 6 カテゴリで</h1>
+  </header>
+
+  <div class="post-body">
+
+    <p>
+      ネットワーク障害切り分けは「<strong>下のレイヤから上に登る</strong>」が定石です。
+      L1/L2 (物理・リンク) → L3 (IP / ICMP) → L4 (TCP/UDP) → L7 (HTTP / TLS / アプリ)。
+      上から「アプリが動かない」を訴えられても、まず ping 通るか・DNS 引けるか・ポート開いてるか・TLS が張れるかを順に潰していきます。
+    </p>
+    <p>
+      本記事では切り分けで使う代表的な 50+ コマンドを 6 カテゴリに整理し、最後に「実際の障害切り分けレシピ」を載せました。
+      AWS でも EC2 / ALB / API Gateway / CloudFront のトラブル時はだいたいこれらでケリがつきます。
+    </p>
+
+    <div class="callout info">
+      <strong>動作環境:</strong> 一部コマンドは root 権限が必要です（<code>tcpdump</code>, <code>iptables</code>, <code>ss</code> 一部）。
+      また Linux ディストリにより <code>net-tools</code>（古い: ifconfig/netstat）と <code>iproute2</code>（新: ip/ss）の両方が混在することがあります。
+      新環境では <code>iproute2</code> 系（<code>ip</code> / <code>ss</code>）を使うのが推奨。
+    </div>
+
+    <h2>目次</h2>
+    <ol>
+      <li><a href="#sec-1">疎通確認 (ping / mtr / traceroute)</a></li>
+      <li><a href="#sec-2">DNS 確認 (dig / nslookup / host)</a></li>
+      <li><a href="#sec-3">ポート・接続確認 (ss / netstat / nc / lsof)</a></li>
+      <li><a href="#sec-4">HTTP / API 確認 (curl / wget / httpie)</a></li>
+      <li><a href="#sec-5">TLS 確認 (openssl / curl --cert)</a></li>
+      <li><a href="#sec-6">パケットキャプチャ・経路 (tcpdump / ip / iptables)</a></li>
+      <li><a href="#cookbook">障害切り分けレシピ</a></li>
+      <li><a href="#glossary">用語集</a></li>
+    </ol>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-1">1. 疎通確認 (ping / mtr / traceroute)</h2>
+
+    <h3>ping — ICMP echo 疎通</h3>
+<pre><code>ping example.com                # 連続 ping (Ctrl+C で停止)
+ping -c 4 8.8.8.8               # 4 回だけ
+ping -i 0.2 -c 100 host         # 0.2 秒間隔で 100 発（負荷確認）
+ping -s 1472 -c 1 host          # MTU 確認用 (1472+28=1500 byte)
+ping -W 2 -c 1 host             # タイムアウト 2 秒
+ping -I eth0 host               # 指定インターフェイスから送信
+ping -4 host / ping -6 host     # 強制 IPv4/IPv6
+ping6 ipv6.google.com           # 古い書き方</code></pre>
+    <div class="callout warn">
+      AWS の Security Group / NACL でデフォルト ICMP は閉じられています。EC2 への ping が通らないからといって死亡判定はできない。
+      代わりに後述する <code>nc</code> や <code>curl</code> で TCP 疎通を確認すること。
+    </div>
+
+    <h3>traceroute / tracepath — 経路追跡</h3>
+<pre><code>traceroute example.com           # 経路ホップを順次表示 (UDP デフォルト)
+traceroute -n example.com        # IP のみ表示（DNS 逆引きしない、速い）
+traceroute -T -p 443 example.com # TCP SYN で 443 ポートに対して traceroute
+traceroute -I example.com        # ICMP echo で traceroute (Windows tracert 互換)
+tracepath example.com            # MTU も併せて確認できる</code></pre>
+
+    <h3>mtr — ping + traceroute の合わせ技（最強）</h3>
+    <p>連続的にホップごとのロス率・RTT が見える。「途中の経路が悪化している」の特定に超強力。</p>
+<pre><code>mtr example.com                  # 対話モード
+mtr -r -c 100 example.com        # report モード、100 回送信して結果を出す
+mtr -T -P 443 example.com        # TCP 443 で実施
+mtr -n example.com               # DNS 逆引き省略</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-2">2. DNS 確認 (dig / nslookup / host)</h2>
+
+    <h3>dig — 最も柔軟（DNS デバッグの第一選択）</h3>
+<pre><code># 基本: A レコードを引く
+dig example.com
+
+# 短縮表示（IP だけ欲しい時）
+dig +short example.com
+
+# 特定レコード種別
+dig MX example.com
+dig AAAA example.com           # IPv6
+dig TXT iigtn.com              # SPF / DKIM / 検証用 TXT
+dig NS example.com             # 権威 NS サーバ
+dig SOA example.com
+dig CNAME www.example.com
+dig CAA example.com            # ACM 取得時に確認
+
+# 公開リゾルバを指定（ローカル DNS 無視）
+dig @8.8.8.8 example.com
+dig @1.1.1.1 example.com
+
+# 権威サーバへ直接（伝搬確認に必須）
+dig @ns-1024.awsdns-00.org example.com
+
+# トレース (ルートからの解決過程)
+dig +trace example.com
+
+# 逆引き
+dig -x 8.8.8.8
+
+# DNSSEC 確認
+dig +dnssec example.com</code></pre>
+
+    <h3>nslookup — どこでも入っている古典</h3>
+<pre><code>nslookup example.com
+nslookup example.com 8.8.8.8       # サーバ指定
+nslookup -type=MX example.com
+nslookup -type=TXT example.com</code></pre>
+
+    <h3>host — シンプルな出力</h3>
+<pre><code>host example.com                   # A/AAAA/MX を一発表示
+host -t TXT example.com
+host -a example.com                # ANY 相当（権威サーバ次第）</code></pre>
+
+    <h3>getent hosts — /etc/nsswitch.conf 経由（hosts ファイルも反映）</h3>
+<pre><code>getent hosts example.com           # OS のリゾルバ設定通りに引く
+getent hosts internal.local        # /etc/hosts や mDNS の確認に使える</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-3">3. ポート・接続確認 (ss / netstat / nc / lsof)</h2>
+
+    <h3>ss — netstat の後継（推奨）</h3>
+    <table>
+      <tr><th>オプション</th><th>意味</th></tr>
+      <tr><td><code>-t</code> / <code>-u</code></td><td>TCP / UDP</td></tr>
+      <tr><td><code>-l</code></td><td>LISTEN 状態のみ</td></tr>
+      <tr><td><code>-n</code></td><td>ポート/IP を数値表示（DNS 逆引きしない）</td></tr>
+      <tr><td><code>-p</code></td><td>プロセス名・PID 表示（root 推奨）</td></tr>
+      <tr><td><code>-a</code></td><td>全状態（LISTEN + ESTABLISHED 等）</td></tr>
+      <tr><td><code>-s</code></td><td>サマリ統計</td></tr>
+    </table>
+<pre><code># LISTEN 中の TCP ポート + プロセス
+sudo ss -tlnp
+
+# TCP 接続を全て表示
+ss -tan
+
+# ESTABLISHED な接続だけ
+ss -tan state established
+
+# 特定ポートの接続
+ss -tan '( dport = :443 or sport = :443 )'
+
+# 特定 IP との接続
+ss -tan dst 10.0.0.5
+
+# サマリ統計
+ss -s</code></pre>
+
+    <h3>netstat — 古典（ss が無い古い環境向け）</h3>
+<pre><code>netstat -tlnp                  # LISTEN 中 + プロセス
+netstat -an | grep :443        # 443 関連だけ
+netstat -i                     # インターフェイス統計
+netstat -rn                    # ルーティングテーブル（→ 推奨は ip route）</code></pre>
+
+    <h3>nc (netcat) — TCP/UDP の万能ツール</h3>
+<pre><code># 単純なポート疎通確認（一番使う）
+nc -zv example.com 443
+nc -zv -w 3 host 22 80 443     # 複数ポート、3 秒タイムアウト
+
+# UDP 確認
+nc -zuv host 53
+
+# シンプルなクライアント（生 TCP でしゃべる）
+echo -e "GET / HTTP/1.0\r\n\r\n" | nc example.com 80
+
+# 一時的なリスナを立てる（テスト用）
+nc -l -p 8080                  # 8080 で待ち受けて受信内容を表示
+nc -l -p 8080 &lt; file.txt       # 接続が来たらファイル送信
+
+# ファイル転送（受信側）
+nc -l -p 9000 &gt; received.bin
+# ファイル転送（送信側）
+nc receiver-host 9000 &lt; file.bin</code></pre>
+    <div class="callout warn">
+      <code>nc</code> は <strong>BSD nc</strong>, <strong>GNU nc</strong>, <strong>nmap-ncat (ncat)</strong> でオプションが微妙に違います。<br>
+      特に <code>-l</code> と <code>-p</code> の組み合わせ、<code>-z</code> (scan only) はない実装も。困ったら <code>man nc</code> 確認。
+    </div>
+
+    <h3>lsof — ファイル/ソケット使用一覧</h3>
+<pre><code>sudo lsof -i                       # 全ソケット
+sudo lsof -i :443                  # 443 ポートを使うプロセス
+sudo lsof -i tcp                   # TCP のみ
+sudo lsof -i tcp:80 -sTCP:LISTEN   # 80 で LISTEN しているプロセス
+sudo lsof -p 1234                  # PID 1234 が開いている全ファイル/ソケット
+sudo lsof +L1                      # ファイルが unlink されたが プロセスが掴み続けてる（ディスクが空かない時の犯人）</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-4">4. HTTP / API 確認 (curl / wget / httpie)</h2>
+
+    <h3>curl — HTTP の万能ツール</h3>
+    <table>
+      <tr><th>オプション</th><th>意味</th></tr>
+      <tr><td><code>-s</code></td><td>silent（プログレス非表示）</td></tr>
+      <tr><td><code>-S</code></td><td>silent でもエラーは出す</td></tr>
+      <tr><td><code>-f</code></td><td>HTTP エラー時に exit code を返す（CI で必須）</td></tr>
+      <tr><td><code>-i</code></td><td>レスポンスヘッダも表示</td></tr>
+      <tr><td><code>-I</code></td><td>HEAD リクエスト</td></tr>
+      <tr><td><code>-L</code></td><td>リダイレクト追跡</td></tr>
+      <tr><td><code>-X METHOD</code></td><td>HTTP メソッド指定</td></tr>
+      <tr><td><code>-H 'K: V'</code></td><td>ヘッダ追加</td></tr>
+      <tr><td><code>-d 'body'</code></td><td>POST ボディ（フォーム）</td></tr>
+      <tr><td><code>--data-binary @file</code></td><td>ファイルから本文送信</td></tr>
+      <tr><td><code>-u user:pass</code></td><td>Basic 認証</td></tr>
+      <tr><td><code>-o file</code></td><td>出力をファイルへ</td></tr>
+      <tr><td><code>-O</code></td><td>URL の basename で保存</td></tr>
+      <tr><td><code>-w '...'</code></td><td>結果フォーマット（時間計測に便利）</td></tr>
+      <tr><td><code>-k</code></td><td>TLS 検証スキップ（デバッグ用、本番禁止）</td></tr>
+      <tr><td><code>--resolve host:port:ip</code></td><td>DNS を上書き（DNS 切替前テストに必須）</td></tr>
+      <tr><td><code>-x http://proxy:8080</code></td><td>プロキシ経由</td></tr>
+      <tr><td><code>--http2</code> / <code>--http3</code></td><td>HTTP プロトコル指定</td></tr>
+    </table>
+
+    <h3>実例 — 基本</h3>
+<pre><code># GET (静かに)
+curl -s https://api.example.com/v1/users
+
+# レスポンスヘッダだけ
+curl -sI https://lab.iigtn.com/
+
+# ステータスコードだけ取得（CI で死活確認）
+curl -s -o /dev/null -w "%{http_code}\n" https://lab.iigtn.com/
+
+# リダイレクト追跡しつつヘッダ表示
+curl -sIL http://example.com
+
+# JSON POST
+curl -X POST https://api.example.com/v1/items \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"foo","value":42}'
+
+# JSON ファイルを送る
+curl -X POST https://api.example.com/v1/items \
+  -H 'Content-Type: application/json' \
+  --data-binary @payload.json
+
+# レスポンスタイム計測
+curl -w "@-" -o /dev/null -s https://lab.iigtn.com/ &lt;&lt;'EOF'
+   namelookup:    %{time_namelookup}s
+   tcp_connect:   %{time_connect}s
+   tls_handshake: %{time_appconnect}s
+   first_byte:    %{time_starttransfer}s
+   total:         %{time_total}s
+EOF</code></pre>
+
+    <h3>実例 — DNS 切替前テスト（重要）</h3>
+<pre><code># DNS を上書きして、特定 IP に対して Host ヘッダ付きでリクエスト
+curl -s --resolve lab.iigtn.com:443:1.2.3.4 https://lab.iigtn.com/
+
+# CloudFront の Distribution が出来たけど DNS 未切替の段階で動作確認
+curl -sI --resolve lab.iigtn.com:443:d3rc5zjg27rqr1.cloudfront.net \
+     https://lab.iigtn.com/
+
+# OAC + S3 の状況確認
+curl -sI https://lab.iigtn.com/index.html | grep -E 'HTTP|cache|x-cache'</code></pre>
+    <div class="callout info">
+      <code>--resolve</code> は ACM 証明書発行直後・DNS 切替前テスト・CloudFront 直接アクセス確認の <strong>必須テクニック</strong>。
+      hosts ファイル書き換えと違って、コマンド単位で限定的に DNS 上書きできる。
+    </div>
+
+    <h3>wget — ダウンロード特化</h3>
+<pre><code>wget https://example.com/file.tar.gz       # 単純ダウンロード
+wget -c https://example.com/big.iso        # レジューム (continue)
+wget -O save.html https://example.com/     # 出力先指定
+wget -q --show-progress url                # 静か + プログレスバー
+wget --tries=3 --timeout=10 url            # リトライ・タイムアウト
+wget --mirror -np url                      # サイトミラー (no-parent)
+wget --content-disposition url             # サーバが指定するファイル名で保存</code></pre>
+
+    <h3>HTTPie (http) — 人間に優しい curl 代替</h3>
+<pre><code>http GET https://api.example.com/users
+http POST https://api.example.com/users name=alice age:=30
+http -h https://lab.iigtn.com/                # ヘッダだけ
+http --auth user:pass https://api.example.com/</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-5">5. TLS 確認 (openssl / curl)</h2>
+
+    <h3>openssl s_client — TLS ハンドシェイク詳細</h3>
+<pre><code># TLS 接続して証明書詳細を表示
+openssl s_client -connect lab.iigtn.com:443 -servername lab.iigtn.com
+
+# 証明書だけ取り出す
+openssl s_client -connect lab.iigtn.com:443 -servername lab.iigtn.com &lt; /dev/null \
+  | openssl x509 -noout -text
+
+# 有効期限だけ確認
+echo | openssl s_client -connect lab.iigtn.com:443 -servername lab.iigtn.com 2&gt;/dev/null \
+  | openssl x509 -noout -dates
+
+# 特定の TLS バージョンで試す
+openssl s_client -connect host:443 -tls1_2
+openssl s_client -connect host:443 -tls1_3
+
+# CipherSuite 列挙
+openssl s_client -connect host:443 -cipher 'ECDHE-RSA-AES256-GCM-SHA384'
+
+# CA バンドル指定
+openssl s_client -connect host:443 -CAfile /etc/ssl/cert.pem</code></pre>
+
+    <h3>openssl x509 — ファイル化された証明書を見る</h3>
+<pre><code>openssl x509 -in cert.pem -text -noout              # 全情報
+openssl x509 -in cert.pem -subject -issuer -noout   # 主要情報のみ
+openssl x509 -in cert.pem -dates -noout             # 有効期限
+openssl x509 -in cert.pem -fingerprint -sha256 -noout</code></pre>
+
+    <h3>openssl 鍵関連</h3>
+<pre><code># 秘密鍵とCSR生成
+openssl req -newkey rsa:2048 -nodes -keyout key.pem -out csr.pem
+
+# 自己署名証明書（テスト用）
+openssl req -x509 -newkey rsa:2048 -nodes -keyout key.pem -out cert.pem -days 365
+
+# 鍵と証明書の整合性確認（同じ Modulus か）
+openssl x509 -noout -modulus -in cert.pem | openssl md5
+openssl rsa  -noout -modulus -in key.pem  | openssl md5</code></pre>
+
+    <h3>curl で TLS 確認</h3>
+<pre><code>curl -v https://lab.iigtn.com/                       # ハンドシェイク詳細を見る
+curl --tlsv1.2 https://host/                         # 強制 TLS バージョン
+curl --cert client.pem --key key.pem https://host/   # mTLS クライアント認証
+curl --cacert ca.pem https://host/                   # 自前 CA 検証</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-6">6. パケットキャプチャ・経路 (tcpdump / ip / iptables)</h2>
+
+    <h3>tcpdump — パケットキャプチャ（要 root）</h3>
+    <table>
+      <tr><th>オプション</th><th>意味</th></tr>
+      <tr><td><code>-i IFACE</code></td><td>インターフェイス指定（<code>any</code> で全体）</td></tr>
+      <tr><td><code>-n</code></td><td>IP/ポートを名前解決しない</td></tr>
+      <tr><td><code>-nn</code></td><td>サービス名も解決しない</td></tr>
+      <tr><td><code>-c N</code></td><td>N パケットで終了</td></tr>
+      <tr><td><code>-w file.pcap</code></td><td>ファイル保存（Wireshark で開ける）</td></tr>
+      <tr><td><code>-r file.pcap</code></td><td>ファイルを読む</td></tr>
+      <tr><td><code>-A</code></td><td>ASCII 表示（HTTP のヘッダ確認）</td></tr>
+      <tr><td><code>-X</code></td><td>HEX + ASCII 表示</td></tr>
+      <tr><td><code>-s 0</code></td><td>パケット全体を取る（デフォルトは先頭のみ）</td></tr>
+      <tr><td><code>-e</code></td><td>L2 ヘッダも表示</td></tr>
+    </table>
+<pre><code># インターフェイス eth0 で全パケット
+sudo tcpdump -i eth0 -nn
+
+# ポート 443 のパケット
+sudo tcpdump -i any -nn 'port 443'
+
+# 特定ホスト宛の TCP のみ
+sudo tcpdump -i any -nn 'tcp and host 10.0.0.5'
+
+# 自分から外への HTTP
+sudo tcpdump -i any -nn -A 'tcp port 80 and dst not 127.0.0.1'
+
+# DNS クエリだけ
+sudo tcpdump -i any -nn 'udp port 53'
+
+# 大量パケットを 1000 個取って .pcap に
+sudo tcpdump -i any -c 1000 -w capture.pcap
+
+# 後で読む
+tcpdump -r capture.pcap -nn 'tcp port 443'</code></pre>
+    <div class="callout warn">
+      <code>tcpdump</code> は本番サーバで動かすと CPU/IO が跳ね上がります。<code>-c</code> で件数制限をかけ、<code>-w</code> でファイル化して短時間で抜く運用に。
+      JIT 用の <code>-J</code> や時刻表示 <code>-tttt</code> も有用。
+    </div>
+
+    <h3>ip — iproute2 のメインコマンド</h3>
+<pre><code>ip a / ip addr                # IP アドレス一覧 (= ifconfig)
+ip a show eth0                # 特定 IF
+ip r / ip route               # ルーティングテーブル
+ip route get 8.8.8.8          # 8.8.8.8 に到達する時の経路
+ip neigh / ip n               # ARP テーブル (= arp -a)
+ip link                       # IF の状態 (UP/DOWN)
+ip link set eth0 up           # IF 起動
+ip link set eth0 mtu 9000     # MTU 変更</code></pre>
+
+    <h3>iptables / nftables — パケットフィルタ確認</h3>
+<pre><code>sudo iptables -L -n -v               # 全 chain を行カウント付きで表示
+sudo iptables -L INPUT -n -v         # INPUT チェイン
+sudo iptables -t nat -L -n -v        # NAT テーブル
+sudo iptables -S                     # ルールをコマンド形式で出力（バックアップに）
+
+# 新しい nftables 系
+sudo nft list ruleset
+sudo nft list table inet filter</code></pre>
+
+    <h3>arp — ARP テーブル（古い書き方）</h3>
+<pre><code>arp -a                           # ARP テーブル全体
+arp -d 10.0.0.5                  # 特定エントリ削除（ip neigh del もアリ）</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="cookbook">障害切り分けレシピ</h2>
+
+    <h3>レシピ 1 — 「サイトが見えない」と言われた時</h3>
+<pre><code># Step 1: DNS 引けるか
+dig +short lab.iigtn.com
+dig +short lab.iigtn.com @8.8.8.8     # ローカル DNS の問題切り分け
+
+# Step 2: ネットワーク到達性 (TCP)
+nc -zv lab.iigtn.com 443
+
+# Step 3: HTTP レスポンスとレイテンシ
+curl -sI -w "tt: %{time_total}\n" https://lab.iigtn.com/
+
+# Step 4: 経路上の問題か
+mtr -r -c 50 lab.iigtn.com
+
+# Step 5: TLS の問題か
+echo | openssl s_client -connect lab.iigtn.com:443 -servername lab.iigtn.com 2&gt;&amp;1 \
+  | grep -E 'subject|issuer|Verify return'</code></pre>
+
+    <h3>レシピ 2 — 「API がたまに 5xx を返す」</h3>
+<pre><code># 高頻度で叩いて再現性を見る
+for i in $(seq 1 100); do
+  curl -s -o /dev/null -w "%{http_code}\n" https://api.example.com/health
+done | sort | uniq -c
+
+# レスポンスタイムも一緒に
+for i in $(seq 1 50); do
+  curl -s -o /dev/null -w "%{http_code} %{time_total}\n" https://api.example.com/v1/x
+done
+
+# ALB / CloudFront のキャッシュ判定
+curl -sI https://api.example.com/v1/x | grep -E 'x-cache|x-amz|cf-'</code></pre>
+
+    <h3>レシピ 3 — 「特定サーバへの接続が遅い」</h3>
+<pre><code># 経路ごとのロス・RTT を計測
+mtr -r -c 100 -T -P 443 host
+
+# TCP の往復だけを見る
+ping -c 20 host                 # ICMP が通るなら
+
+# 帯域・rtt を実測（要 iperf3 入れる）
+iperf3 -c iperf-server.example.com
+
+# 実際の TCP 接続にかかった時間内訳
+curl -w "@-" -o /dev/null -s https://host/ &lt;&lt;'EOF'
+DNS:    %{time_namelookup}
+TCP:    %{time_connect}
+TLS:    %{time_appconnect}
+TTFB:   %{time_starttransfer}
+TOTAL:  %{time_total}
+EOF</code></pre>
+
+    <h3>レシピ 4 — 「証明書の有効期限が近い」</h3>
+<pre><code># 全管理ドメインの有効期限を一括取得（cron で監視可）
+for d in iigtn.com lab.iigtn.com www.iigtn.com; do
+  date=$(echo | openssl s_client -connect "${d}:443" -servername "$d" 2&gt;/dev/null \
+         | openssl x509 -noout -enddate \
+         | cut -d= -f2)
+  echo "$d  $date"
+done</code></pre>
+
+    <h3>レシピ 5 — 「DNS 伝搬が完了したか」</h3>
+<pre><code># 公開リゾルバ複数で確認
+for ns in 8.8.8.8 1.1.1.1 9.9.9.9 208.67.222.222; do
+  printf "%-15s  " "$ns"
+  dig @"$ns" +short lab.iigtn.com
+done
+
+# 権威サーバに直接問い合わせ（最速で正確）
+dig +short NS iigtn.com
+dig @ns-1024.awsdns-00.org +short lab.iigtn.com</code></pre>
+
+    <!-- ========================================================== -->
+    <section class="post-glossary" id="glossary">
+      <h2>用語集</h2>
+      <dl>
+        <dt>L1〜L7 (OSI 参照モデル)</dt>
+        <dd>L1 物理 / L2 データリンク / L3 ネットワーク (IP) / L4 トランスポート (TCP/UDP) / L5 セッション / L6 プレゼンテーション / L7 アプリケーション (HTTP/TLS)。障害切り分けは下から潰すのが定石。</dd>
+
+        <dt>ICMP</dt>
+        <dd>IP 層の制御メッセージ。<code>ping</code> が使う echo request/reply、<code>traceroute</code> の TTL 超過通知など。AWS Security Group ではデフォルト閉じている。</dd>
+
+        <dt>TTL (Time To Live)</dt>
+        <dd>IP パケットが許される最大ホップ数。<code>traceroute</code> はこれを 1 から増やしながら送って経路を炙り出す。DNS の TTL は別概念で「キャッシュ寿命（秒）」。</dd>
+
+        <dt>MTU</dt>
+        <dd>1 パケットで送れる最大サイズ（典型 1500 byte）。VPN や AWS などで小さくなっている時、<code>ping -s</code> + <code>-M do</code> や <code>tracepath</code> で発見できる。</dd>
+
+        <dt>iproute2 vs net-tools</dt>
+        <dd>iproute2 (<code>ip</code>, <code>ss</code>) が新世代、net-tools (<code>ifconfig</code>, <code>netstat</code>) が旧世代。新環境は iproute2 系のみ入っていることも多い。</dd>
+
+        <dt>SNI (Server Name Indication)</dt>
+        <dd>TLS ハンドシェイク時にクライアントが「どのドメイン宛か」を伝える拡張。1 IP で複数証明書を出し分けるのに必須。<code>openssl s_client -servername</code> で明示できる。</dd>
+
+        <dt>mTLS (Mutual TLS)</dt>
+        <dd>サーバ証明書に加えてクライアント証明書も検証する相互認証。<code>curl --cert ... --key ...</code> でクライアント側を指定できる。</dd>
+
+        <dt>DNS 権威サーバ vs リゾルバ</dt>
+        <dd>権威サーバ = ドメイン本来の正解を持つサーバ（例: AWS Route 53）。リゾルバ = それを問い合わせて返す中継（例: 8.8.8.8 / 1.1.1.1）。伝搬確認は権威に直接 <code>dig @NS</code> が最速。</dd>
+
+        <dt>--resolve (curl)</dt>
+        <dd>DNS を一時的に上書きして、特定 IP に Host ヘッダ付きで HTTPS リクエストを送るオプション。DNS 切替前のテスト・CloudFront 直接アクセスに必須。</dd>
+
+        <dt>HEAD リクエスト</dt>
+        <dd>ボディを返さずヘッダだけ返す HTTP メソッド。<code>curl -I</code> で叩ける。死活確認・キャッシュヘッダ確認に使う。</dd>
+
+        <dt>pcap</dt>
+        <dd>tcpdump / Wireshark が使うパケットキャプチャファイル形式。tcpdump で <code>-w</code> 指定すると保存、Wireshark で GUI 解析できる。</dd>
+
+        <dt>BPF (Berkeley Packet Filter)</dt>
+        <dd>tcpdump のフィルタ式 (<code>'tcp and port 443'</code>) を解釈するカーネル内仕組み。eBPF は その拡張版で観測 / セキュリティ ツールの基盤。</dd>
+
+        <dt>NAT (Network Address Translation)</dt>
+        <dd>プライベート IP と外向き IP を変換する仕組み。<code>iptables -t nat</code> で確認できる。</dd>
+
+        <dt>ARP (Address Resolution Protocol)</dt>
+        <dd>同一 LAN 内で IP → MAC アドレスを解決する L2 プロトコル。<code>ip neigh</code> や <code>arp -a</code> でテーブルを確認できる。</dd>
+
+        <dt>DNSSEC</dt>
+        <dd>DNS 応答に署名を付けて改ざん検知する拡張。<code>dig +dnssec</code> で確認。</dd>
+
+        <dt>CAA レコード</dt>
+        <dd>「このドメインの証明書を発行できる CA」を指定する DNS レコード。ACM 取得時にここでブロックされていることがある。<code>dig CAA example.com</code> で確認。</dd>
+      </dl>
+    </section>
+
+    <footer class="post-footer">
+      <a href="/blog/ref/02-text-processing.html">← #ref-02 テキスト処理</a>
+      <a href="/blog/ref/">シリーズ目次</a>
+    </footer>
+
+  </div>
+</article>
+
+</body>
+</html>
