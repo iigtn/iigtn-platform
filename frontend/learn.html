@@ -162,14 +162,68 @@
     overflow-x: auto;
   }
   .meta { color: var(--c-muted); font-size: 0.85rem; }
-  nav.top {
+  /* site-wide nav */
+  .site-header {
+    position: sticky; top: 0;
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--c-border);
+    z-index: 100;
+  }
+  .site-nav {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0.7rem 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .site-nav .logo {
+    display: inline-flex;
+    align-items: center;
+    color: var(--c-text);
+    line-height: 0;
+  }
+  .site-nav .logo img { height: 32px; width: auto; display: block; }
+  .site-nav ul {
+    display: flex;
+    gap: 1.4rem;
+    list-style: none;
+    margin: 0; padding: 0;
+    font-size: 0.92rem;
+  }
+  .site-nav ul a {
+    color: var(--c-text);
+    font-weight: 500;
+    padding: 0.2rem 0;
+    border-bottom: 2px solid transparent;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .site-nav ul a:hover { color: var(--c-link); text-decoration: none; }
+  .site-nav ul a.active {
+    color: var(--c-link);
+    border-bottom-color: var(--c-link);
+  }
+  @media (max-width: 700px) {
+    .site-nav ul { gap: 0.8rem; font-size: 0.82rem; flex-wrap: wrap; justify-content: flex-end; }
+    .site-nav .logo img { height: 26px; }
+  }
+  /* legacy doc TOC nav (not sticky anymore — site-header already sticky) */
+  nav.doc-toc {
     background: #fff;
     border-bottom: 1px solid var(--c-border);
-    padding: 0.7rem 1.2rem;
-    position: sticky; top: 0;
-    z-index: 10;
+    padding: 0.6rem 1.2rem;
+    font-size: 0.88rem;
   }
-  nav.top a { margin-right: 1rem; font-size: 0.9rem; }
+  nav.doc-toc .doc-toc-inner {
+    max-width: 960px;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1rem;
+  }
+  nav.doc-toc a { color: var(--c-muted); }
+  nav.doc-toc a:hover { color: var(--c-link); }
   .mermaid {
     background: #fff;
     border: 1px solid var(--c-border);
@@ -184,14 +238,32 @@
 </head>
 <body>
 
-<nav class="top">
-  <a href="/">← トップ</a>
-  <a href="#intro">はじめに</a>
-  <a href="#aws-glossary">AWS 用語</a>
-  <a href="#architecture">構成</a>
-  <a href="#modules">Terraform</a>
-  <a href="#cicd">CI/CD</a>
-  <a href="#cost">コスト</a>
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="/" class="logo" aria-label="iigtn">
+      <img src="/assets/logo.svg" alt="iigtn" height="32">
+    </a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+      <li><a href="/learn.html" class="active">解説書</a></li>
+    </ul>
+  </nav>
+</header>
+
+<nav class="doc-toc">
+  <div class="doc-toc-inner">
+    <span style="font-weight:600;color:var(--c-text);">この解説書の目次:</span>
+    <a href="#intro">はじめに</a>
+    <a href="#aws-glossary">AWS 用語</a>
+    <a href="#architecture">構成</a>
+    <a href="#modules">Terraform</a>
+    <a href="#cicd">CI/CD</a>
+    <a href="#cost">コスト</a>
+  </div>
 </nav>
 
 <div class="wrap">

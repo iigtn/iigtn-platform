@@ -21,6 +21,7 @@
   <meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
   <link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
   <link rel="apple-touch-icon" href="/assets/icon.svg">
+  <link rel="stylesheet" href="/site.css">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -47,371 +48,20 @@
     ]
   }
   </script>
-  <style>
-    :root {
-      --c-bg: #fafafa;
-      --c-surface: #ffffff;
-      --c-text: #1a1a1a;
-      --c-muted: #666;
-      --c-border: #e5e5e5;
-      --c-accent: #2a6acc;
-      --c-accent-dark: #1f4d99;
-      --c-accent-light: #e3f2fd;
-      --c-good: #2a8a2a;
-      --max-width: 960px;
-      --gutter: 1.2rem;
-    }
-    * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
-      line-height: 1.7;
-      color: var(--c-text);
-      margin: 0;
-      background: var(--c-bg);
-      -webkit-font-smoothing: antialiased;
-    }
-    a { color: var(--c-accent); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    h1, h2, h3 { letter-spacing: 0.02em; }
-    code {
-      background: #f0f0f0;
-      padding: 1px 6px;
-      border-radius: 3px;
-      font-size: 0.88em;
-      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-    }
-
-    /* ── Header / Nav ──────────────────────────── */
-    .site-header {
-      position: sticky; top: 0;
-      background: rgba(255,255,255,0.95);
-      backdrop-filter: blur(8px);
-      border-bottom: 1px solid var(--c-border);
-      z-index: 100;
-    }
-    .nav {
-      max-width: var(--max-width);
-      margin: 0 auto;
-      padding: 0.7rem var(--gutter);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .nav .logo {
-      display: inline-flex;
-      align-items: center;
-      color: var(--c-text);
-      line-height: 0;
-    }
-    .nav .logo img {
-      height: 32px;
-      width: auto;
-      display: block;
-    }
-    .nav ul {
-      display: flex;
-      gap: 1.4rem;
-      list-style: none;
-      margin: 0; padding: 0;
-      font-size: 0.92rem;
-    }
-    .nav ul a {
-      color: var(--c-text);
-      font-weight: 500;
-    }
-    .nav ul a:hover { color: var(--c-accent); text-decoration: none; }
-    @media (max-width: 700px) {
-      .nav ul { gap: 0.8rem; font-size: 0.82rem; flex-wrap: wrap; justify-content: flex-end; }
-      .nav .logo img { height: 26px; }
-    }
-
-    /* ── Sections common ─────────────────────────── */
-    section {
-      max-width: var(--max-width);
-      margin: 0 auto;
-      padding: 4rem var(--gutter) 3rem;
-      scroll-margin-top: 60px;
-    }
-    section h2 {
-      font-size: 1.6rem;
-      margin: 0 0 0.4rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    section h2::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: var(--c-border);
-    }
-    section .lead {
-      color: var(--c-muted);
-      margin: 0 0 2rem;
-      font-size: 0.95rem;
-    }
-
-    /* ── Hero ─────────────────────────────────────── */
-    .hero {
-      max-width: var(--max-width);
-      padding: 5rem var(--gutter) 4rem;
-      text-align: left;
-    }
-    .hero-monogram {
-      width: 90px; height: 90px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--c-accent) 0%, var(--c-accent-dark) 100%);
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2.2rem;
-      font-weight: 700;
-      letter-spacing: 0;
-      margin-bottom: 1.6rem;
-      box-shadow: 0 8px 24px rgba(42,106,204,0.25);
-    }
-    .hero h1 {
-      font-size: clamp(1.9rem, 4vw, 2.6rem);
-      margin: 0 0 0.6rem;
-      line-height: 1.25;
-    }
-    .hero h1 .accent { color: var(--c-accent); }
-    .hero .tagline {
-      font-size: 1.05rem;
-      color: var(--c-muted);
-      margin: 0 0 2rem;
-      max-width: 580px;
-    }
-    .hero-cta {
-      display: flex;
-      gap: 0.8rem;
-      flex-wrap: wrap;
-    }
-    .btn {
-      display: inline-block;
-      padding: 0.7rem 1.4rem;
-      border-radius: 6px;
-      font-weight: 600;
-      font-size: 0.95rem;
-      text-decoration: none;
-      transition: transform 0.1s, box-shadow 0.2s;
-    }
-    .btn:hover { text-decoration: none; transform: translateY(-1px); }
-    .btn-primary { background: var(--c-accent); color: white; }
-    .btn-primary:hover { background: var(--c-accent-dark); box-shadow: 0 4px 12px rgba(42,106,204,0.3); }
-    .btn-ghost {
-      background: transparent;
-      color: var(--c-text);
-      border: 1px solid var(--c-border);
-    }
-    .btn-ghost:hover { background: var(--c-surface); border-color: var(--c-accent); }
-
-    /* ── About ────────────────────────────────────── */
-    .about-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 1.5rem;
-    }
-    .about-text p { margin: 0 0 1rem; }
-    .about-facts {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 1rem;
-      margin-top: 1.5rem;
-    }
-    .fact {
-      padding: 0.9rem 1rem;
-      background: var(--c-surface);
-      border: 1px solid var(--c-border);
-      border-radius: 6px;
-    }
-    .fact strong {
-      display: block;
-      color: var(--c-accent);
-      font-size: 0.85rem;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      margin-bottom: 0.2rem;
-    }
-    .fact span { font-size: 0.95rem; }
-
-    /* ── Skills ───────────────────────────────────── */
-    .skills-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 1.2rem;
-    }
-    .skill-card {
-      background: var(--c-surface);
-      border: 1px solid var(--c-border);
-      border-radius: 8px;
-      padding: 1.2rem 1.4rem;
-    }
-    .skill-card h3 {
-      font-size: 1rem;
-      margin: 0 0 0.7rem;
-      color: var(--c-accent);
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-    }
-    .skill-tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.35rem;
-      margin: 0;
-      padding: 0;
-      list-style: none;
-    }
-    .skill-tag {
-      background: var(--c-accent-light);
-      color: var(--c-accent-dark);
-      padding: 0.2rem 0.6rem;
-      border-radius: 4px;
-      font-size: 0.82rem;
-      font-weight: 500;
-    }
-
-    /* ── Works ────────────────────────────────────── */
-    .works-list {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 1.2rem;
-    }
-    .work-card {
-      background: var(--c-surface);
-      border: 1px solid var(--c-border);
-      border-radius: 8px;
-      padding: 1.4rem;
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    .work-card:hover {
-      border-color: var(--c-accent);
-      box-shadow: 0 6px 16px rgba(0,0,0,0.06);
-    }
-    .work-meta {
-      font-size: 0.82rem;
-      color: var(--c-muted);
-      margin-bottom: 0.4rem;
-      letter-spacing: 0.04em;
-    }
-    .work-card h3 {
-      font-size: 1.15rem;
-      margin: 0 0 0.5rem;
-      color: var(--c-text);
-    }
-    .work-card h3 a {
-      color: var(--c-text);
-    }
-    .work-card h3 a:hover { color: var(--c-accent); text-decoration: none; }
-    .work-summary { color: var(--c-text); margin: 0.4rem 0 0.8rem; font-size: 0.95rem; }
-    .work-card .skill-tags { margin-top: 0.6rem; }
-
-    /* カード全体をクリック可能にするラッパー */
-    .work-card-link {
-      display: block;
-      text-decoration: none;
-      color: inherit;
-    }
-    .work-card-link:hover { text-decoration: none; }
-    .work-card-link:hover .work-card {
-      border-color: var(--c-accent);
-      box-shadow: 0 6px 16px rgba(0,0,0,0.06);
-    }
-    .work-card-link:hover .work-card h3 { color: var(--c-accent); }
-    .work-card-link .work-card { cursor: pointer; }
-
-    /* ── Blog ─────────────────────────────────────── */
-    .post-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      display: grid;
-      gap: 0.6rem;
-    }
-    .post-list li {
-      background: var(--c-surface);
-      border: 1px solid var(--c-border);
-      border-radius: 6px;
-      padding: 0.9rem 1.1rem;
-    }
-    .post-list .post-date {
-      font-size: 0.82rem;
-      color: var(--c-muted);
-      margin-right: 0.6rem;
-    }
-    .blog-empty {
-      background: var(--c-surface);
-      border: 1px dashed var(--c-border);
-      border-radius: 6px;
-      padding: 1.6rem;
-      color: var(--c-muted);
-      text-align: center;
-    }
-
-    /* ── Contact / Form ──────────────────────────── */
-    form { display: grid; gap: 0.8rem; max-width: 580px; margin-top: 1rem; }
-    label {
-      font-size: 0.88rem;
-      font-weight: 600;
-      color: var(--c-text);
-      display: block;
-      margin-bottom: 0.3rem;
-    }
-    input, textarea {
-      width: 100%;
-      padding: 0.65rem 0.8rem;
-      border: 1px solid var(--c-border);
-      border-radius: 5px;
-      font-family: inherit;
-      font-size: 0.95rem;
-      background: var(--c-surface);
-    }
-    input:focus, textarea:focus {
-      outline: none;
-      border-color: var(--c-accent);
-      box-shadow: 0 0 0 3px var(--c-accent-light);
-    }
-    textarea { min-height: 8rem; resize: vertical; }
-    .status {
-      padding: 0.7rem 1rem;
-      border-radius: 5px;
-      font-size: 0.92rem;
-    }
-    .status.ok { background: #e8f5e9; color: #1d6b1d; border: 1px solid #b6e0b6; }
-    .status.err { background: #fde8e8; color: #8c1f1f; border: 1px solid #f1b8b8; }
-
-    /* ── Footer ──────────────────────────────────── */
-    footer {
-      max-width: var(--max-width);
-      margin: 3rem auto 0;
-      padding: 2rem var(--gutter);
-      border-top: 1px solid var(--c-border);
-      color: var(--c-muted);
-      font-size: 0.85rem;
-      display: flex;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 0.6rem;
-    }
-  </style>
 </head>
 <body>
 
-<!-- ─── Header / Nav ─────────────────────────────────────── -->
 <header class="site-header">
   <nav class="nav">
-    <a href="#top" class="logo" aria-label="iigtn">
+    <a href="/" class="logo" aria-label="iigtn">
       <img src="/assets/logo.svg" alt="iigtn" height="32">
     </a>
     <ul>
-      <li><a href="#about">About</a></li>
-      <li><a href="#skills">Skills</a></li>
-      <li><a href="#works">Works</a></li>
-      <li><a href="#blog">Blog</a></li>
-      <li><a href="#contact">Contact</a></li>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
       <li><a href="/learn.html">解説書</a></li>
     </ul>
   </nav>
@@ -419,8 +69,8 @@
 
 <main>
 
-  <!-- ─── Top / Hero ─────────────────────────────────────── -->
-  <section id="top" class="hero">
+  <!-- ─── Hero ─────────────────────────────────────── -->
+  <section class="hero">
     <div class="hero-monogram">i</div>
     <h1>サーバレス × IaC で<br>動かし続ける <span class="accent">インフラ</span> を。</h1>
     <p class="tagline">
@@ -428,216 +78,98 @@
       サーバレス基盤の設計・構築・運用を担当しています。本サイトもすべて IaC + CI/CD で自動運用中。
     </p>
     <div class="hero-cta">
-      <a href="#works" class="btn btn-primary">実績を見る</a>
-      <a href="#contact" class="btn btn-ghost">お問い合わせ</a>
+      <a href="/works.html" class="btn btn-primary">実績を見る</a>
+      <a href="/contact.html" class="btn btn-ghost">お問い合わせ</a>
       <a href="/learn.html" class="btn btn-ghost">解説書を読む →</a>
     </div>
   </section>
 
-  <!-- ─── About ──────────────────────────────────────────── -->
-  <section id="about">
-    <h2>About</h2>
-    <p class="lead">フリーランス・インフラエンジニア iigtn のプロフィール</p>
+  <!-- ─── ナビゲーション・サマリ ──────────────────── -->
+  <section class="page-section">
+    <h2>サイトマップ</h2>
+    <p class="lead">各ページには以下の内容を載せています。気になるところからどうぞ。</p>
 
-    <div class="about-grid">
-      <div class="about-text">
-        <p>
-          AWS サーバレス基盤の設計・構築・運用を専門とするフリーランス・インフラエンジニアです。
-          常駐サーバを持たず <strong>「壊れにくく / 壊れたら気付ける」</strong> 構成を意識し、
-          全構成を Terraform でコード化、GitHub Actions OIDC で静的キーレス CI/CD を組むスタイルを
-          得意としています。
-        </p>
-        <p>
-          ポートフォリオの軸は「凝った構成より <strong>運用が回り続けている事実</strong>」。
-          本サイト自体が運用中の AWS 構成サンプルで、構築の全コードと判断記録を
-          <a href="/learn.html">解説書</a> として公開しています（採用評価向け）。
-        </p>
+    <div class="summary-grid">
 
-        <div class="about-facts">
-          <div class="fact"><strong>専門領域</strong><span>AWS / Linux / IaC</span></div>
-          <div class="fact"><strong>働き方</strong><span>業務委託 / 案件</span></div>
-          <div class="fact"><strong>所在</strong><span>日本</span></div>
-          <div class="fact"><strong>連絡方法</strong><span>下記フォーム</span></div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ─── Skills ─────────────────────────────────────────── -->
-  <section id="skills">
-    <h2>Skills</h2>
-    <p class="lead">業務で使用している技術スタック</p>
-
-    <div class="skills-grid">
-
-      <div class="skill-card">
-        <h3>☁️ AWS</h3>
-        <ul class="skill-tags">
-          <li class="skill-tag">CloudFront</li>
-          <li class="skill-tag">S3</li>
-          <li class="skill-tag">Lambda</li>
-          <li class="skill-tag">API Gateway</li>
-          <li class="skill-tag">DynamoDB</li>
-          <li class="skill-tag">ACM</li>
-          <li class="skill-tag">SES / SNS</li>
-          <li class="skill-tag">CloudWatch</li>
-          <li class="skill-tag">IAM (OIDC)</li>
-          <li class="skill-tag">Route 53</li>
-          <li class="skill-tag">EC2 / VPC</li>
-          <li class="skill-tag">Budgets</li>
-        </ul>
-      </div>
-
-      <div class="skill-card">
-        <h3>🛠 IaC / 自動化</h3>
-        <ul class="skill-tags">
-          <li class="skill-tag">Terraform</li>
-          <li class="skill-tag">GitHub Actions</li>
-          <li class="skill-tag">OIDC AssumeRole</li>
-          <li class="skill-tag">S3 backend + DDB Lock</li>
-          <li class="skill-tag">module 設計</li>
-          <li class="skill-tag">multi-env (dev/prod)</li>
-        </ul>
-      </div>
-
-      <div class="skill-card">
-        <h3>🐧 Linux / ネットワーク</h3>
-        <ul class="skill-tags">
-          <li class="skill-tag">Linux 全般</li>
-          <li class="skill-tag">systemd</li>
-          <li class="skill-tag">Nginx</li>
-          <li class="skill-tag">DNS (Route53 / Cloud DNS)</li>
-          <li class="skill-tag">TLS / ACM</li>
-          <li class="skill-tag">Security Groups / WAF</li>
-        </ul>
-      </div>
-
-      <div class="skill-card">
-        <h3>💻 アプリ / 言語</h3>
-        <ul class="skill-tags">
-          <li class="skill-tag">Node.js (Lambda)</li>
-          <li class="skill-tag">Python</li>
-          <li class="skill-tag">Bash / PowerShell</li>
-          <li class="skill-tag">HTML / CSS / JS</li>
-          <li class="skill-tag">Markdown / MDX</li>
-        </ul>
-      </div>
-
-      <div class="skill-card">
-        <h3>📊 観測・運用</h3>
-        <ul class="skill-tags">
-          <li class="skill-tag">CloudWatch Alarms</li>
-          <li class="skill-tag">Logs Insights</li>
-          <li class="skill-tag">SNS 通知</li>
-          <li class="skill-tag">Budgets / コスト最適化</li>
-          <li class="skill-tag">Runbook / Post-mortem</li>
-        </ul>
-      </div>
-
-      <div class="skill-card">
-        <h3>🔐 セキュリティ</h3>
-        <ul class="skill-tags">
-          <li class="skill-tag">IAM 最小権限</li>
-          <li class="skill-tag">OAC (S3 非公開維持)</li>
-          <li class="skill-tag">SSE-S3 / KMS</li>
-          <li class="skill-tag">Public Access Block</li>
-          <li class="skill-tag">静的キーレス設計</li>
-        </ul>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- ─── Works ──────────────────────────────────────────── -->
-  <section id="works">
-    <h2>Works</h2>
-    <p class="lead">これまでの主な制作・構築物</p>
-
-    <div class="works-list">
-
-      <a href="/learn.html" class="work-card-link">
-        <article class="work-card">
-          <div class="work-meta">2026 / 個人 / 公開稼働中</div>
-          <h3>iigtn-platform — Serverless Portfolio Lab →</h3>
-          <p class="work-summary">
-            このサイト本体。AWS サーバレス + Terraform + GitHub Actions OIDC でゼロから設計・構築。
-            フロント (S3 + CloudFront + OAC) / API (API Gateway + Lambda + DynamoDB) / 監視 (CloudWatch + SNS + Budgets) /
-            静的キーレス CI/CD まで一通りカバー。全コード GitHub に公開予定。
-          </p>
-          <ul class="skill-tags">
-            <li class="skill-tag">AWS</li>
-            <li class="skill-tag">Terraform</li>
-            <li class="skill-tag">GitHub Actions OIDC</li>
-            <li class="skill-tag">CloudFront / S3 / Lambda</li>
-            <li class="skill-tag">DynamoDB</li>
-          </ul>
+      <a href="/about.html" class="summary-card-link">
+        <article class="summary-card">
+          <h3>👤 About</h3>
+          <p>プロフィール、設計思想 4 本柱、仕事をするうえで大事にしていること。</p>
+          <span class="more">プロフィールを見る →</span>
         </article>
       </a>
 
-      <article class="work-card">
-        <div class="work-meta">準備中</div>
-        <h3>次の案件・実績</h3>
-        <p class="work-summary">
-          受託・常駐案件の実績を順次追加予定。匿名化したケーススタディとして、
-          技術選定の判断記録 (ADR) と運用記録 (post-mortem) を併記する形で公開します。
-        </p>
-        <ul class="skill-tags">
-          <li class="skill-tag">Coming soon</li>
-        </ul>
-      </article>
-
-    </div>
-  </section>
-
-  <!-- ─── Blog ───────────────────────────────────────────── -->
-  <section id="blog">
-    <h2>Blog</h2>
-    <p class="lead">構築の記録・運用メトリクス・障害復旧・技術選定の判断記録 (ADR) を執筆中</p>
-
-    <div class="works-list">
-      <a href="/blog/" class="work-card-link">
-        <article class="work-card">
-          <div class="work-meta">2026-04-26 · 全 21 記事 · 完結</div>
-          <h3>iigtn 構築日誌 — フリーランスがゼロから AWS サーバレスポートフォリオを作るまで →</h3>
-          <p class="work-summary">
-            AWS サーバレス + Terraform + GitHub Actions OIDC で、ポートフォリオサイト
-            <code>lab.iigtn.com</code> を 0 から構築した記録の全 21 記事シリーズ。
-            設計思想・構築手順・ハマりどころ・運用判断を、各記事 3,500〜5,000 字 + 用語集付きで解説。
-          </p>
-          <ul class="skill-tags">
-            <li class="skill-tag">AWS</li>
-            <li class="skill-tag">Terraform</li>
-            <li class="skill-tag">GitHub Actions OIDC</li>
-            <li class="skill-tag">CloudFront / S3 / Lambda</li>
-            <li class="skill-tag">DynamoDB / SES</li>
-            <li class="skill-tag">構築日誌</li>
-          </ul>
+      <a href="/skills.html" class="summary-card-link">
+        <article class="summary-card">
+          <h3>🛠 Skills</h3>
+          <p>AWS / Terraform / Linux / CI/CD / セキュリティ / 観測など、業務で使う技術スタック 6 カテゴリ・40+ 項目。</p>
+          <span class="more">スキル一覧へ →</span>
         </article>
       </a>
+
+      <a href="/works.html" class="summary-card-link">
+        <article class="summary-card">
+          <h3>📦 Works</h3>
+          <p>これまでの主な制作・構築実績。匿名化したケーススタディも順次追加予定。</p>
+          <span class="more">実績を見る →</span>
+        </article>
+      </a>
+
+      <a href="/blog/" class="summary-card-link">
+        <article class="summary-card">
+          <h3>📝 Blog</h3>
+          <p>iigtn-platform をゼロから AWS サーバレスで構築するまでの記録 — 全 21 記事シリーズ。</p>
+          <span class="more">構築日誌を読む →</span>
+        </article>
+      </a>
+
+      <a href="/learn.html" class="summary-card-link">
+        <article class="summary-card">
+          <h3>📖 解説書</h3>
+          <p>このサイトの AWS サーバレス構成をモジュール単位で詳解。採用評価・技術検討向け。</p>
+          <span class="more">解説書を読む →</span>
+        </article>
+      </a>
+
+      <a href="/contact.html" class="summary-card-link">
+        <article class="summary-card">
+          <h3>✉️ Contact</h3>
+          <p>お仕事のご相談、技術相談、コードレビュー依頼など、お気軽にどうぞ。</p>
+          <span class="more">お問い合わせへ →</span>
+        </article>
+      </a>
+
     </div>
   </section>
 
-  <!-- ─── Contact ────────────────────────────────────────── -->
-  <section id="contact">
-    <h2>Contact</h2>
-    <p class="lead">お仕事のご相談・ご質問など、お気軽にお問い合わせください</p>
+  <!-- ─── ハイライト（要約） ──────────────────────── -->
+  <section class="page-section">
+    <h2>このサイトのハイライト</h2>
+    <p class="lead">本サイト自体が「運用中の AWS サーバレス構成」のサンプルです</p>
 
-    <form id="contact-form">
-      <div>
-        <label for="name">お名前</label>
-        <input id="name" name="name" required maxlength="100" placeholder="山田 太郎">
+    <div class="summary-grid">
+
+      <div class="summary-card">
+        <h3>☁️ AWS サーバレス</h3>
+        <p>S3 + CloudFront (OAC) + Lambda + API Gateway + DynamoDB + SES + CloudWatch + SNS + Budgets。</p>
       </div>
-      <div>
-        <label for="email">メールアドレス</label>
-        <input id="email" name="email" type="email" required maxlength="254" placeholder="you@example.com">
+
+      <div class="summary-card">
+        <h3>🛠 Terraform IaC</h3>
+        <p>5 モジュール (network_dns / frontend_cdn / backend_api / ci_oidc / observability) + S3 backend + DDB Lock。</p>
       </div>
-      <div>
-        <label for="message">メッセージ</label>
-        <textarea id="message" name="message" required minlength="10" maxlength="5000" placeholder="お問い合わせ内容をご記入ください（10 文字以上）"></textarea>
+
+      <div class="summary-card">
+        <h3>🔁 静的キーレス CI/CD</h3>
+        <p>GitHub Actions OIDC で IAM Role を一時 AssumeRole。長期アクセスキーを GitHub Secrets に置かない設計。</p>
       </div>
-      <button type="submit" id="submit-btn" class="btn btn-primary" style="border:0;cursor:pointer;">送信</button>
-      <div id="status" class="status" hidden></div>
-    </form>
+
+      <div class="summary-card">
+        <h3>🔐 最小権限 + 観測</h3>
+        <p>OAC で S3 を非公開維持、Public Access Block で構造的に公開不能化。CloudWatch Alarms + SNS Email + Budgets で異常検知。</p>
+      </div>
+
+    </div>
   </section>
 
 </main>
@@ -650,47 +182,6 @@
     <a href="https://github.com/iigtn/iigtn-platform">GitHub</a>
   </div>
 </footer>
-
-<script>
-  const form = document.getElementById('contact-form');
-  const btn  = document.getElementById('submit-btn');
-  const stat = document.getElementById('status');
-
-  form.addEventListener('submit', async (ev) => {
-    ev.preventDefault();
-    btn.disabled = true;
-    stat.hidden = true;
-
-    const payload = {
-      name:    form.name.value.trim(),
-      email:   form.email.value.trim(),
-      message: form.message.value.trim(),
-    };
-
-    try {
-      const res = await fetch('/api/contact', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(payload),
-      });
-      if (res.ok) {
-        stat.className = 'status ok';
-        stat.textContent = '✅ 送信完了。ご連絡ありがとうございます。';
-        form.reset();
-      } else {
-        const err = await res.json().catch(() => ({}));
-        stat.className = 'status err';
-        stat.textContent = '❌ 送信失敗: ' + (err.error || res.status);
-      }
-    } catch (e) {
-      stat.className = 'status err';
-      stat.textContent = '❌ ネットワークエラー: ' + e.message;
-    } finally {
-      stat.hidden = false;
-      btn.disabled = false;
-    }
-  });
-</script>
 
 </body>
 </html>

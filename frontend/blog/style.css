@@ -26,23 +26,56 @@ body {
   background: var(--c-bg);
   -webkit-font-smoothing: antialiased;
 }
-nav.top {
+/* Site-wide nav (shared with main site pages) */
+.site-header {
   position: sticky; top: 0;
   background: rgba(255,255,255,0.95);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--c-border);
-  padding: 0.7rem 1.2rem;
-  z-index: 10;
-  font-size: 0.9rem;
+  z-index: 100;
 }
-nav.top .nav-inner {
+.site-nav {
   max-width: var(--max-width);
   margin: 0 auto;
+  padding: 0.7rem 1.2rem;
   display: flex;
-  gap: 1.2rem;
+  align-items: center;
+  justify-content: space-between;
 }
-nav.top a { color: var(--c-text); text-decoration: none; font-weight: 500; }
-nav.top a:hover { color: var(--c-accent); }
+.site-nav .logo {
+  display: inline-flex;
+  align-items: center;
+  color: var(--c-text);
+  line-height: 0;
+}
+.site-nav .logo img { height: 32px; width: auto; display: block; }
+.site-nav ul {
+  display: flex;
+  gap: 1.4rem;
+  list-style: none;
+  margin: 0; padding: 0;
+  font-size: 0.92rem;
+}
+.site-nav ul a {
+  color: var(--c-text);
+  font-weight: 500;
+  padding: 0.2rem 0;
+  border-bottom: 2px solid transparent;
+  text-decoration: none;
+  transition: border-color 0.15s, color 0.15s;
+}
+.site-nav ul a:hover { color: var(--c-accent); text-decoration: none; }
+.site-nav ul a.active {
+  color: var(--c-accent);
+  border-bottom-color: var(--c-accent);
+}
+@media (max-width: 700px) {
+  .site-nav ul { gap: 0.8rem; font-size: 0.82rem; flex-wrap: wrap; justify-content: flex-end; }
+  .site-nav .logo img { height: 26px; }
+}
+
+/* Legacy nav.top alias (kept for older articles before nav refresh) */
+nav.top { display: none; }
 article.post {
   max-width: var(--max-width);
   margin: 0 auto;

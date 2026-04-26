@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact — iigtn / お問い合わせ</title>
+  <meta name="description" content="フリーランス・インフラエンジニア iigtn へのお問い合わせフォーム。AWS サーバレス基盤の設計・構築・運用のご相談、お見積り、技術相談を受け付けています。">
+  <meta name="author" content="iigtn">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://lab.iigtn.com/contact.html">
+  <meta property="og:title" content="Contact — iigtn / お問い合わせ">
+  <meta property="og:description" content="AWS サーバレス基盤の構築・運用のご相談はお問い合わせフォームからお気軽にどうぞ。">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://lab.iigtn.com/contact.html">
+  <meta property="og:site_name" content="iigtn">
+  <meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+  <meta property="og:locale" content="ja_JP">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Contact — iigtn / お問い合わせ">
+  <meta name="twitter:description" content="AWS サーバレス基盤の構築・運用のご相談はお気軽にどうぞ。">
+  <meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+  <link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+  <link rel="apple-touch-icon" href="/assets/icon.svg">
+  <link rel="stylesheet" href="/site.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "ContactPage",
+    "url": "https://lab.iigtn.com/contact.html",
+    "inLanguage": "ja",
+    "name": "Contact — iigtn",
+    "about": {
+      "@type": "Person",
+      "name": "iigtn",
+      "email": "mailto:contact@iigtn.com",
+      "url": "https://lab.iigtn.com/"
+    }
+  }
+  </script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="nav">
+    <a href="/" class="logo" aria-label="iigtn">
+      <img src="/assets/logo.svg" alt="iigtn" height="32">
+    </a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/contact.html" class="active">Contact</a></li>
+      <li><a href="/learn.html">解説書</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main>
+
+  <header class="page-header">
+    <h1>Contact</h1>
+    <p class="lead">お仕事のご相談・ご質問など、お気軽にお問い合わせください。3 営業日以内に返信いたします。</p>
+  </header>
+
+  <section class="page-section">
+    <h2>お問い合わせフォーム</h2>
+    <p class="lead">下記フォームから送信いただくと <code>contact@iigtn.com</code> 宛にメールが届きます。</p>
+
+    <form id="contact-form">
+      <div>
+        <label for="name">お名前 <span style="color:var(--c-muted);font-weight:400;">（必須）</span></label>
+        <input id="name" name="name" required maxlength="100" placeholder="山田 太郎">
+      </div>
+      <div>
+        <label for="email">メールアドレス <span style="color:var(--c-muted);font-weight:400;">（必須）</span></label>
+        <input id="email" name="email" type="email" required maxlength="254" placeholder="you@example.com">
+      </div>
+      <div>
+        <label for="message">メッセージ <span style="color:var(--c-muted);font-weight:400;">（10 文字以上、5000 文字以内）</span></label>
+        <textarea id="message" name="message" required minlength="10" maxlength="5000" placeholder="お問い合わせ内容をご記入ください。&#10;&#10;例:&#10;・◯◯のような構成を AWS サーバレスで作りたい&#10;・既存システムのコードレビュー / 設計相談&#10;・技術記事の執筆依頼 など"></textarea>
+      </div>
+      <button type="submit" id="submit-btn" class="btn btn-primary" style="border:0;cursor:pointer;">送信</button>
+      <div id="status" class="status" hidden></div>
+    </form>
+  </section>
+
+  <section class="page-section">
+    <h2>受付内容</h2>
+    <div class="about-grid">
+      <div class="about-text">
+        <ul>
+          <li><strong>AWS サーバレス基盤の設計・構築・運用</strong> ― 個人・中小企業向けの新規構築、既存システムの IaC 化、CI/CD パイプライン整備など</li>
+          <li><strong>技術相談・コードレビュー</strong> ― Terraform / IAM / CloudFront / Lambda などの単発の相談も歓迎です</li>
+          <li><strong>採用に関するご相談</strong> ― 業務委託・常駐案件のお引き合い</li>
+          <li><strong>技術記事の執筆・監修</strong> ― AWS / Terraform / インフラ関連</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="page-section">
+    <h2>関連ページ</h2>
+    <div class="summary-grid">
+      <a href="/about.html" class="summary-card-link">
+        <article class="summary-card">
+          <h3>👤 About</h3>
+          <p>プロフィール・設計思想・大事にしていること。</p>
+          <span class="more">プロフィールを見る →</span>
+        </article>
+      </a>
+      <a href="/skills.html" class="summary-card-link">
+        <article class="summary-card">
+          <h3>🛠 Skills</h3>
+          <p>業務で使用している技術スタックの一覧。</p>
+          <span class="more">スキル一覧へ →</span>
+        </article>
+      </a>
+      <a href="/works.html" class="summary-card-link">
+        <article class="summary-card">
+          <h3>📦 Works</h3>
+          <p>これまでの主な制作物・構築実績。</p>
+          <span class="more">実績を見る →</span>
+        </article>
+      </a>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div>© 2026 iigtn — Built with Terraform &amp; GitHub Actions</div>
+  <div>
+    <a href="/learn.html">解説書</a>
+    &nbsp;·&nbsp;
+    <a href="https://github.com/iigtn/iigtn-platform">GitHub</a>
+  </div>
+</footer>
+
+<script>
+  const form = document.getElementById('contact-form');
+  const btn  = document.getElementById('submit-btn');
+  const stat = document.getElementById('status');
+
+  form.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    btn.disabled = true;
+    stat.hidden = true;
+
+    const payload = {
+      name:    form.name.value.trim(),
+      email:   form.email.value.trim(),
+      message: form.message.value.trim(),
+    };
+
+    try {
+      const res = await fetch('/api/contact', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload),
+      });
+      if (res.ok) {
+        stat.className = 'status ok';
+        stat.textContent = '✅ 送信完了。ご連絡ありがとうございます。3 営業日以内に返信いたします。';
+        form.reset();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        stat.className = 'status err';
+        stat.textContent = '❌ 送信失敗: ' + (err.error || res.status);
+      }
+    } catch (e) {
+      stat.className = 'status err';
+      stat.textContent = '❌ ネットワークエラー: ' + e.message;
+    } finally {
+      stat.hidden = false;
+      btn.disabled = false;
+    }
+  });
+</script>
+
+</body>
+</html>
