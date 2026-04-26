@@ -264,6 +264,7 @@
     .work-card h3 {
       font-size: 1.15rem;
       margin: 0 0 0.5rem;
+      color: var(--c-text);
     }
     .work-card h3 a {
       color: var(--c-text);
@@ -271,6 +272,20 @@
     .work-card h3 a:hover { color: var(--c-accent); text-decoration: none; }
     .work-summary { color: var(--c-text); margin: 0.4rem 0 0.8rem; font-size: 0.95rem; }
     .work-card .skill-tags { margin-top: 0.6rem; }
+
+    /* カード全体をクリック可能にするラッパー */
+    .work-card-link {
+      display: block;
+      text-decoration: none;
+      color: inherit;
+    }
+    .work-card-link:hover { text-decoration: none; }
+    .work-card-link:hover .work-card {
+      border-color: var(--c-accent);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+    }
+    .work-card-link:hover .work-card h3 { color: var(--c-accent); }
+    .work-card-link .work-card { cursor: pointer; }
 
     /* ── Blog ─────────────────────────────────────── */
     .post-list {
@@ -504,22 +519,24 @@
 
     <div class="works-list">
 
-      <article class="work-card">
-        <div class="work-meta">2026 / 個人 / 公開稼働中</div>
-        <h3><a href="/learn.html">iigtn-platform — Serverless Portfolio Lab</a></h3>
-        <p class="work-summary">
-          このサイト本体。AWS サーバレス + Terraform + GitHub Actions OIDC でゼロから設計・構築。
-          フロント (S3 + CloudFront + OAC) / API (API Gateway + Lambda + DynamoDB) / 監視 (CloudWatch + SNS + Budgets) /
-          静的キーレス CI/CD まで一通りカバー。全コード GitHub に公開予定。
-        </p>
-        <ul class="skill-tags">
-          <li class="skill-tag">AWS</li>
-          <li class="skill-tag">Terraform</li>
-          <li class="skill-tag">GitHub Actions OIDC</li>
-          <li class="skill-tag">CloudFront / S3 / Lambda</li>
-          <li class="skill-tag">DynamoDB</li>
-        </ul>
-      </article>
+      <a href="/learn.html" class="work-card-link">
+        <article class="work-card">
+          <div class="work-meta">2026 / 個人 / 公開稼働中</div>
+          <h3>iigtn-platform — Serverless Portfolio Lab →</h3>
+          <p class="work-summary">
+            このサイト本体。AWS サーバレス + Terraform + GitHub Actions OIDC でゼロから設計・構築。
+            フロント (S3 + CloudFront + OAC) / API (API Gateway + Lambda + DynamoDB) / 監視 (CloudWatch + SNS + Budgets) /
+            静的キーレス CI/CD まで一通りカバー。全コード GitHub に公開予定。
+          </p>
+          <ul class="skill-tags">
+            <li class="skill-tag">AWS</li>
+            <li class="skill-tag">Terraform</li>
+            <li class="skill-tag">GitHub Actions OIDC</li>
+            <li class="skill-tag">CloudFront / S3 / Lambda</li>
+            <li class="skill-tag">DynamoDB</li>
+          </ul>
+        </article>
+      </a>
 
       <article class="work-card">
         <div class="work-meta">準備中</div>
@@ -542,23 +559,25 @@
     <p class="lead">構築の記録・運用メトリクス・障害復旧・技術選定の判断記録 (ADR) を執筆中</p>
 
     <div class="works-list">
-      <article class="work-card">
-        <div class="work-meta">2026-04-26 · 全 21 記事 · 完結</div>
-        <h3><a href="/blog/">iigtn 構築日誌 — フリーランスがゼロから AWS サーバレスポートフォリオを作るまで</a></h3>
-        <p class="work-summary">
-          AWS サーバレス + Terraform + GitHub Actions OIDC で、ポートフォリオサイト
-          <code>lab.iigtn.com</code> を 0 から構築した記録の全 21 記事シリーズ。
-          設計思想・構築手順・ハマりどころ・運用判断を、各記事 3,500〜5,000 字 + 用語集付きで解説。
-        </p>
-        <ul class="skill-tags">
-          <li class="skill-tag">AWS</li>
-          <li class="skill-tag">Terraform</li>
-          <li class="skill-tag">GitHub Actions OIDC</li>
-          <li class="skill-tag">CloudFront / S3 / Lambda</li>
-          <li class="skill-tag">DynamoDB / SES</li>
-          <li class="skill-tag">構築日誌</li>
-        </ul>
-      </article>
+      <a href="/blog/" class="work-card-link">
+        <article class="work-card">
+          <div class="work-meta">2026-04-26 · 全 21 記事 · 完結</div>
+          <h3>iigtn 構築日誌 — フリーランスがゼロから AWS サーバレスポートフォリオを作るまで →</h3>
+          <p class="work-summary">
+            AWS サーバレス + Terraform + GitHub Actions OIDC で、ポートフォリオサイト
+            <code>lab.iigtn.com</code> を 0 から構築した記録の全 21 記事シリーズ。
+            設計思想・構築手順・ハマりどころ・運用判断を、各記事 3,500〜5,000 字 + 用語集付きで解説。
+          </p>
+          <ul class="skill-tags">
+            <li class="skill-tag">AWS</li>
+            <li class="skill-tag">Terraform</li>
+            <li class="skill-tag">GitHub Actions OIDC</li>
+            <li class="skill-tag">CloudFront / S3 / Lambda</li>
+            <li class="skill-tag">DynamoDB / SES</li>
+            <li class="skill-tag">構築日誌</li>
+          </ul>
+        </article>
+      </a>
     </div>
   </section>
 
