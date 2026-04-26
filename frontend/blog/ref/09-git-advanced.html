@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#ref-09 Git 応用コマンド集 — rebase / bisect / reflog | 現場コマンドリファレンス | iigtn</title>
+<meta name="description" content="git rebase / cherry-pick / stash / bisect / reflog / worktree / submodule / blame / log の応用ほか、Git で「日常 add/commit/push」を超えて現場で使う 60+ コマンドを 9 カテゴリで深掘り解説します。レビュー対応・履歴整形・障害復旧に。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/ref/09-git-advanced.html">
+<meta property="og:title" content="#ref-09 Git 応用コマンド集 — rebase / bisect / reflog">
+<meta property="og:description" content="git rebase / cherry-pick / stash / bisect / reflog / worktree ほか 60+ コマンドを 9 カテゴリで深掘り。レビュー対応・履歴整形・障害復旧に。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/ref/09-git-advanced.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="#ref-09 Git 応用コマンド集 — rebase / bisect / reflog">
+<meta name="twitter:description" content="git rebase / cherry-pick / stash / bisect / reflog / worktree ほか 60+ コマンドを 9 カテゴリで深掘り。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="stylesheet" href="/blog/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "#ref-09 Git 応用コマンド集 — rebase / bisect / reflog",
+  "description": "git rebase / cherry-pick / stash / bisect / reflog / worktree ほか 60+ コマンドを 9 カテゴリで深掘り。",
+  "datePublished": "2026-04-26",
+  "author": { "@type": "Person", "name": "iigtn", "url": "https://lab.iigtn.com/" },
+  "publisher": { "@type": "Person", "name": "iigtn" },
+  "url": "https://lab.iigtn.com/blog/ref/09-git-advanced.html",
+  "mainEntityOfPage": "https://lab.iigtn.com/blog/ref/09-git-advanced.html",
+  "image": "https://lab.iigtn.com/assets/icon.svg",
+  "inLanguage": "ja",
+  "isPartOf": { "@id": "https://lab.iigtn.com/blog/ref/#blog" }
+}
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="/" class="logo" aria-label="iigtn">
+      <img src="/assets/logo.svg" alt="iigtn" height="32">
+    </a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/" class="active">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+      <li><a href="/learn.html">解説書</a></li>
+    </ul>
+  </nav>
+</header>
+
+<article class="post">
+
+  <header class="post-header">
+    <p class="post-meta">2026-04-26 · 現場コマンドリファレンス · #ref-09</p>
+    <h1>Git 応用コマンド集 — rebase / bisect / reflog ほか 60+ コマンドを 9 カテゴリで</h1>
+  </header>
+
+  <div class="post-body">
+
+    <p>
+      現場の Git は「日常 add/commit/push」だけで回るわけではなく、レビュー対応で履歴を整える <code>rebase -i</code>、
+      バグ混入版を二分探索する <code>bisect</code>、過去の状態に戻る <code>reflog</code>、複数ブランチ並行作業の <code>worktree</code> など、
+      <strong>応用コマンドを使えるかどうかで生産性が桁違い</strong>になります。
+    </p>
+    <p>
+      本記事は「日常 git は知っている」を前提に、現場でよく使う 60+ コマンドを 9 カテゴリに分けて深掘りします。
+      ハマりどころとリカバリ手順も併記。最後に「<a href="#cookbook">よく使うレシピ</a>」も。
+    </p>
+
+    <div class="callout warn">
+      <strong>破壊的操作の前に必ず:</strong>
+      <ul style="margin: 0.4rem 0 0;">
+        <li><code>git status</code> で commit 漏れがないか確認</li>
+        <li><code>git stash</code> でローカル変更を退避（必要なら）</li>
+        <li><code>git branch backup-$(date +%s)</code> で念の為のバックアップ参照を作る</li>
+        <li>共有ブランチ（main/develop）への <code>push --force</code> は基本禁止 → <code>--force-with-lease</code> を使う</li>
+      </ul>
+    </div>
+
+    <h2>目次</h2>
+    <ol>
+      <li><a href="#sec-1">履歴閲覧の応用 (log / show)</a></li>
+      <li><a href="#sec-2">差分・ブレーム (diff / blame)</a></li>
+      <li><a href="#sec-3">ブランチ・タグ操作</a></li>
+      <li><a href="#sec-4">rebase — 履歴の整形</a></li>
+      <li><a href="#sec-5">cherry-pick / revert</a></li>
+      <li><a href="#sec-6">stash — 一時退避</a></li>
+      <li><a href="#sec-7">reflog / reset / restore — リカバリ系</a></li>
+      <li><a href="#sec-8">bisect — バグ二分探索</a></li>
+      <li><a href="#sec-9">worktree / submodule / hooks</a></li>
+      <li><a href="#cookbook">よく使うレシピ</a></li>
+      <li><a href="#glossary">用語集</a></li>
+    </ol>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-1">1. 履歴閲覧の応用 (log / show)</h2>
+
+    <h3>git log — 履歴の見方を覚えると速い</h3>
+<pre><code># コンパクトに 1 行
+git log --oneline
+
+# グラフ + ブランチ構造
+git log --oneline --graph --all --decorate
+
+# 著者・期間絞り込み
+git log --author='iigtn' --since='1 week ago' --until='today'
+git log --since='2026-04-01' --until='2026-04-30'
+
+# ファイル単位の履歴
+git log --oneline -- path/to/file
+git log -p -- path/to/file       # ファイルへの差分付き
+git log --follow -- path/to/file # リネーム前まで追跡
+
+# コミットメッセージ検索
+git log --grep='fix' -i
+
+# 変更内容（パッチ内容）の検索 — 「ある関数名がいつ消えたか」
+git log -S 'function_name'       # 文字列出現の差し引き履歴
+git log -G 'regex_pattern'       # 正規表現
+
+# フォーマットカスタム
+git log --pretty=format:'%h %an %ad %s' --date=short
+
+# ファイルの変更行数統計
+git log --stat -- path/to/file
+git log --shortstat --since='1 month ago' | grep -E 'fil(e|es) changed'</code></pre>
+
+    <h3>git show — コミット詳細</h3>
+<pre><code>git show HEAD                     # 最新コミットの内容
+git show abc1234                  # 特定コミット
+git show abc1234 -- path/file     # そのコミットでの特定ファイルの差分
+git show abc1234:path/file        # そのコミット時点のファイル全体（取り出せる）
+git show --stat HEAD              # 統計のみ
+git show --name-only HEAD         # 変更ファイル名のみ</code></pre>
+
+    <h3>git shortlog — 著者別サマリ</h3>
+<pre><code>git shortlog -sn                  # 著者ごとのコミット数（ランキング）
+git shortlog -sn --since='1 month ago'
+git shortlog --no-merges -sn      # マージコミット除外</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-2">2. 差分・ブレーム (diff / blame)</h2>
+
+    <h3>git diff — 変更差分</h3>
+<pre><code>git diff                          # ワークツリー vs インデックス
+git diff --staged                 # インデックス vs HEAD（commit 直前の最終確認）
+git diff HEAD                     # ワークツリー vs HEAD
+git diff main feature             # ブランチ間
+git diff main..feature            # 同上
+git diff main...feature           # main から枝分かれした共通祖先 vs feature
+git diff abc123 def456            # 任意コミット間
+git diff --stat                   # 統計のみ
+git diff --name-only              # ファイル名のみ
+git diff -w                       # 空白差分を無視
+git diff --word-diff              # 単語単位の差分（文章編集に便利）
+
+# 特定ファイルだけ
+git diff -- path/to/file
+git diff main feature -- path/to/file
+
+# パッチとして保存
+git diff main feature &gt; my.patch
+git apply my.patch                # 別の場所で適用</code></pre>
+
+    <h3>git blame — 行単位の責任者・時刻</h3>
+<pre><code>git blame path/to/file
+git blame -L 10,30 path/to/file       # 10〜30 行目だけ
+git blame -w path/to/file             # 空白変更を無視
+git blame -C path/to/file             # コピー / 移動も追跡
+git blame --since='6 months ago' file # 期間内の変更だけ
+
+# 特定行が「いつから」あるか
+git log -L 10,30:path/to/file</code></pre>
+    <div class="callout info">
+      コードレビュー中・障害調査中に「この行いつ・なぜ入った？」で <code>git blame</code> → コミットハッシュ → <code>git show</code> で
+      コミットメッセージ・PR 番号を辿るのが現場の鉄板コンボ。
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-3">3. ブランチ・タグ操作</h2>
+
+    <h3>ブランチ管理</h3>
+<pre><code>git branch                          # ローカルブランチ一覧
+git branch -a                       # リモート含む
+git branch -vv                      # 追跡先 + 最終コミット表示
+git branch --merged main            # main にマージ済みのブランチ
+git branch --no-merged main         # まだマージされてないブランチ
+
+git switch -c feature/new           # 新規ブランチ + 切替（推奨、checkout より明確）
+git switch main                     # 既存ブランチへ切替
+git switch -                        # 直前のブランチに戻る
+
+git branch -m old-name new-name     # ローカル名変更
+git branch -d topic                 # 削除（マージ済み必須）
+git branch -D topic                 # 強制削除
+
+git push origin --delete topic      # リモート側削除
+git fetch -p                        # 削除済みリモート参照のクリーンアップ</code></pre>
+
+    <h3>追跡ブランチ</h3>
+<pre><code>git branch -u origin/main           # 現ブランチの追跡先設定
+git branch --unset-upstream         # 追跡解除
+git push -u origin feature          # push と同時に追跡先を作る</code></pre>
+
+    <h3>タグ</h3>
+<pre><code>git tag                             # タグ一覧
+git tag v1.2.3                      # 軽量タグ
+git tag -a v1.2.3 -m 'release 1.2.3'    # 注釈付き（推奨）
+git tag -a v1.2.3 abc123 -m '...'   # 過去コミットにタグ
+git push origin v1.2.3              # 1 個 push
+git push origin --tags              # 全タグ push
+git tag -d v1.2.3                   # ローカル削除
+git push origin :refs/tags/v1.2.3   # リモート削除</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-4">4. rebase — 履歴の整形</h2>
+
+    <p>レビュー指摘で「コミットを 1 つにまとめて」「メッセージ修正して」と言われた時の道具。
+    リモートに push 済みのブランチを書き換える時は <code>--force-with-lease</code> 必須。</p>
+
+    <h3>非対話 rebase</h3>
+<pre><code># 自分のブランチを最新 main の上に乗せ直す（PR 前の定番）
+git switch feature
+git fetch origin
+git rebase origin/main
+
+# あるいはまとめて
+git pull --rebase origin main
+
+# rebase 中の競合解決
+# 1. 競合ファイルを編集
+# 2. git add &lt;file&gt;
+# 3. git rebase --continue
+# 中断したい
+git rebase --abort
+# このコミットを飛ばす
+git rebase --skip</code></pre>
+
+    <h3>対話 rebase (-i) — squash / reword / drop</h3>
+<pre><code>git rebase -i HEAD~5             # 直近 5 コミットを編集
+git rebase -i abc123              # abc123 の次のコミットから編集
+git rebase -i --root              # 全履歴を編集（最初のコミットから）
+
+# エディタが開く。各行のキーワードを書き換える:
+#   pick   = そのまま使う
+#   reword = メッセージだけ書き直す
+#   edit   = 一旦止めて中身を直してから git rebase --continue
+#   squash = 直前のコミットに統合（メッセージは結合）
+#   fixup  = squash と同じだがメッセージ捨てる
+#   drop   = コミットを消す</code></pre>
+    <div class="callout warn">
+      <code>git push --force</code> は他人の commit を吹き飛ばす危険あり。代わりに <code>--force-with-lease</code> を使えば、
+      自分が把握していないリモート更新がある場合に push が失敗してくれる。
+    </div>
+
+    <h3>rebase --onto — 起点の付け替え</h3>
+<pre><code># A → B → C の C を B の上ではなく D の上に乗せ直す
+git rebase --onto D B C
+
+# よくあるシナリオ: 親ブランチが消えた後の救済
+git rebase --onto main old-base feature</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-5">5. cherry-pick / revert</h2>
+
+    <h3>cherry-pick — 別ブランチのコミットを持ってくる</h3>
+<pre><code>git cherry-pick abc1234              # 1 コミット持ってくる
+git cherry-pick abc1234 def5678      # 複数
+git cherry-pick A..B                 # A〜B の範囲（A は含まない、B は含む）
+git cherry-pick A^..B                # A も含む
+
+git cherry-pick -x abc1234           # コミットメッセージに「(cherry picked from ...)」追加
+git cherry-pick -n abc1234           # コミットせず内容のみ取り込む（複数まとめてコミットしたい時）
+
+# 競合時
+git cherry-pick --continue
+git cherry-pick --abort
+git cherry-pick --skip</code></pre>
+
+    <h3>revert — 過去コミットを打ち消す新コミット</h3>
+<pre><code>git revert abc1234                   # 打ち消しコミットを作る（履歴は残る）
+git revert HEAD                      # 最新を打ち消す
+git revert -n abc1234                # コミットせず内容のみ revert（複数まとめて）
+git revert abc1234..def5678          # 範囲（古い順 to 新しい順）
+
+# マージコミットを revert（親番号の指定が必要）
+git revert -m 1 &lt;merge_commit&gt;</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-6">6. stash — 一時退避</h2>
+
+<pre><code>git stash                            # ワークツリーとインデックスを退避（追跡ファイルのみ）
+git stash -u                         # 未追跡ファイルも含む
+git stash -a                         # 未追跡 + 無視ファイルも全部
+git stash push -m 'msg'              # メッセージ付き
+git stash push path/to/file          # 特定ファイルだけ stash
+
+git stash list                       # スタッシュ一覧
+git stash show stash@{0}             # 中身（統計）
+git stash show -p stash@{0}          # 中身（差分）
+
+git stash pop                        # 最新の stash を取り出して削除
+git stash apply stash@{1}            # 取り出すが削除しない
+git stash drop stash@{0}             # 削除
+git stash clear                      # 全削除
+
+# 別ブランチに stash を適用
+git stash branch new-branch stash@{0}</code></pre>
+    <div class="callout info">
+      <code>stash pop</code> 時に競合すると stash は <strong>削除されない</strong>（apply 失敗扱い）。安心して再試行できる。
+    </div>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-7">7. reflog / reset / restore — リカバリ系</h2>
+
+    <h3>reflog — Git 内部の操作履歴（最強の救命綱）</h3>
+    <p>commit / checkout / rebase / reset すべての HEAD 移動が記録されている。<strong>「やらかした」時の復旧の起点</strong>。</p>
+<pre><code>git reflog                           # 操作履歴
+git reflog show feature               # 特定ブランチの reflog
+
+# 「reset --hard したけど元に戻したい」
+git reflog                            # 戻したい状態の SHA や HEAD@{N} を確認
+git reset --hard HEAD@{2}             # 2 つ前の状態に戻す</code></pre>
+
+    <h3>reset — HEAD・インデックス・ワークツリーの巻き戻し</h3>
+    <table>
+      <tr><th>モード</th><th>HEAD</th><th>インデックス</th><th>ワークツリー</th></tr>
+      <tr><td><code>--soft</code></td><td>移動</td><td>変えない</td><td>変えない</td></tr>
+      <tr><td><code>--mixed</code> (デフォルト)</td><td>移動</td><td>HEAD に合わせる</td><td>変えない</td></tr>
+      <tr><td><code>--hard</code></td><td>移動</td><td>HEAD に合わせる</td><td>HEAD に合わせる（破壊）</td></tr>
+    </table>
+<pre><code>git reset --soft HEAD~1              # 直前コミットを取り消すが変更は残す（再コミット用）
+git reset HEAD path/to/file          # ステージング解除
+git reset --mixed HEAD~1             # 直前コミット取り消し + アンステージ
+git reset --hard origin/main         # ブランチをリモートに完全に合わせる（ローカル変更は消える）</code></pre>
+
+    <h3>restore — ファイル単位の取り消し（git 2.23+ 推奨）</h3>
+<pre><code>git restore path/to/file             # ワークツリーを HEAD に戻す（変更破棄）
+git restore --staged path/to/file    # アンステージ（reset HEAD と同じ）
+git restore --source=abc123 path     # 特定コミットの状態に戻す
+git restore --source=HEAD~3 .        # 全ファイルを 3 コミット前に戻す</code></pre>
+
+    <h3>checkout の代替ツリー（参考）</h3>
+<pre><code>git switch branch                    # ブランチ切替（旧 git checkout branch）
+git restore file                     # ファイル復元（旧 git checkout -- file）
+git restore --staged file            # アンステージ（旧 git reset HEAD file）</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-8">8. bisect — バグ二分探索</h2>
+
+    <p>「最近壊れた、原因コミットを特定したい」時の最強ツール。
+    古い良いコミット (good) と新しい壊れたコミット (bad) を指定すると、Git が二分探索して原因を絞り込む。</p>
+
+    <h3>手動 bisect</h3>
+<pre><code>git bisect start
+git bisect bad                       # 現在 (HEAD) は壊れている
+git bisect good v1.0.0               # v1.0.0 は動いていた
+
+# Git が中間コミットに切り替えてくれる
+# テストして良し悪しを伝える
+git bisect good          # OK だった
+# or
+git bisect bad           # NG だった
+
+# 繰り返すと "abc123 is the first bad commit" と特定される
+
+git bisect reset         # 終了して元の HEAD に戻す</code></pre>
+
+    <h3>自動 bisect</h3>
+<pre><code># テストスクリプトの exit code で自動判定
+# 0 = good, 1〜127 (125 除く) = bad, 125 = skip
+git bisect start HEAD v1.0.0
+git bisect run npm test
+
+# CLI 1 行で良し悪し判定できるなら超強力
+git bisect run sh -c 'curl -sf http://localhost:8080/health'</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="sec-9">9. worktree / submodule / hooks</h2>
+
+    <h3>worktree — 同じリポジトリで複数ブランチを並行作業</h3>
+<pre><code>git worktree add ../proj-fix hotfix/login    # hotfix ブランチを別ディレクトリに展開
+git worktree add -b new ../proj-new main     # 新規ブランチを作って add
+git worktree list                            # 作業ツリー一覧
+git worktree remove ../proj-fix              # 削除
+git worktree prune                           # 消えた作業ツリーの参照を整理</code></pre>
+    <div class="callout info">
+      stash で行ったり来たりする代わりに <code>worktree add</code>。レビュー対応中・hotfix と機能開発を完全分離したい時に最適。
+    </div>
+
+    <h3>submodule — リポジトリ内に別リポジトリを取り込む</h3>
+<pre><code>git submodule add git@github.com:org/lib.git lib
+git submodule init
+git submodule update                # サブモジュール側を初期化 + checkout
+git submodule update --init --recursive    # 再帰、初回 clone 後に頻出
+
+# 全サブモジュールを最新に
+git submodule update --remote --merge
+
+# 状態確認
+git submodule status
+
+# 削除（やや面倒）
+git submodule deinit -f lib
+git rm -f lib
+rm -rf .git/modules/lib</code></pre>
+    <div class="callout warn">
+      submodule の運用は複雑。代替として <strong>git subtree</strong> や <strong>monorepo</strong> 化、または npm/pip パッケージ化を先に検討。
+    </div>
+
+    <h3>hooks — クライアント側の自動化</h3>
+<pre><code># プロジェクト固有 hook
+ls .git/hooks/                       # サンプル一覧 (.sample 拡張子)
+
+# 例: pre-commit でフォーマッタを実行
+cat &gt;&gt; .git/hooks/pre-commit &lt;&lt;'EOF'
+#!/bin/bash
+set -e
+terraform fmt -check -recursive
+EOF
+chmod +x .git/hooks/pre-commit
+
+# プロジェクト共有用には pre-commit (Python ツール) や lefthook 等を使うのが定番
+pre-commit install                   # .pre-commit-config.yaml を読み込む</code></pre>
+
+    <!-- ========================================================== -->
+    <h2 id="cookbook">よく使うレシピ</h2>
+
+    <h3>レシピ 1 — PR 前にコミットを綺麗に整える</h3>
+<pre><code># 5 コミットを 1 つにまとめてメッセージ書き直し
+git fetch origin
+git rebase -i origin/main
+# エディタで 1 行目以外を fixup or squash に書き換え、保存
+# その後コミットメッセージを reword で整形
+
+# main の最新を取り込みつつ rebase
+git pull --rebase origin main
+
+# push（自分しか触らないブランチ前提で）
+git push --force-with-lease origin feature</code></pre>
+
+    <h3>レシピ 2 — main に間違った push をしてしまった</h3>
+<pre><code># 自分しか push してない / 共有前のローカル開発の場合
+git reset --hard HEAD~1
+git push --force-with-lease origin main
+
+# 他人も push 済みなら revert で打ち消し（履歴は残る、安全）
+git revert HEAD
+git push origin main</code></pre>
+
+    <h3>レシピ 3 — リセットしすぎて消えたブランチを復活</h3>
+<pre><code>git reflog                                  # 「あの時の HEAD」を探す
+git switch -c rescue HEAD@{12}              # 12 操作前から新ブランチ作成</code></pre>
+
+    <h3>レシピ 4 — 別ブランチの 1 コミットだけ取り込む</h3>
+<pre><code>git switch main
+git cherry-pick abc1234                     # OK</code></pre>
+
+    <h3>レシピ 5 — 巨大ファイルを誤コミット → 履歴から消す</h3>
+<pre><code># 直前のコミットだけ消す
+git rm --cached huge.bin
+echo "huge.bin" &gt;&gt; .gitignore
+git add .gitignore
+git commit --amend                          # 直前コミットを上書き
+
+# 過去全履歴から消す（要 git-filter-repo）
+git filter-repo --path huge.bin --invert-paths
+git push --force-with-lease</code></pre>
+
+    <h3>レシピ 6 — ブランチがどこから派生したか</h3>
+<pre><code>git merge-base main feature                 # 共通祖先のコミット SHA
+git log $(git merge-base main feature)..feature --oneline   # 派生後の差分</code></pre>
+
+    <h3>レシピ 7 — レビューで「この変更だけ取り込んで」</h3>
+<pre><code># 特定コミットの内容を patch にして適用
+git format-patch -1 abc1234
+git am 0001-*.patch
+
+# あるいは diff を直接適用
+git show abc1234 | git apply</code></pre>
+
+    <h3>レシピ 8 — 各人のコミット行数 ランキング（自分の貢献量チェック）</h3>
+<pre><code>git log --pretty=tformat: --numstat \
+  | awk '{ add[$3]+=$1; del[$3]+=$2 } END { for (f in add) print add[f]+del[f], f }' \
+  | sort -rn | head -n 20</code></pre>
+
+    <!-- ========================================================== -->
+    <h2>コマンド早見表</h2>
+<pre><code># 履歴
+git log --oneline --graph --all --decorate
+git log -S 'function_name'
+git blame -L 10,30 file
+
+# rebase
+git pull --rebase origin main
+git rebase -i HEAD~5
+git push --force-with-lease
+
+# 救命系
+git reflog
+git reset --hard HEAD@{2}
+git restore --source=HEAD~3 file
+
+# bisect
+git bisect start HEAD v1.0.0
+git bisect run npm test
+
+# worktree
+git worktree add ../hotfix hotfix/login</code></pre>
+
+    <!-- ========================================================== -->
+    <section class="post-glossary" id="glossary">
+      <h2>用語集</h2>
+      <dl>
+        <dt>HEAD</dt>
+        <dd>「現在チェックアウトしているコミット」を指すシンボリック参照。通常はブランチ名を指す。デタッチ HEAD はブランチに紐付かないコミットを直接見ている状態。</dd>
+
+        <dt>refspec / 参照</dt>
+        <dd>コミットを指す文字列（ブランチ名、タグ名、SHA、HEAD、HEAD~3、HEAD@{2} など）。Git の柔軟さの源泉。</dd>
+
+        <dt>HEAD~N vs HEAD^N</dt>
+        <dd><code>HEAD~N</code> は親方向に N 個遡る（マージの場合は第 1 親優先）。<code>HEAD^N</code> は HEAD の N 番目の親（マージコミットの第 2 親など）。</dd>
+
+        <dt>HEAD@{N}</dt>
+        <dd>reflog 上で N 操作前の HEAD。<code>HEAD@{yesterday}</code>, <code>HEAD@{1.hour.ago}</code> も使える。</dd>
+
+        <dt>fast-forward</dt>
+        <dd>マージ対象のブランチが現ブランチの祖先に直接続いている場合、新しいマージコミットを作らず HEAD を進めるだけのマージ。<code>--no-ff</code> で強制的にマージコミットを作れる。</dd>
+
+        <dt>rebase vs merge</dt>
+        <dd>rebase は履歴を直線に整形（コミット ID は変わる）、merge は分岐の歴史を残す（マージコミットができる）。チームで使い分けポリシーを決めることが多い。</dd>
+
+        <dt>squash / fixup / reword (rebase -i)</dt>
+        <dd>squash = 直前コミットに統合してメッセージも結合 / fixup = 統合してメッセージは捨てる / reword = メッセージだけ書き直す。</dd>
+
+        <dt>force-with-lease</dt>
+        <dd><code>git push --force</code> の安全版。リモートの状態が自分の知っている状態と一致する時のみ強制 push を許可。他人の push を上書きする事故を防ぐ。</dd>
+
+        <dt>cherry-pick</dt>
+        <dd>別ブランチの特定コミットの差分だけを現ブランチに適用して新コミットを作る操作。コミット ID は新規発行される。</dd>
+
+        <dt>revert</dt>
+        <dd>過去コミットを打ち消す新コミットを作る操作。履歴は残るので安全。<code>reset</code> は履歴を巻き戻すので破壊的。</dd>
+
+        <dt>reset --soft / --mixed / --hard</dt>
+        <dd>HEAD のみ動かす (soft) / HEAD + インデックス (mixed, デフォルト) / HEAD + インデックス + ワークツリー (hard) で挙動が変わる。hard のみ破壊的。</dd>
+
+        <dt>stash</dt>
+        <dd>ワークツリーとインデックスの変更を一時退避するスタック。pop で取り出せる。緊急の hotfix で割り込まれた時に活躍。</dd>
+
+        <dt>reflog</dt>
+        <dd>HEAD の移動履歴。commit/checkout/rebase/reset すべての操作が記録される。「壊した」と思った時の最強の救命綱。デフォルトで 90 日保持。</dd>
+
+        <dt>bisect</dt>
+        <dd>「ある時点で動いていた、今動かない」時にコミットを二分探索でバグ混入箇所を絞り込む機能。テストを <code>git bisect run</code> で自動化できる。</dd>
+
+        <dt>worktree</dt>
+        <dd>1 リポジトリで複数ディレクトリ・複数ブランチを並行 checkout する機能。stash の代替として強力。</dd>
+
+        <dt>submodule</dt>
+        <dd>あるリポジトリ内に別リポジトリを「特定 commit を指す」形で取り込む。複雑なので代替（パッケージ化、subtree、monorepo）も検討。</dd>
+
+        <dt>blame -w / -C</dt>
+        <dd>blame で「空白だけの変更を無視 (-w)」「コピー / 移動も追跡 (-C)」できる。リファクタ後の本来の作者を辿るのに便利。</dd>
+
+        <dt>filter-repo</dt>
+        <dd>履歴を書き換える公式推奨ツール（旧 filter-branch の後継）。誤コミットの巨大ファイル削除や機密情報除去に使う。要別途インストール。</dd>
+
+        <dt>merge-base</dt>
+        <dd>2 ブランチの共通祖先コミット。<code>git merge-base main feature</code> で取得。「派生してから何が変わったか」の起点。</dd>
+      </dl>
+    </section>
+
+    <footer class="post-footer">
+      <a href="/blog/ref/03-network.html">← #ref-03 ネットワーク診断</a>
+      <a href="/blog/ref/">シリーズ目次</a>
+    </footer>
+
+  </div>
+</article>
+
+</body>
+</html>
