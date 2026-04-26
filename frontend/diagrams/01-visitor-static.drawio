@@ -1,24 +1,30 @@
-<mxfile host="lab.iigtn.com" modified="2026-04-25T13:00:00.000Z" agent="iigtn-platform" version="24.0.0">
+<mxfile host="lab.iigtn.com" modified="2026-04-26T13:00:00.000Z" agent="iigtn-platform" version="24.0.0">
   <diagram name="Visitor Static" id="visitor-static">
-    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="700" pageHeight="600" math="0" shadow="0">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="800" pageHeight="720" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
+
         <mxCell id="browser" value="🌐 Browser&#xa;https://lab.iigtn.com/" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666;fontSize=12;" vertex="1" parent="1">
-          <mxGeometry x="240" y="40" width="220" height="60" as="geometry" />
+          <mxGeometry x="280" y="40" width="240" height="60" as="geometry" />
         </mxCell>
+
         <mxCell id="dns" value="Squarespace DNS&#xa;CNAME: lab → cloudfront.net" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff8e1;strokeColor=#ffa726;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="220" y="160" width="260" height="60" as="geometry" />
+          <mxGeometry x="260" y="170" width="280" height="60" as="geometry" />
         </mxCell>
+
         <mxCell id="cf" value="CloudFront" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#8C4FFF;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudfront;" vertex="1" parent="1">
-          <mxGeometry x="311" y="290" width="78" height="78" as="geometry" />
+          <mxGeometry x="361" y="320" width="78" height="78" as="geometry" />
         </mxCell>
+
         <mxCell id="acm" value="ACM 証明書&#xa;us-east-1" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#DD344C;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.certificate_manager_3;" vertex="1" parent="1">
-          <mxGeometry x="540" y="290" width="78" height="78" as="geometry" />
+          <mxGeometry x="620" y="320" width="78" height="78" as="geometry" />
         </mxCell>
+
         <mxCell id="s3" value="S3 Bucket&#xa;非公開 / OAC 限定" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#7AA116;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;" vertex="1" parent="1">
-          <mxGeometry x="311" y="450" width="78" height="78" as="geometry" />
+          <mxGeometry x="361" y="540" width="78" height="78" as="geometry" />
         </mxCell>
+
         <mxCell id="e1" value="① DNS 解決" style="endArrow=classic;html=1;fontSize=11;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="browser" target="dns">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
@@ -31,6 +37,7 @@
         <mxCell id="e4" value="③ OAC SigV4&#xa;s3:GetObject" style="endArrow=classic;html=1;fontSize=11;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="cf" target="s3">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
+
       </root>
     </mxGraphModel>
   </diagram>

@@ -1,58 +1,68 @@
-<mxfile host="lab.iigtn.com" modified="2026-04-25T13:00:00.000Z" agent="iigtn-platform" version="24.0.0">
+<mxfile host="lab.iigtn.com" modified="2026-04-26T13:00:00.000Z" agent="iigtn-platform" version="24.0.0">
   <diagram name="Deploy Flow" id="deploy-flow">
-    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="950" pageHeight="800" math="0" shadow="0">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="900" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
+
         <mxCell id="dev" value="👨‍💻 開発者" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666;fontSize=12;" vertex="1" parent="1">
           <mxGeometry x="60" y="40" width="160" height="50" as="geometry" />
         </mxCell>
+
         <mxCell id="gh" value="GitHub Repo&#xa;iigtn/iigtn-platform" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#24292e;strokeColor=#000;fontColor=#fff;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="280" y="40" width="200" height="50" as="geometry" />
+          <mxGeometry x="320" y="40" width="220" height="50" as="geometry" />
         </mxCell>
-        <mxCell id="gha" value="GitHub Actions&#xa;frontend-deploy.yml&#xa;(Ubuntu Runner)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0969da;strokeColor=#000;fontColor=#fff;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="60" y="160" width="220" height="60" as="geometry" />
+
+        <mxCell id="gha" value="GitHub Actions Runner&#xa;frontend-deploy.yml" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0969da;strokeColor=#000;fontColor=#fff;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="60" y="180" width="240" height="60" as="geometry" />
         </mxCell>
+
         <mxCell id="oidc" value="GitHub OIDC IdP&#xa;token.actions.githubusercontent.com" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#24292e;strokeColor=#000;fontColor=#fff;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="360" y="160" width="280" height="60" as="geometry" />
+          <mxGeometry x="380" y="180" width="280" height="60" as="geometry" />
         </mxCell>
+
         <mxCell id="sts" value="AWS STS&#xa;AssumeRoleWithWebIdentity" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff5f5;strokeColor=#DD344C;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="700" y="160" width="220" height="60" as="geometry" />
+          <mxGeometry x="740" y="180" width="280" height="60" as="geometry" />
         </mxCell>
+
         <mxCell id="role" value="IAM Role&#xa;iigtn-github-actions-deploy" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#DD344C;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.role;" vertex="1" parent="1">
-          <mxGeometry x="760" y="290" width="78" height="44" as="geometry" />
+          <mxGeometry x="841" y="320" width="78" height="44" as="geometry" />
         </mxCell>
-        <mxCell id="s3" value="S3&#xa;iigtn-lab-web-prod-***" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#7AA116;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;" vertex="1" parent="1">
-          <mxGeometry x="280" y="500" width="78" height="78" as="geometry" />
+
+        <mxCell id="s3" value="S3&#xa;静的ファイル配信" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#7AA116;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;" vertex="1" parent="1">
+          <mxGeometry x="280" y="540" width="78" height="78" as="geometry" />
         </mxCell>
-        <mxCell id="cf" value="CloudFront&#xa;create-invalidation" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#8C4FFF;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudfront;" vertex="1" parent="1">
-          <mxGeometry x="500" y="500" width="78" height="78" as="geometry" />
+
+        <mxCell id="cf" value="CloudFront&#xa;create-invalidation /*" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#8C4FFF;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudfront;" vertex="1" parent="1">
+          <mxGeometry x="600" y="540" width="78" height="78" as="geometry" />
         </mxCell>
+
         <mxCell id="site" value="🌐 lab.iigtn.com&#xa;反映完了" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f5e9;strokeColor=#2a8a2a;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="350" y="680" width="200" height="50" as="geometry" />
+          <mxGeometry x="380" y="780" width="240" height="50" as="geometry" />
         </mxCell>
+
         <mxCell id="e1" value="git push" style="endArrow=classic;html=1;fontSize=11;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="dev" target="gh">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e2" value="on: push" style="endArrow=classic;html=1;fontSize=11;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="gh" target="gha">
+        <mxCell id="e2" value="on: push" style="endArrow=classic;html=1;fontSize=11;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="gh" target="gha">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e3" value="① JWT 要求&#xa;(id-token: write)" style="endArrow=classic;html=1;fontSize=10;" edge="1" parent="1" source="gha" target="oidc">
+        <mxCell id="e3" value="① JWT 要求" style="endArrow=classic;html=1;fontSize=10;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="gha" target="oidc">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e4" value="② JWT 発行&#xa;sub: repo:iigtn/...:ref:refs/heads/main" style="endArrow=classic;html=1;fontSize=10;" edge="1" parent="1" source="oidc" target="sts">
+        <mxCell id="e4" value="② JWT 発行" style="endArrow=classic;html=1;fontSize=10;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="oidc" target="sts">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e5" value="③ Trust Policy&#xa;検証" style="endArrow=classic;dashed=1;html=1;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="sts" target="role">
+        <mxCell id="e5" value="③ Trust 検証" style="endArrow=classic;dashed=1;html=1;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="sts" target="role">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e6" value="④ 一時認証&#xa;(1h 有効)" style="endArrow=classic;html=1;fontSize=10;" edge="1" parent="1" source="role" target="gha">
+        <mxCell id="e6" value="④ 一時認証 (1h)" style="endArrow=classic;html=1;fontSize=10;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="role" target="gha">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e7" value="⑤ aws s3 sync&#xa;--delete" style="endArrow=classic;html=1;fontSize=11;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="gha" target="s3">
+        <mxCell id="e7" value="⑤ aws s3 sync --delete" style="endArrow=classic;html=1;fontSize=11;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="gha" target="s3">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e8" value="⑥ create-invalidation&#xa;/*" style="endArrow=classic;html=1;fontSize=11;" edge="1" parent="1" source="gha" target="cf">
+        <mxCell id="e8" value="⑥ create-invalidation" style="endArrow=classic;html=1;fontSize=11;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="gha" target="cf">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="e9" style="endArrow=classic;html=1;fontSize=11;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.25;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="s3" target="site">
@@ -61,6 +71,7 @@
         <mxCell id="e10" style="endArrow=classic;html=1;fontSize=11;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.75;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="cf" target="site">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
+
       </root>
     </mxGraphModel>
   </diagram>
