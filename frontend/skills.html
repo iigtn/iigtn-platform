@@ -22,6 +22,10 @@
   <link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
   <link rel="apple-touch-icon" href="/assets/icon.svg">
   <link rel="stylesheet" href="/site.css">
+
+  <!-- Google AdSense -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7533093647574923" crossorigin="anonymous"></script>
+  <meta name="google-adsense-account" content="ca-pub-7533093647574923">
 </head>
 <body>
 
@@ -173,20 +177,6 @@
   </section>
 
   <section class="page-section">
-    <h2>得意な構成パターン</h2>
-    <div class="about-grid">
-      <div class="about-text">
-        <ul>
-          <li><strong>静的サイト + サーバレス API</strong> ― S3 + CloudFront (OAC) + Lambda + API Gateway + DynamoDB の組み合わせ。本サイト自体がそのサンプル。</li>
-          <li><strong>静的キーレス CI/CD</strong> ― GitHub Actions OIDC で IAM Role を一時 AssumeRole。AWS の長期アクセスキーを GitHub Secrets に置かない運用。</li>
-          <li><strong>監視・通知の最低ライン</strong> ― CloudWatch Alarms (Lambda Errors / Duration p95 / API GW 5xx) + SNS Email + AWS Budgets を Terraform モジュール化。</li>
-          <li><strong>multi-env 管理</strong> ― dev / prod のアカウント分離 + S3 backend + DynamoDB Lock。dev で実験 → prod に昇格させる流れ。</li>
-        </ul>
-      </div>
-    </div>
-  </section>
-
-  <section class="page-section">
     <h2>関連ページ</h2>
     <div class="summary-grid">
       <a href="/works.html" class="summary-card-link">
@@ -221,6 +211,8 @@
     <a href="/learn.html">解説書</a>
     &nbsp;·&nbsp;
     <a href="https://github.com/iigtn/iigtn-platform">GitHub</a>
+    &nbsp;·&nbsp;
+    <a href="/privacy.html">プライバシーポリシー</a>
   </div>
 </footer>
 
