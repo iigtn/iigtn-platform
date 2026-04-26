@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#aws-01 S3 — オブジェクトストレージ | AWS 基本サービス入門 | iigtn</title>
+<meta name="description" content="Amazon S3 を「何を解決するか / 使うべきパターン / 使わない方が良いパターン / Terraform 最小サンプル」で解説。Public Access Block / Versioning / OAC / Lifecycle / Storage Class まで。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/aws-basics/01-s3.html">
+<meta property="og:title" content="#aws-01 S3 — オブジェクトストレージ">
+<meta property="og:description" content="S3 の特徴 / 採用判断 / Terraform 最小サンプル / 用語集。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/aws-basics/01-s3.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="#aws-01 S3 — オブジェクトストレージ">
+<meta name="twitter:description" content="S3 の特徴 / 採用判断 / Terraform 最小サンプル。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="stylesheet" href="/blog/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "#aws-01 S3 — オブジェクトストレージ",
+  "description": "Amazon S3 の特徴 / 採用判断 / Terraform 最小サンプル / 用語集。",
+  "datePublished": "2026-04-26",
+  "author": { "@type": "Person", "name": "iigtn", "url": "https://lab.iigtn.com/" },
+  "publisher": { "@type": "Person", "name": "iigtn" },
+  "url": "https://lab.iigtn.com/blog/aws-basics/01-s3.html",
+  "mainEntityOfPage": "https://lab.iigtn.com/blog/aws-basics/01-s3.html",
+  "image": "https://lab.iigtn.com/assets/icon.svg",
+  "inLanguage": "ja",
+  "isPartOf": { "@id": "https://lab.iigtn.com/blog/aws-basics/#blog" }
+}
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="/" class="logo" aria-label="iigtn"><img src="/assets/logo.svg" alt="iigtn" height="32"></a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/" class="active">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+    </ul>
+  </nav>
+</header>
+
+<article class="post">
+  <header class="post-header">
+    <p class="post-meta">2026-04-26 · AWS 基本サービス入門 · #aws-01</p>
+    <h1>S3 — オブジェクトストレージ</h1>
+  </header>
+  <div class="post-body">
+
+    <h2>概要</h2>
+    <p>
+      <strong>Amazon S3 (Simple Storage Service)</strong> はファイルを「オブジェクト」単位で保存する AWS のフルマネージドストレージです。
+      ファイルシステムではなくキーバリュー形式で、URL（パス）にファイルを置く・取り出すだけのシンプルな API。
+      静的サイト配信、ログ集約、データレイク、Terraform state、バックアップなど、AWS 上のほぼ全プロジェクトで何かしら使う中核サービスです。
+    </p>
+    <p>
+      11 ナイン（99.999999999%）の耐久性を SLA で謳っており、「データが消える」を実用上心配しなくて済むレベル。
+      容量無制限・従量課金・Region ごとに完全独立。
+    </p>
+
+    <h2>主な機能</h2>
+    <ul>
+      <li><strong>バケット</strong> — オブジェクトの入れ物。AWS 全体でグローバル一意な名前。</li>
+      <li><strong>オブジェクト</strong> — ファイル本体 + メタデータ + キー (URL パス相当)。最大 5TB。</li>
+      <li><strong>Public Access Block</strong> — 「公開設定そのものを構造的に禁止」する 4 つのスイッチ。事故防止の鉄則。</li>
+      <li><strong>Versioning</strong> — 同キー上書きで旧バージョンが残る。誤削除復旧の鍵。</li>
+      <li><strong>Lifecycle</strong> — 「N 日後に削除 / Glacier に移行」を自動ルール化。コスト最適化。</li>
+      <li><strong>Storage Class</strong> — STANDARD / IA / Intelligent-Tiering / Glacier IR / Glacier / Deep Archive。アクセス頻度とコストのトレードオフ。</li>
+      <li><strong>SSE</strong> — 保存時暗号化 (SSE-S3 / SSE-KMS / SSE-C)。デフォルトで AES256 が有効。</li>
+      <li><strong>OAC (Origin Access Control)</strong> — CloudFront からだけ S3 を読めるようにする仕組み。OAI の後継。</li>
+      <li><strong>presigned URL</strong> — 「この URL を持つ人だけ一時的に GET / PUT 可能」な短命 URL。</li>
+      <li><strong>Replication</strong> — クロスリージョン / 同一リージョン複製。バックアップ・DR・地域別配信に。</li>
+    </ul>
+
+    <h2>使うべきパターン</h2>
+    <ul>
+      <li><strong>静的サイト配信</strong> — Next.js export / Jekyll / Hugo など、静的 HTML/CSS/JS の置き場。CloudFront + OAC と組合わせると非公開バケットのまま全世界配信できる。</li>
+      <li><strong>ログ集約</strong> — CloudFront / ALB / CloudTrail のログ受け先。Athena でそのまま SQL クエリも可能。</li>
+      <li><strong>Terraform state</strong> — DynamoDB Lock と組み合わせて、チーム共有の state バックエンドに。</li>
+      <li><strong>バックアップ</strong> — Lifecycle で 30 日後に Glacier に移すなど、データレイヤごとにコスト最適化。</li>
+      <li><strong>大容量ファイル授受</strong> — presigned URL 発行 + クライアント直接アップロードで、Lambda やサーバを介さない設計。</li>
+    </ul>
+
+    <h2>使わない方が良いパターン</h2>
+    <ul>
+      <li><strong>低レイテンシなデータ I/O</strong> — リクエスト 1 件あたり 100ms オーダー。DynamoDB（数 ms）や ElastiCache（マイクロ秒）の方が速い。</li>
+      <li><strong>頻繁にメタデータを更新する処理</strong> — S3 はオブジェクト更新ごとにフルアップロード。差分更新ができないので、リレーショナル / NoSQL DB の方が適切。</li>
+      <li><strong>POSIX 風のファイルシステム要件</strong> — ファイルロック、ディレクトリ rename、リアルタイム共有が必要なら EFS や FSx を検討。</li>
+      <li><strong>強整合性が必須なリードアフターライト</strong> — 2020 年以降は Read-After-Write 強整合性をサポートするが、オブジェクト一覧の整合性などは結果整合になる場合あり。</li>
+    </ul>
+
+    <h2>Terraform 最小サンプル（OAC 経由の非公開バケット）</h2>
+<pre><code>resource "aws_s3_bucket" "site" {
+  bucket = "my-site-${data.aws_caller_identity.current.account_id}"
+}
+
+# 1. 公開を構造的に禁止 (4 スイッチ全 true)
+resource "aws_s3_bucket_public_access_block" "site" {
+  bucket                  = aws_s3_bucket.site.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# 2. バージョニング
+resource "aws_s3_bucket_versioning" "site" {
+  bucket = aws_s3_bucket.site.id
+  versioning_configuration { status = "Enabled" }
+}
+
+# 3. SSE-S3 (AES256)
+resource "aws_s3_bucket_server_side_encryption_configuration" "site" {
+  bucket = aws_s3_bucket.site.id
+  rule {
+    apply_server_side_encryption_by_default { sse_algorithm = "AES256" }
+  }
+}
+
+# 4. Lifecycle: 90 日経過で Glacier
+resource "aws_s3_bucket_lifecycle_configuration" "site" {
+  bucket = aws_s3_bucket.site.id
+  rule {
+    id     = "to-glacier"
+    status = "Enabled"
+    filter { prefix = "logs/" }
+    transition { days = 90; storage_class = "GLACIER" }
+  }
+}</code></pre>
+
+    <h2>採用評価ポイント</h2>
+    <ul>
+      <li><strong>Public Access Block 4 つ全 true</strong> がデフォルトで書けると「最小権限 / 構造的安全性」を理解していると伝わる。</li>
+      <li><strong>Versioning + Lifecycle</strong> のセットで設定できる人は「事故復旧と コスト管理」の両立を意識している。</li>
+      <li><strong>OAC + CloudFront</strong> 構成は「直接公開ではなく CDN 経由」の現代的なベストプラクティスを把握している証拠。</li>
+      <li>採用面接で S3 の話が出たら、ストレージクラスと Lifecycle / Replication / Versioning の使い分けを説明できると深さが伝わる。</li>
+    </ul>
+
+    <h2>用語集</h2>
+    <dl>
+      <dt>バケット (Bucket)</dt><dd>S3 のオブジェクト群を入れる単位。AWS 全体でグローバル一意な命名が必要。</dd>
+      <dt>オブジェクト</dt><dd>S3 上のファイル本体 + メタデータ + キー (URL パス相当)。1 オブジェクト 5TB まで。</dd>
+      <dt>Public Access Block</dt><dd>バケット / アカウント単位で「公開設定そのものを構造的に禁止」する 4 つのスイッチ。</dd>
+      <dt>OAC (Origin Access Control)</dt><dd>CloudFront からのみ S3 を読めるように制限する仕組み。OAI の後継、KMS 暗号化バケットや S3 以外の origin にも対応。</dd>
+      <dt>Storage Class</dt><dd>オブジェクトのアクセス頻度に応じた料金プラン。STANDARD / IA / Intelligent-Tiering / Glacier 系など。</dd>
+      <dt>SSE-S3 / SSE-KMS</dt><dd>サーバ側暗号化。SSE-S3 は AWS 管理キー (AES256)、SSE-KMS は顧客管理キー。</dd>
+      <dt>presigned URL</dt><dd>一時的に有効な URL を発行し、それを持つ人だけが GET / PUT できる仕組み。クライアント直接アップロードに使う。</dd>
+      <dt>Lifecycle Rule</dt><dd>「N 日経過したオブジェクトを別ストレージクラスに移す / 削除する」自動ルール。コスト最適化の基本。</dd>
+      <dt>11 ナイン</dt><dd>99.999999999% の耐久性。1 兆個のオブジェクトに対して 1 個失う頻度。</dd>
+    </dl>
+
+    <footer class="post-footer">
+      <a href="/blog/aws-basics/">← シリーズ目次</a>
+      <a href="/blog/aws-basics/02-dynamodb.html">次: #aws-02 DynamoDB →</a>
+    </footer>
+  </div>
+</article>
+
+
+<footer style="max-width:920px;margin:3rem auto 0;padding:1.5rem 1.6rem;border-top:1px solid #e5e5e5;color:#666;font-size:0.85rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.6rem;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','Noto Sans JP',system-ui,sans-serif;">
+  <div>&copy; 2026 iigtn &mdash; Built with Terraform &amp; GitHub Actions</div>
+  <div>
+    <a href="/learn.html" style="color:#2a6acc;text-decoration:none;">解説書</a>
+    &nbsp;&middot;&nbsp;
+    <a href="https://github.com/iigtn/iigtn-platform" style="color:#2a6acc;text-decoration:none;">GitHub</a>
+    &nbsp;&middot;&nbsp;
+    <a href="/privacy.html" style="color:#2a6acc;text-decoration:none;">プライバシーポリシー</a>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#aws-09 Route 53 — DNS | AWS 基本サービス入門 | iigtn</title>
+<meta name="description" content="Route 53 を「何を解決するか / 採用判断 / Terraform 最小サンプル」で解説。Hosted Zone / A/AAAA/CNAME/Alias / Health Check / Failover / レイテンシルーティングまで。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/aws-basics/09-route53.html">
+<meta property="og:title" content="#aws-09 Route 53 — DNS">
+<meta property="og:description" content="Route 53 の特徴 / 採用判断 / Terraform サンプル。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/aws-basics/09-route53.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="#aws-09 Route 53">
+<meta name="twitter:description" content="Route 53 の特徴 / 採用判断 / Terraform サンプル。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="stylesheet" href="/blog/style.css">
+<script type="application/ld+json">
+{ "@context":"https://schema.org","@type":"TechArticle","headline":"#aws-09 Route 53","description":"Route 53 の特徴 / 採用判断 / Terraform サンプル。","datePublished":"2026-04-26","author":{"@type":"Person","name":"iigtn","url":"https://lab.iigtn.com/"},"publisher":{"@type":"Person","name":"iigtn"},"url":"https://lab.iigtn.com/blog/aws-basics/09-route53.html","mainEntityOfPage":"https://lab.iigtn.com/blog/aws-basics/09-route53.html","image":"https://lab.iigtn.com/assets/icon.svg","inLanguage":"ja","isPartOf":{"@id":"https://lab.iigtn.com/blog/aws-basics/#blog"} }
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="/" class="logo" aria-label="iigtn"><img src="/assets/logo.svg" alt="iigtn" height="32"></a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/" class="active">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+    </ul>
+  </nav>
+</header>
+
+<article class="post">
+  <header class="post-header">
+    <p class="post-meta">2026-04-26 · AWS 基本サービス入門 · #aws-09</p>
+    <h1>Route 53 — DNS</h1>
+  </header>
+  <div class="post-body">
+
+    <h2>概要</h2>
+    <p>
+      <strong>Amazon Route 53</strong> は AWS のフルマネージド DNS サービス。ドメイン取得・管理、DNS レコード解決、ヘルスチェックを提供します。
+      他社で取得したドメインを Route 53 でレコード管理することも、ドメイン取得 + DNS まとめてやることも可能です。
+      AWS 内のサービス（CloudFront / ALB / S3 等）への <strong>Alias レコード</strong>が無料で使える点が大きな利点。
+    </p>
+    <p>
+      可用性は SLA 100% (DNS は AWS で唯一)。1 ホストゾーン $0.5/月 + クエリ課金で安く済みます。
+    </p>
+
+    <h2>主な機能</h2>
+    <ul>
+      <li><strong>Hosted Zone</strong> — ドメインの DNS レコード集合。Public / Private がある。</li>
+      <li><strong>レコードタイプ</strong> — A / AAAA / CNAME / MX / TXT / NS / SOA / CAA / ALIAS。</li>
+      <li><strong>Alias レコード</strong> — Route 53 独自。CloudFront / ALB / S3 等 AWS リソースへの参照を無料・apex ドメイン対応で書ける（CNAME の制約を回避）。</li>
+      <li><strong>Health Check</strong> — ターゲット (URL / TCP / その他チェック) の死活監視。Failover ルーティングと連携。</li>
+      <li><strong>ルーティングポリシー</strong> — Simple / Weighted / Latency / Geolocation / Failover / Multivalue。</li>
+      <li><strong>DNSSEC</strong> — DNS 応答に署名を付けて改ざん検知。</li>
+      <li><strong>Domain Registration</strong> — ドメイン取得・更新・移管も可能。</li>
+      <li><strong>Resolver</strong> — VPC 内の DNS 解決を制御 (Inbound / Outbound endpoint)。</li>
+    </ul>
+
+    <h2>使うべきパターン</h2>
+    <ul>
+      <li><strong>AWS リソースへの DNS</strong> — CloudFront / ALB / S3 静的サイトに Alias で繋ぐのが定番。apex (iigtn.com) 直配置も可能。</li>
+      <li><strong>マルチリージョン Failover</strong> — Health Check + Failover ルーティングで自動切替。</li>
+      <li><strong>Geolocation / Latency ベース配信</strong> — 地域別に異なる Origin に振り分け。</li>
+      <li><strong>Private Hosted Zone</strong> — VPC 内専用 DNS で社内向け名前解決。</li>
+    </ul>
+
+    <h2>使わない方が良いパターン</h2>
+    <ul>
+      <li><strong>既存 DNS 業者で十分</strong> — Cloudflare / Google Domains / Squarespace 等で間に合う場合、無理に移管不要。</li>
+      <li><strong>個人ブログ程度</strong> — DNS は安いが、移管手続きの手間 vs 効果が見合わないことも。</li>
+      <li><strong>iigtn-platform のように Squarespace で DNS 管理して CNAME のみで AWS 連携</strong> — Hosted Zone 不要のケースもある（ドメインまるごと Route 53 必須ではない）。</li>
+    </ul>
+
+    <h2>Terraform 最小サンプル（Public Hosted Zone + CloudFront Alias）</h2>
+<pre><code>resource "aws_route53_zone" "main" {
+  name = "example.com"
+}
+
+# CloudFront に Alias で繋ぐ (apex でも可)
+resource "aws_route53_record" "root" {
+  zone_id = aws_route53_zone.main.zone_id
+  name    = "example.com"
+  type    = "A"
+
+  alias {
+    name                   = aws_cloudfront_distribution.site.domain_name
+    zone_id                = aws_cloudfront_distribution.site.hosted_zone_id
+    evaluate_target_health = false
+  }
+}
+
+# www → root リダイレクト相当
+resource "aws_route53_record" "www" {
+  zone_id = aws_route53_zone.main.zone_id
+  name    = "www.example.com"
+  type    = "CNAME"
+  ttl     = 300
+  records = ["example.com"]
+}
+
+# Health Check + Failover
+resource "aws_route53_health_check" "primary" {
+  fqdn              = "primary.example.com"
+  type              = "HTTPS"
+  port              = 443
+  resource_path     = "/health"
+  failure_threshold = 3
+  request_interval  = 30
+}
+
+resource "aws_route53_record" "failover_primary" {
+  zone_id        = aws_route53_zone.main.zone_id
+  name           = "api.example.com"
+  type           = "A"
+  set_identifier = "primary"
+  failover_routing_policy { type = "PRIMARY" }
+  health_check_id = aws_route53_health_check.primary.id
+  alias {
+    name                   = aws_lb.primary.dns_name
+    zone_id                = aws_lb.primary.zone_id
+    evaluate_target_health = true
+  }
+}</code></pre>
+
+    <h2>採用評価ポイント</h2>
+    <ul>
+      <li><strong>Alias vs CNAME</strong> の違いを説明できる（apex 対応・無料・AWS リソース最適化）。</li>
+      <li><strong>Health Check + Failover</strong> による自動切替を IaC で組める。</li>
+      <li><strong>Route 53 を使わない選択肢</strong>も持っている（Squarespace / Cloudflare 等）。コストと運用バランスを判断できる。</li>
+      <li><strong>Private Hosted Zone</strong> を VPC 内サービスディスカバリに使える。</li>
+    </ul>
+
+    <h2>用語集</h2>
+    <dl>
+      <dt>Hosted Zone</dt><dd>ドメインの DNS レコード集合。Public (インターネット向け) / Private (VPC 内) がある。$0.5/月。</dd>
+      <dt>Alias レコード</dt><dd>Route 53 独自。CloudFront / ALB / S3 等 AWS リソースへの参照。CNAME と違い apex ドメイン対応・無料・短 TTL。</dd>
+      <dt>Health Check</dt><dd>URL / TCP の死活監視。Failover ルーティングと組み合わせる。</dd>
+      <dt>ルーティングポリシー</dt><dd>Simple / Weighted / Latency / Geolocation / Failover / Multivalue。同じ名前で複数レコードを登録する時の振り分け方。</dd>
+      <dt>DNSSEC</dt><dd>DNS 応答に署名を付けて改ざん検知する拡張。</dd>
+      <dt>Resolver</dt><dd>VPC 内の DNS 解決を制御する機能。Inbound / Outbound endpoint で社内 DNS と連携可。</dd>
+      <dt>Domain Registration</dt><dd>Route 53 で直接ドメインを取得・更新・移管できる機能。</dd>
+      <dt>Apex ドメイン</dt><dd><code>example.com</code> のようにサブドメイン無しのトップ。CNAME は使えないので Alias が必要。</dd>
+    </dl>
+
+    <footer class="post-footer">
+      <a href="/blog/aws-basics/08-cloudfront.html">← #aws-08 CloudFront</a>
+      <a href="/blog/aws-basics/10-api-gateway.html">次: #aws-10 API Gateway →</a>
+    </footer>
+  </div>
+</article>
+
+
+<footer style="max-width:920px;margin:3rem auto 0;padding:1.5rem 1.6rem;border-top:1px solid #e5e5e5;color:#666;font-size:0.85rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.6rem;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','Noto Sans JP',system-ui,sans-serif;">
+  <div>&copy; 2026 iigtn &mdash; Built with Terraform &amp; GitHub Actions</div>
+  <div>
+    <a href="/learn.html" style="color:#2a6acc;text-decoration:none;">解説書</a>
+    &nbsp;&middot;&nbsp;
+    <a href="https://github.com/iigtn/iigtn-platform" style="color:#2a6acc;text-decoration:none;">GitHub</a>
+    &nbsp;&middot;&nbsp;
+    <a href="/privacy.html" style="color:#2a6acc;text-decoration:none;">プライバシーポリシー</a>
+  </div>
+</footer>
+
+</body>
+</html>

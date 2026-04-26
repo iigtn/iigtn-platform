@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#aws-02 DynamoDB — マネージド NoSQL | AWS 基本サービス入門 | iigtn</title>
+<meta name="description" content="DynamoDB を「何を解決するか / 使うべきパターン / 使わない方が良いパターン / Terraform 最小サンプル」で解説。PK/SK / GSI / On-Demand / PITR / TTL / Stream まで。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/aws-basics/02-dynamodb.html">
+<meta property="og:title" content="#aws-02 DynamoDB — マネージド NoSQL">
+<meta property="og:description" content="DynamoDB の特徴 / 採用判断 / Terraform 最小サンプル。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/aws-basics/02-dynamodb.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="#aws-02 DynamoDB — マネージド NoSQL">
+<meta name="twitter:description" content="DynamoDB の特徴 / 採用判断 / Terraform サンプル。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="stylesheet" href="/blog/style.css">
+<script type="application/ld+json">
+{ "@context":"https://schema.org","@type":"TechArticle","headline":"#aws-02 DynamoDB — マネージド NoSQL","description":"DynamoDB の特徴 / 採用判断 / Terraform サンプル。","datePublished":"2026-04-26","author":{"@type":"Person","name":"iigtn","url":"https://lab.iigtn.com/"},"publisher":{"@type":"Person","name":"iigtn"},"url":"https://lab.iigtn.com/blog/aws-basics/02-dynamodb.html","mainEntityOfPage":"https://lab.iigtn.com/blog/aws-basics/02-dynamodb.html","image":"https://lab.iigtn.com/assets/icon.svg","inLanguage":"ja","isPartOf":{"@id":"https://lab.iigtn.com/blog/aws-basics/#blog"} }
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="/" class="logo" aria-label="iigtn"><img src="/assets/logo.svg" alt="iigtn" height="32"></a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/" class="active">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+    </ul>
+  </nav>
+</header>
+
+<article class="post">
+  <header class="post-header">
+    <p class="post-meta">2026-04-26 · AWS 基本サービス入門 · #aws-02</p>
+    <h1>DynamoDB — マネージド NoSQL</h1>
+  </header>
+  <div class="post-body">
+
+    <h2>概要</h2>
+    <p>
+      <strong>Amazon DynamoDB</strong> は AWS のフルマネージド NoSQL データベース。
+      キーバリュー / ドキュメントの両モデルをサポートし、自動スケーリング・無停止運用・SLA 99.999% という非常に強い可用性を提供します。
+      サーバを意識せずに使えるため、Lambda + DynamoDB のサーバレス構成で「コードだけで動くアプリ」が組めるのが特徴です。
+    </p>
+    <p>
+      RDB と違ってスキーマ定義はありません。ただし「クエリパターンを先に決めて、それに最適化したキー設計をする」という発想の転換が必要で、そこで詰まる人が多いサービスでもあります。
+    </p>
+
+    <h2>主な機能</h2>
+    <ul>
+      <li><strong>PK (Partition Key)</strong> — 必須。ハッシュ値で物理シャードを決める。</li>
+      <li><strong>SK (Sort Key)</strong> — 任意。同じ PK 内でソート / 範囲クエリができる。PK + SK の複合主キーが定番。</li>
+      <li><strong>GSI (Global Secondary Index)</strong> — 別の PK/SK でクエリできる二次インデックス。最大 20 個。</li>
+      <li><strong>LSI (Local Secondary Index)</strong> — 同じ PK 内で別の SK を使う。テーブル作成時にしか作れない。</li>
+      <li><strong>On-Demand 課金</strong> — リクエスト数ベース。プロビジョニングが要らない。</li>
+      <li><strong>Provisioned 課金</strong> — RCU/WCU を予約して定額化。安定したワークロードで安い。</li>
+      <li><strong>PITR (Point-in-Time Recovery)</strong> — 過去 35 日間の任意時点に復旧できるバックアップ。誤削除復旧の最後の砦。</li>
+      <li><strong>TTL</strong> — 属性の UNIX タイムスタンプを過ぎた item を自動削除。セッション管理に便利。</li>
+      <li><strong>DynamoDB Stream</strong> — テーブル変更を順次配信。Lambda トリガで cross-table 整合性や監査ログに利用。</li>
+      <li><strong>Transactions</strong> — 100 件まで ACID 保証で書き込める。複数テーブル横断も可。</li>
+      <li><strong>Conditional Write</strong> — condition-expression で楽観的ロックが可能。</li>
+    </ul>
+
+    <h2>使うべきパターン</h2>
+    <ul>
+      <li><strong>サーバレス API のバックエンド</strong> — Lambda + API Gateway + DynamoDB の三種の神器。月数百円スタートでスケール無限。</li>
+      <li><strong>セッション / キャッシュ的なストア</strong> — TTL で自動削除、低レイテンシ (1 桁 ms)、可用性高。</li>
+      <li><strong>イベントソーシング / 監査ログ</strong> — Stream + Lambda で変更を別テーブルに伝搬する設計。</li>
+      <li><strong>突発的なアクセス スパイクが起きるサービス</strong> — On-Demand なら自動でスケール、人手介入なし。</li>
+    </ul>
+
+    <h2>使わない方が良いパターン</h2>
+    <ul>
+      <li><strong>JOIN や複雑な集計</strong> — DynamoDB は単純な key lookup と範囲クエリが基本。集計は別途 Athena や Aurora Serverless v2 を検討。</li>
+      <li><strong>クエリパターンが事前に決まらない</strong> — 後からインデックスを足すのは可能だが、設計の見直しが頻発するなら RDS / Aurora が楽。</li>
+      <li><strong>スキーマがリレーショナル</strong> — 外部キー制約や複雑な正規化が要るなら RDB。</li>
+      <li><strong>大量の Scan を毎回叩くワークロード</strong> — 全件走査はコスト・速度ともに不利。Query 一択になるよう PK/GSI を設計する。</li>
+    </ul>
+
+    <h2>Terraform 最小サンプル（PK + SK + GSI 付き On-Demand）</h2>
+<pre><code>resource "aws_dynamodb_table" "orders" {
+  name         = "orders"
+  billing_mode = "PAY_PER_REQUEST"  # On-Demand
+
+  hash_key  = "user_id"
+  range_key = "order_id"
+
+  attribute { name = "user_id";    type = "S" }
+  attribute { name = "order_id";   type = "S" }
+  attribute { name = "order_date"; type = "S" }
+
+  # GSI: 日付順で検索したい時用
+  global_secondary_index {
+    name            = "user-date-index"
+    hash_key        = "user_id"
+    range_key       = "order_date"
+    projection_type = "ALL"
+  }
+
+  # PITR (誤削除復旧)
+  point_in_time_recovery { enabled = true }
+
+  # TTL (任意)
+  ttl {
+    attribute_name = "expires_at"
+    enabled        = true
+  }
+
+  # Stream (Lambda トリガで使う場合)
+  stream_enabled   = true
+  stream_view_type = "NEW_AND_OLD_IMAGES"
+}</code></pre>
+
+    <h2>採用評価ポイント</h2>
+    <ul>
+      <li><strong>「クエリパターンを先に決める」</strong> 設計思想を語れると一段階上の理解と判断される。</li>
+      <li><strong>PITR / TTL / Stream</strong> をデフォルトで有効化できる人は「運用視点」がある。</li>
+      <li><strong>On-Demand vs Provisioned</strong> の使い分けを月コスト試算込みで説明できると、コスト感覚も伝わる。</li>
+      <li><strong>「DynamoDB を使うべきでない場面」</strong> を明確に持っているのは重要。NoSQL 何でも信者は警戒される。</li>
+    </ul>
+
+    <h2>用語集</h2>
+    <dl>
+      <dt>PK / SK</dt><dd>Partition Key / Sort Key。複合主キーで item を一意化する。</dd>
+      <dt>GSI</dt><dd>Global Secondary Index。テーブル作成後でも追加可能、別の PK/SK でクエリできる。</dd>
+      <dt>LSI</dt><dd>Local Secondary Index。同じ PK の中で別の SK を使う。テーブル作成時しか作れない。</dd>
+      <dt>RCU / WCU</dt><dd>Read Capacity Unit / Write Capacity Unit。Provisioned モードでの課金単位。</dd>
+      <dt>On-Demand / PAY_PER_REQUEST</dt><dd>リクエスト数ベースの従量課金。プロビジョニング不要。</dd>
+      <dt>PITR (Point-in-Time Recovery)</dt><dd>過去 35 日間の任意時点に復旧可能なバックアップ機能。</dd>
+      <dt>TTL</dt><dd>UNIX タイムスタンプ属性が過去になると item を自動削除する仕組み。</dd>
+      <dt>Stream</dt><dd>テーブル変更を順次配信するイベントソース。Lambda トリガで連携可能。</dd>
+      <dt>Transactions</dt><dd>最大 100 件 ACID 保証で書き込める仕組み。複数テーブル横断も可。</dd>
+      <dt>Conditional Write</dt><dd>「ある条件を満たす時だけ書き込む」操作。楽観的ロック実装の基本。</dd>
+    </dl>
+
+    <footer class="post-footer">
+      <a href="/blog/aws-basics/01-s3.html">← #aws-01 S3</a>
+      <a href="/blog/aws-basics/03-rds.html">次: #aws-03 RDS →</a>
+    </footer>
+  </div>
+</article>
+
+
+<footer style="max-width:920px;margin:3rem auto 0;padding:1.5rem 1.6rem;border-top:1px solid #e5e5e5;color:#666;font-size:0.85rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.6rem;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','Noto Sans JP',system-ui,sans-serif;">
+  <div>&copy; 2026 iigtn &mdash; Built with Terraform &amp; GitHub Actions</div>
+  <div>
+    <a href="/learn.html" style="color:#2a6acc;text-decoration:none;">解説書</a>
+    &nbsp;&middot;&nbsp;
+    <a href="https://github.com/iigtn/iigtn-platform" style="color:#2a6acc;text-decoration:none;">GitHub</a>
+    &nbsp;&middot;&nbsp;
+    <a href="/privacy.html" style="color:#2a6acc;text-decoration:none;">プライバシーポリシー</a>
+  </div>
+</footer>
+
+</body>
+</html>

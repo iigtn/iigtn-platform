@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#aws-11 IAM + STS — 権限管理 | AWS 基本サービス入門 | iigtn</title>
+<meta name="description" content="IAM + STS を「何を解決するか / 採用判断 / Terraform 最小サンプル」で解説。User / Role / Policy / Trust / OIDC / 最小権限まで。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/aws-basics/11-iam-sts.html">
+<meta property="og:title" content="#aws-11 IAM + STS">
+<meta property="og:description" content="User / Role / Policy / OIDC の特徴と採用判断。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/aws-basics/11-iam-sts.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="#aws-11 IAM + STS">
+<meta name="twitter:description" content="User / Role / Policy / OIDC の特徴と採用判断。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="stylesheet" href="/blog/style.css">
+<script type="application/ld+json">
+{ "@context":"https://schema.org","@type":"TechArticle","headline":"#aws-11 IAM + STS","description":"User / Role / Policy / OIDC の特徴と採用判断。","datePublished":"2026-04-26","author":{"@type":"Person","name":"iigtn","url":"https://lab.iigtn.com/"},"publisher":{"@type":"Person","name":"iigtn"},"url":"https://lab.iigtn.com/blog/aws-basics/11-iam-sts.html","mainEntityOfPage":"https://lab.iigtn.com/blog/aws-basics/11-iam-sts.html","image":"https://lab.iigtn.com/assets/icon.svg","inLanguage":"ja","isPartOf":{"@id":"https://lab.iigtn.com/blog/aws-basics/#blog"} }
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="/" class="logo" aria-label="iigtn"><img src="/assets/logo.svg" alt="iigtn" height="32"></a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/" class="active">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+    </ul>
+  </nav>
+</header>
+
+<article class="post">
+  <header class="post-header">
+    <p class="post-meta">2026-04-26 · AWS 基本サービス入門 · #aws-11</p>
+    <h1>IAM + STS — 権限管理</h1>
+  </header>
+  <div class="post-body">
+
+    <h2>概要</h2>
+    <p>
+      <strong>IAM (Identity and Access Management)</strong> は AWS の認証認可サービス。
+      User / Group / Role / Policy で構成され、「誰が何にどうアクセスできるか」をすべてここで決めます。
+      <strong>STS (Security Token Service)</strong> は IAM と組み合わせて使う一時認証情報の発行サービスで、AssumeRole / OIDC / MFA Session を扱います。
+    </p>
+    <p>
+      IAM は AWS で最も重要なサービス。設計が雑だと事故・侵害の温床になります。
+      逆に「最小権限の原則」を貫けると、セキュリティだけでなく運用安定性も上がります。
+    </p>
+
+    <h2>主な構成要素</h2>
+    <ul>
+      <li><strong>User</strong> — 人 or アプリ単位の長期 ID。AccessKey を持てる。</li>
+      <li><strong>Group</strong> — User をまとめる単位。共通ポリシーを Group に attach 可能。</li>
+      <li><strong>Role</strong> — 「引き受けられる役割」。短命な認証情報で動く。EC2 / Lambda / OIDC で頻出。</li>
+      <li><strong>Managed Policy</strong> — 独立リソース化されたポリシー。複数 user/role に attach 可能、バージョン管理あり。</li>
+      <li><strong>Inline Policy</strong> — 特定 user/role/group に埋め込みのポリシー。再利用不可だが運命共同体。</li>
+      <li><strong>Trust Policy</strong> — Role の「誰が AssumeRole できるか」宣言。Principal で AWS / Service / Federated を指定。</li>
+      <li><strong>Permissions Boundary</strong> — Role/User の最大権限の上限。委譲先が過剰な権限を attach しないよう制限。</li>
+      <li><strong>SCP (Service Control Policy)</strong> — Organizations の OU/Account 単位の禁止条項。IAM より上位。</li>
+      <li><strong>STS API</strong> — AssumeRole / AssumeRoleWithWebIdentity / GetSessionToken。</li>
+    </ul>
+
+    <h2>「最小権限の原則」の実践</h2>
+    <ol>
+      <li><strong>長期 AccessKey は人間用に作らない</strong> — IAM Identity Center / SSO / OIDC で短命認証へ移行。</li>
+      <li><strong>Action は具体的に書く</strong> — <code>s3:*</code> ではなく <code>s3:GetObject</code> / <code>s3:PutObject</code>。</li>
+      <li><strong>Resource を絞る</strong> — <code>*</code> ではなく <code>arn:aws:s3:::my-bucket/*</code>。</li>
+      <li><strong>Condition で追加制約</strong> — <code>aws:SourceIp</code>, <code>aws:MultiFactorAuthPresent</code>, <code>aws:SourceArn</code>。</li>
+      <li><strong>Permissions Boundary で上限</strong> — 委譲する Role に上限を設けて事故防止。</li>
+    </ol>
+
+    <h2>使うべきパターン</h2>
+    <ul>
+      <li><strong>EC2 / Lambda の認証</strong> — Instance Profile / Execution Role でコードに認証情報を書かない。</li>
+      <li><strong>GitHub Actions の AWS デプロイ</strong> — OIDC + AssumeRoleWithWebIdentity で長期 AccessKey 不要。</li>
+      <li><strong>マルチアカウント</strong> — 各アカウントの Role を AssumeRole でジャンプ。SSO 統合可。</li>
+      <li><strong>クライアント側コード</strong> — Cognito Identity Pool 経由で一時認証。</li>
+    </ul>
+
+    <h2>使わない方が良いパターン</h2>
+    <ul>
+      <li><strong>長期 AccessKey を CI に直書き</strong> — OIDC へ移行。</li>
+      <li><strong>AdministratorAccess の濫用</strong> — 開発初期はやむを得ないが、本番は最小権限化。</li>
+      <li><strong>1 Role を全用途で使い回す</strong> — 用途別に分ける。事故時の影響範囲を局所化。</li>
+    </ul>
+
+    <h2>Terraform 最小サンプル（GitHub Actions OIDC Role）</h2>
+<pre><code># GitHub OIDC Provider (アカウントに 1 個だけ)
+resource "aws_iam_openid_connect_provider" "github" {
+  url             = "https://token.actions.githubusercontent.com"
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
+}
+
+# Trust Policy: 特定 repo の特定 branch のみ assume 許可
+data "aws_iam_policy_document" "github_trust" {
+  statement {
+    effect = "Allow"
+    principals {
+      type        = "Federated"
+      identifiers = [aws_iam_openid_connect_provider.github.arn]
+    }
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+    condition {
+      test     = "StringLike"
+      variable = "token.actions.githubusercontent.com:sub"
+      values   = ["repo:iigtn/iigtn-platform:*"]
+    }
+  }
+}
+
+resource "aws_iam_role" "github_deploy" {
+  name               = "github-actions-deploy"
+  assume_role_policy = data.aws_iam_policy_document.github_trust.json
+}
+
+# 最小限のデプロイ権限
+data "aws_iam_policy_document" "deploy_perms" {
+  statement {
+    actions = [
+      "s3:PutObject", "s3:DeleteObject", "s3:ListBucket",
+      "cloudfront:CreateInvalidation",
+    ]
+    resources = ["arn:aws:s3:::my-site/*", "arn:aws:s3:::my-site"]
+  }
+}
+
+resource "aws_iam_role_policy" "deploy" {
+  role   = aws_iam_role.github_deploy.id
+  policy = data.aws_iam_policy_document.deploy_perms.json
+}</code></pre>
+
+    <h2>採用評価ポイント</h2>
+    <ul>
+      <li><strong>OIDC で AccessKey ゼロ運用</strong>を当然のように設計できる。</li>
+      <li><strong>Trust Policy の sub claim 制限</strong>で「特定 repo / branch のみ」最小権限化できる。</li>
+      <li><strong>Managed vs Inline / Permissions Boundary</strong> の使い分けを明確に語れる。</li>
+      <li><strong>aws:SourceArn / SourceIp / MFA Condition</strong> の活用例を出せる。</li>
+      <li><strong>Access Analyzer / Service Last Accessed</strong> で過剰権限を検出する運用を持っている。</li>
+    </ul>
+
+    <h2>用語集</h2>
+    <dl>
+      <dt>User vs Role</dt><dd>User = 長期 ID (AccessKey 持てる)。Role = 引き受けられる役割で短命。CI/CD は Role 推奨。</dd>
+      <dt>Managed Policy / Inline Policy</dt><dd>Managed = 独立リソースで再利用可・バージョン管理あり。Inline = 特定 user/role/group 埋め込み。</dd>
+      <dt>Trust Policy</dt><dd>Role の「誰が AssumeRole できるか」宣言。Principal + Action: sts:AssumeRole。</dd>
+      <dt>Permissions Policy</dt><dd>Role/User の「何ができるか」宣言。Allow/Deny + Action + Resource + Condition。</dd>
+      <dt>Permissions Boundary</dt><dd>Role/User の最大権限の上限。委譲先が過剰権限を attach しないよう制限。</dd>
+      <dt>SCP</dt><dd>Service Control Policy。Organizations 配下の OU/Account 全体に強制する禁止条項。</dd>
+      <dt>STS</dt><dd>Security Token Service。一時認証情報を発行するサービス。AssumeRole 系 API。</dd>
+      <dt>OIDC Provider</dt><dd>外部 ID プロバイダ (GitHub Actions / GitLab / EKS) を AWS に登録した仕組み。AssumeRoleWithWebIdentity の前提。</dd>
+      <dt>Condition Keys</dt><dd>Policy で使える条件キー。aws:SourceIp / aws:MultiFactorAuthPresent / aws:SourceArn 等。</dd>
+      <dt>Access Analyzer</dt><dd>外部公開リソース (S3 / IAM Role / KMS 等) を検出する AWS マネージド分析。</dd>
+    </dl>
+
+    <footer class="post-footer">
+      <a href="/blog/aws-basics/10-api-gateway.html">← #aws-10 API Gateway</a>
+      <a href="/blog/aws-basics/12-acm.html">次: #aws-12 ACM →</a>
+    </footer>
+  </div>
+</article>
+
+
+<footer style="max-width:920px;margin:3rem auto 0;padding:1.5rem 1.6rem;border-top:1px solid #e5e5e5;color:#666;font-size:0.85rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.6rem;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','Noto Sans JP',system-ui,sans-serif;">
+  <div>&copy; 2026 iigtn &mdash; Built with Terraform &amp; GitHub Actions</div>
+  <div>
+    <a href="/learn.html" style="color:#2a6acc;text-decoration:none;">解説書</a>
+    &nbsp;&middot;&nbsp;
+    <a href="https://github.com/iigtn/iigtn-platform" style="color:#2a6acc;text-decoration:none;">GitHub</a>
+    &nbsp;&middot;&nbsp;
+    <a href="/privacy.html" style="color:#2a6acc;text-decoration:none;">プライバシーポリシー</a>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#aws-14 SNS + SQS — メッセージング | AWS 基本サービス入門 | iigtn</title>
+<meta name="description" content="SNS と SQS を「何を解決するか / 採用判断 / Terraform 最小サンプル」で解説。Pub/Sub / FIFO / Dead Letter Queue / Lambda 連携 / 使い分けの軸まで。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/aws-basics/14-sns-sqs.html">
+<meta property="og:title" content="#aws-14 SNS + SQS">
+<meta property="og:description" content="SNS と SQS の使い分けと採用判断、Terraform サンプル。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/aws-basics/14-sns-sqs.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="#aws-14 SNS + SQS">
+<meta name="twitter:description" content="SNS と SQS の使い分けと採用判断。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="stylesheet" href="/blog/style.css">
+<script type="application/ld+json">
+{ "@context":"https://schema.org","@type":"TechArticle","headline":"#aws-14 SNS + SQS","description":"SNS と SQS の使い分けと採用判断。","datePublished":"2026-04-26","author":{"@type":"Person","name":"iigtn","url":"https://lab.iigtn.com/"},"publisher":{"@type":"Person","name":"iigtn"},"url":"https://lab.iigtn.com/blog/aws-basics/14-sns-sqs.html","mainEntityOfPage":"https://lab.iigtn.com/blog/aws-basics/14-sns-sqs.html","image":"https://lab.iigtn.com/assets/icon.svg","inLanguage":"ja","isPartOf":{"@id":"https://lab.iigtn.com/blog/aws-basics/#blog"} }
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="/" class="logo" aria-label="iigtn"><img src="/assets/logo.svg" alt="iigtn" height="32"></a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/" class="active">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+    </ul>
+  </nav>
+</header>
+
+<article class="post">
+  <header class="post-header">
+    <p class="post-meta">2026-04-26 · AWS 基本サービス入門 · #aws-14</p>
+    <h1>SNS + SQS — メッセージング</h1>
+  </header>
+  <div class="post-body">
+
+    <h2>概要</h2>
+    <p>
+      <strong>SNS (Simple Notification Service)</strong> と <strong>SQS (Simple Queue Service)</strong> は AWS の 2 大メッセージング基盤。
+      システム間を疎結合にする、非同期処理を導入する、再試行や負荷平準化を行う、といった目的で使い分けます。
+    </p>
+    <ul>
+      <li><strong>SNS</strong> = Pub/Sub。1 メッセージを複数の Subscriber に同時配信。</li>
+      <li><strong>SQS</strong> = キュー。1 メッセージを 1 Consumer が処理（複数 Consumer なら早い者勝ち）。</li>
+    </ul>
+    <p>両者を組み合わせる「Fanout パターン」（SNS → 複数 SQS）が定番。</p>
+
+    <h2>SNS の主な機能</h2>
+    <ul>
+      <li><strong>Topic</strong> — メッセージの送信先カテゴリ。Standard と FIFO の 2 種類。</li>
+      <li><strong>Subscription</strong> — Topic を受信する宛先。Email / SMS / HTTPS / Lambda / SQS / Kinesis Firehose。</li>
+      <li><strong>FIFO Topic</strong> — 順序保証 + 重複排除。SQS FIFO とセットで使う。</li>
+      <li><strong>Filter Policy</strong> — Subscriber 側でメッセージ属性を見て受信可否を判定。</li>
+      <li><strong>Mobile Push</strong> — APNs / FCM 経由でアプリ通知配信。</li>
+    </ul>
+
+    <h2>SQS の主な機能</h2>
+    <ul>
+      <li><strong>Standard Queue</strong> — 高スループット、順序保証なし、稀に重複あり (At-Least-Once)。</li>
+      <li><strong>FIFO Queue</strong> — 順序保証 + Exactly-Once。1 グループ 300 TPS 上限。</li>
+      <li><strong>Visibility Timeout</strong> — Consumer が message を取った後、他 Consumer に見えなくなる期間。</li>
+      <li><strong>Dead Letter Queue (DLQ)</strong> — 一定回数失敗したメッセージを別キューに退避。</li>
+      <li><strong>Long Polling</strong> — 受信を最大 20 秒待つことで API 呼び出し回数削減。</li>
+      <li><strong>Lambda トリガ</strong> — SQS にメッセージが入ると自動的に Lambda が呼ばれる。</li>
+      <li><strong>Delay Queue / Message Timer</strong> — 配信を一定時間遅延。</li>
+    </ul>
+
+    <h2>SNS vs SQS の使い分け</h2>
+    <table>
+      <tr><th>シナリオ</th><th>選択</th><th>理由</th></tr>
+      <tr><td>1 メッセージ → 複数の処理</td><td>SNS (+ SQS)</td><td>Fanout が前提</td></tr>
+      <tr><td>負荷平準化したい</td><td>SQS</td><td>Consumer が自分のペースで pull</td></tr>
+      <tr><td>順序保証が必要</td><td>FIFO Topic + FIFO Queue</td><td>Standard では順序保証無し</td></tr>
+      <tr><td>失敗リトライ + DLQ</td><td>SQS</td><td>DLQ 機能で再処理を制御</td></tr>
+      <tr><td>Email / Mobile 通知</td><td>SNS</td><td>SNS が Subscriber 種別豊富</td></tr>
+      <tr><td>CloudWatch Alarm の通知先</td><td>SNS</td><td>Alarm から SNS Topic へが標準</td></tr>
+    </table>
+
+    <h2>使うべきパターン</h2>
+    <ul>
+      <li><strong>非同期処理</strong> — API → SQS → Lambda で「重い処理を後回し」。</li>
+      <li><strong>マイクロサービス間連携</strong> — SNS Fanout で複数サービスへ疎結合通知。</li>
+      <li><strong>監視通知</strong> — CloudWatch Alarms → SNS → Email。</li>
+      <li><strong>バッチ処理の入口</strong> — S3 イベント → SNS → 複数 SQS → 各 Lambda。</li>
+    </ul>
+
+    <h2>使わない方が良いパターン</h2>
+    <ul>
+      <li><strong>低レイテンシ ms 級リアルタイム</strong> — EventBridge / Kinesis Streams を検討。</li>
+      <li><strong>大量ストリーム処理 (秒間数万)</strong> — Kinesis Data Streams の方が向く。</li>
+      <li><strong>WebSocket 双方向</strong> — API GW WebSocket / IoT Core が適切。</li>
+    </ul>
+
+    <h2>Terraform 最小サンプル（SNS Fanout + SQS + DLQ）</h2>
+<pre><code># SNS Topic
+resource "aws_sns_topic" "events" {
+  name = "events"
+}
+
+# DLQ
+resource "aws_sqs_queue" "worker_dlq" {
+  name = "worker-dlq"
+}
+
+# Worker Queue
+resource "aws_sqs_queue" "worker" {
+  name                       = "worker"
+  visibility_timeout_seconds = 60
+  message_retention_seconds  = 1209600   # 14 日
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.worker_dlq.arn
+    maxReceiveCount     = 3
+  })
+}
+
+# SQS が SNS を購読
+resource "aws_sns_topic_subscription" "worker" {
+  topic_arn = aws_sns_topic.events.arn
+  protocol  = "sqs"
+  endpoint  = aws_sqs_queue.worker.arn
+}
+
+# SNS から SQS への送信を許可する Queue Policy
+resource "aws_sqs_queue_policy" "worker" {
+  queue_url = aws_sqs_queue.worker.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "sns.amazonaws.com" }
+      Action    = "sqs:SendMessage"
+      Resource  = aws_sqs_queue.worker.arn
+      Condition = {
+        ArnEquals = { "aws:SourceArn" = aws_sns_topic.events.arn }
+      }
+    }]
+  })
+}
+
+# Lambda トリガ
+resource "aws_lambda_event_source_mapping" "worker" {
+  event_source_arn = aws_sqs_queue.worker.arn
+  function_name    = aws_lambda_function.worker.arn
+  batch_size       = 10
+}</code></pre>
+
+    <h2>採用評価ポイント</h2>
+    <ul>
+      <li><strong>SNS + SQS Fanout</strong> パターンを即書ける。</li>
+      <li><strong>DLQ + maxReceiveCount</strong> をデフォルトで設定。失敗メッセージの可視化を意識。</li>
+      <li><strong>Visibility Timeout</strong> を Lambda の timeout より長く設定する原則を理解。</li>
+      <li><strong>Standard vs FIFO</strong> の選択軸（順序保証 vs スループット）を明示できる。</li>
+      <li><strong>SQS Queue Policy で SourceArn 制限</strong>を SNS 側にかけられる。</li>
+    </ul>
+
+    <h2>用語集</h2>
+    <dl>
+      <dt>Topic / Subscription</dt><dd>SNS の 2 主要要素。Topic = 送信先カテゴリ、Subscription = 受信先設定。</dd>
+      <dt>Pub/Sub</dt><dd>Publish/Subscribe パターン。1 メッセージを複数の Subscriber に同時配信する設計。</dd>
+      <dt>Fanout</dt><dd>SNS → 複数 SQS への配信パターン。Producer は SNS に送るだけで複数の処理パイプを起動可能。</dd>
+      <dt>Standard / FIFO</dt><dd>Standard = 高スループット・順序保証なし。FIFO = 順序保証 + Exactly-Once、ただしスループット制限あり。</dd>
+      <dt>Visibility Timeout</dt><dd>Consumer が message を取った後、他 Consumer に見えなくする期間。Lambda timeout より長くする。</dd>
+      <dt>Dead Letter Queue (DLQ)</dt><dd>maxReceiveCount を超えたメッセージを退避する別キュー。失敗メッセージの可視化と手動再処理に。</dd>
+      <dt>Long Polling</dt><dd>SQS の受信を最大 20 秒待つことで API 呼び出し回数を削減する仕組み。</dd>
+      <dt>Filter Policy</dt><dd>SNS Subscriber 側でメッセージ属性を見て受信可否を判定する仕組み。</dd>
+      <dt>Lambda Event Source Mapping</dt><dd>SQS / Kinesis / DynamoDB Stream を Lambda のトリガに紐付ける仕組み。</dd>
+    </dl>
+
+    <footer class="post-footer">
+      <a href="/blog/aws-basics/13-cloudwatch.html">← #aws-13 CloudWatch</a>
+      <a href="/blog/aws-basics/15-budgets.html">次: #aws-15 AWS Budgets →</a>
+    </footer>
+  </div>
+</article>
+
+
+<footer style="max-width:920px;margin:3rem auto 0;padding:1.5rem 1.6rem;border-top:1px solid #e5e5e5;color:#666;font-size:0.85rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.6rem;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','Noto Sans JP',system-ui,sans-serif;">
+  <div>&copy; 2026 iigtn &mdash; Built with Terraform &amp; GitHub Actions</div>
+  <div>
+    <a href="/learn.html" style="color:#2a6acc;text-decoration:none;">解説書</a>
+    &nbsp;&middot;&nbsp;
+    <a href="https://github.com/iigtn/iigtn-platform" style="color:#2a6acc;text-decoration:none;">GitHub</a>
+    &nbsp;&middot;&nbsp;
+    <a href="/privacy.html" style="color:#2a6acc;text-decoration:none;">プライバシーポリシー</a>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#aws-07 VPC + Subnet + Route Table | AWS 基本サービス入門 | iigtn</title>
+<meta name="description" content="VPC を「何を解決するか / 採用判断 / Terraform 最小サンプル」で解説。CIDR 設計 / Public・Private Subnet / IGW / NAT / VPC Endpoint まで。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/aws-basics/07-vpc.html">
+<meta property="og:title" content="#aws-07 VPC + Subnet + Route Table">
+<meta property="og:description" content="VPC / Subnet / Route Table / IGW / NAT / VPC Endpoint。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/aws-basics/07-vpc.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="#aws-07 VPC + Subnet + Route Table">
+<meta name="twitter:description" content="VPC / Subnet / Route Table / IGW / NAT / VPC Endpoint。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="stylesheet" href="/blog/style.css">
+<script type="application/ld+json">
+{ "@context":"https://schema.org","@type":"TechArticle","headline":"#aws-07 VPC","description":"VPC / Subnet / Route Table / IGW / NAT。","datePublished":"2026-04-26","author":{"@type":"Person","name":"iigtn","url":"https://lab.iigtn.com/"},"publisher":{"@type":"Person","name":"iigtn"},"url":"https://lab.iigtn.com/blog/aws-basics/07-vpc.html","mainEntityOfPage":"https://lab.iigtn.com/blog/aws-basics/07-vpc.html","image":"https://lab.iigtn.com/assets/icon.svg","inLanguage":"ja","isPartOf":{"@id":"https://lab.iigtn.com/blog/aws-basics/#blog"} }
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="/" class="logo" aria-label="iigtn"><img src="/assets/logo.svg" alt="iigtn" height="32"></a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/" class="active">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+    </ul>
+  </nav>
+</header>
+
+<article class="post">
+  <header class="post-header">
+    <p class="post-meta">2026-04-26 · AWS 基本サービス入門 · #aws-07</p>
+    <h1>VPC + Subnet + Route Table — AWS のネットワーク基盤</h1>
+  </header>
+  <div class="post-body">
+
+    <h2>概要</h2>
+    <p>
+      <strong>Amazon VPC (Virtual Private Cloud)</strong> は AWS 上に独立したプライベートネットワークを作る仕組みです。
+      EC2 / RDS / Lambda などのリソースをどこに配置するか、どこから通信を許可するかを制御する基盤になります。
+    </p>
+    <p>
+      サーバレス全盛でも VPC の理解は必須です。なぜなら、RDS や ElastiCache を使う時、Lambda を VPC 連携させる時、社内システムと VPN / Direct Connect で繋ぐ時など、
+      <strong>VPC 設計が後から変えにくい部分</strong>のため、初期設計で迷うとずっと尾を引きます。
+    </p>
+
+    <h2>主な構成要素</h2>
+    <ul>
+      <li><strong>VPC</strong> — CIDR ブロック (10.0.0.0/16 等) を持つ仮想ネットワーク。アカウント・リージョン単位で複数作成可能。</li>
+      <li><strong>Subnet</strong> — VPC を AZ 単位で分割した小ネットワーク。Public / Private で分けるのが定番。</li>
+      <li><strong>Route Table</strong> — 「この CIDR への通信はどこへ送るか」のルール集。Subnet ごとに紐付ける。</li>
+      <li><strong>IGW (Internet Gateway)</strong> — VPC をインターネットに繋ぐ出入口。Public Subnet に紐付く Route Table に <code>0.0.0.0/0 → igw</code> を書く。</li>
+      <li><strong>NAT Gateway</strong> — Private Subnet から outbound する仕組み。EIP と組み合わせ。時間課金 + データ転送課金。</li>
+      <li><strong>VPC Endpoint</strong> — AWS サービス (S3 / DynamoDB 等) に VPC 内から直接接続する仕組み。NAT 不要化 / セキュリティ向上。</li>
+      <li><strong>Security Group (SG)</strong> — リソース単位のステートフルなネットワーク ACL。</li>
+      <li><strong>NACL (Network ACL)</strong> — Subnet 単位のステートレスな ACL。SG の補助。</li>
+      <li><strong>VPC Peering / Transit Gateway</strong> — 複数 VPC を相互接続する仕組み。</li>
+    </ul>
+
+    <h2>典型的な設計パターン (3 層)</h2>
+    <ol>
+      <li><strong>Public Subnet (10.0.10.0/24)</strong> — インターネット向け / ALB / NAT Gateway を置く</li>
+      <li><strong>Private (App) Subnet (10.0.20.0/24)</strong> — Lambda / EC2 / Fargate アプリを置く。NAT 経由で外向き</li>
+      <li><strong>Private (Data) Subnet (10.0.30.0/24)</strong> — RDS / ElastiCache を置く。インターネット直接アクセス不可</li>
+    </ol>
+    <p>
+      AZ ごとに同じ層を 2〜3 重複させ、計 6〜9 Subnet で構成するのが定番。
+    </p>
+
+    <h2>使うべきパターン</h2>
+    <ul>
+      <li><strong>RDS / ElastiCache を使う</strong> — VPC 内必須。Private Subnet に置く。</li>
+      <li><strong>EC2 / Fargate でアプリを動かす</strong> — Private Subnet + ALB Public Subnet の構成。</li>
+      <li><strong>オンプレ連携</strong> — VPN Site-to-Site / Direct Connect で VPC 内に統合。</li>
+      <li><strong>セキュリティ / コンプライアンス要件</strong> — VPC Flow Logs で全通信ログ取得。</li>
+    </ul>
+
+    <h2>使わない方が良いパターン (≒ デフォルト VPC で十分)</h2>
+    <ul>
+      <li><strong>静的サイト + Lambda + DynamoDB</strong> — どれも VPC 不要。デフォルト VPC 放置で OK。</li>
+      <li><strong>個人ポートフォリオ</strong> — VPC 設計に時間をかけても効果が薄い。S3 + CloudFront + サーバレスで完結させる。</li>
+      <li><strong>Lambda の VPC 連携を闇雲に有効化</strong> — Cold Start 増加 + 料金増。RDS 等が本当に要る場合だけ。</li>
+    </ul>
+
+    <h2>Terraform 最小サンプル（Multi-AZ 3 層）</h2>
+<pre><code>resource "aws_vpc" "main" {
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_hostnames = true
+  tags = { Name = "main" }
+}
+
+resource "aws_internet_gateway" "main" {
+  vpc_id = aws_vpc.main.id
+}
+
+# Public Subnet x2
+resource "aws_subnet" "public" {
+  count             = 2
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = "10.0.${10 + count.index}.0/24"
+  availability_zone = data.aws_availability_zones.available.names[count.index]
+  map_public_ip_on_launch = true
+}
+
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.main.id
+  route { cidr_block = "0.0.0.0/0"; gateway_id = aws_internet_gateway.main.id }
+}
+
+resource "aws_route_table_association" "public" {
+  count          = 2
+  subnet_id      = aws_subnet.public[count.index].id
+  route_table_id = aws_route_table.public.id
+}
+
+# Private Subnet x2 (NAT 経由 outbound)
+resource "aws_eip" "nat" { domain = "vpc" }
+
+resource "aws_nat_gateway" "main" {
+  allocation_id = aws_eip.nat.id
+  subnet_id     = aws_subnet.public[0].id
+}
+
+resource "aws_subnet" "private" {
+  count             = 2
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = "10.0.${20 + count.index}.0/24"
+  availability_zone = data.aws_availability_zones.available.names[count.index]
+}
+
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.main.id
+  route { cidr_block = "0.0.0.0/0"; nat_gateway_id = aws_nat_gateway.main.id }
+}
+
+# VPC Endpoint (S3 / DynamoDB は無料の Gateway 型推奨)
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.${var.region}.s3"
+  vpc_endpoint_type = "Gateway"
+  route_table_ids   = [aws_route_table.private.id]
+}</code></pre>
+
+    <h2>採用評価ポイント</h2>
+    <ul>
+      <li><strong>3 層 (Public / Private App / Private Data) 設計</strong>を即書ける。</li>
+      <li><strong>NAT Gateway のコスト</strong>を意識（月 $32 + データ転送課金）。VPC Endpoint で削減可能。</li>
+      <li><strong>「VPC 不要なケース」を区別できる</strong> — 過剰設計を避けられる。</li>
+      <li><strong>Flow Logs / VPC Endpoint / Transit Gateway</strong> 等の応用機能を場面に応じて提案できる。</li>
+    </ul>
+
+    <h2>用語集</h2>
+    <dl>
+      <dt>VPC</dt><dd>Virtual Private Cloud。AWS 上の独立した仮想ネットワーク。</dd>
+      <dt>CIDR</dt><dd>Classless Inter-Domain Routing。IP アドレス範囲の表記法 (10.0.0.0/16 等)。</dd>
+      <dt>Subnet</dt><dd>VPC を AZ 単位で分割した小ネットワーク。</dd>
+      <dt>Route Table</dt><dd>「この CIDR はどこへ送るか」のルール集。Subnet ごとに紐付け。</dd>
+      <dt>IGW</dt><dd>Internet Gateway。VPC をインターネットへ接続する出入口。</dd>
+      <dt>NAT Gateway</dt><dd>Private Subnet から outbound する仕組み。マネージドサービスなので運用不要。</dd>
+      <dt>VPC Endpoint</dt><dd>AWS サービスに VPC 内から直接接続する仕組み。Gateway 型 (S3/DDB 無料) と Interface 型 (有料) がある。</dd>
+      <dt>Security Group</dt><dd>リソース単位のステートフル ACL。Inbound/Outbound ルールを書く。</dd>
+      <dt>NACL</dt><dd>Subnet 単位のステートレス ACL。SG の補助、明示的 Deny が必要な時に使う。</dd>
+      <dt>VPC Peering / Transit Gateway</dt><dd>複数 VPC を相互接続する仕組み。Transit Gateway は複数 VPC のハブ。</dd>
+      <dt>VPC Flow Logs</dt><dd>VPC 内の全通信ログを CloudWatch Logs / S3 に出力する機能。</dd>
+    </dl>
+
+    <footer class="post-footer">
+      <a href="/blog/aws-basics/06-ecs-fargate.html">← #aws-06 ECS / Fargate</a>
+      <a href="/blog/aws-basics/08-cloudfront.html">次: #aws-08 CloudFront →</a>
+    </footer>
+  </div>
+</article>
+
+
+<footer style="max-width:920px;margin:3rem auto 0;padding:1.5rem 1.6rem;border-top:1px solid #e5e5e5;color:#666;font-size:0.85rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.6rem;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','Noto Sans JP',system-ui,sans-serif;">
+  <div>&copy; 2026 iigtn &mdash; Built with Terraform &amp; GitHub Actions</div>
+  <div>
+    <a href="/learn.html" style="color:#2a6acc;text-decoration:none;">解説書</a>
+    &nbsp;&middot;&nbsp;
+    <a href="https://github.com/iigtn/iigtn-platform" style="color:#2a6acc;text-decoration:none;">GitHub</a>
+    &nbsp;&middot;&nbsp;
+    <a href="/privacy.html" style="color:#2a6acc;text-decoration:none;">プライバシーポリシー</a>
+  </div>
+</footer>
+
+</body>
+</html>

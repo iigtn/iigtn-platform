@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#aws-04 EC2 + AMI — 仮想サーバの土台 | AWS 基本サービス入門 | iigtn</title>
+<meta name="description" content="Amazon EC2 と AMI を「何を解決するか / 採用判断 / Terraform 最小サンプル」で解説。Instance Type / EBS / Security Group / Instance Profile / SSM Session Manager まで。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/aws-basics/04-ec2.html">
+<meta property="og:title" content="#aws-04 EC2 + AMI">
+<meta property="og:description" content="EC2 / AMI / SG / Instance Profile の特徴と採用判断。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/aws-basics/04-ec2.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="#aws-04 EC2 + AMI">
+<meta name="twitter:description" content="EC2 / AMI / SG / Instance Profile の特徴と採用判断。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="stylesheet" href="/blog/style.css">
+<script type="application/ld+json">
+{ "@context":"https://schema.org","@type":"TechArticle","headline":"#aws-04 EC2 + AMI","description":"EC2 / AMI / SG / Instance Profile の特徴と採用判断。","datePublished":"2026-04-26","author":{"@type":"Person","name":"iigtn","url":"https://lab.iigtn.com/"},"publisher":{"@type":"Person","name":"iigtn"},"url":"https://lab.iigtn.com/blog/aws-basics/04-ec2.html","mainEntityOfPage":"https://lab.iigtn.com/blog/aws-basics/04-ec2.html","image":"https://lab.iigtn.com/assets/icon.svg","inLanguage":"ja","isPartOf":{"@id":"https://lab.iigtn.com/blog/aws-basics/#blog"} }
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="/" class="logo" aria-label="iigtn"><img src="/assets/logo.svg" alt="iigtn" height="32"></a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/" class="active">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+    </ul>
+  </nav>
+</header>
+
+<article class="post">
+  <header class="post-header">
+    <p class="post-meta">2026-04-26 · AWS 基本サービス入門 · #aws-04</p>
+    <h1>EC2 + AMI — 仮想サーバの土台</h1>
+  </header>
+  <div class="post-body">
+
+    <h2>概要</h2>
+    <p>
+      <strong>Amazon EC2 (Elastic Compute Cloud)</strong> は AWS 最古参のサービスで、Linux / Windows の仮想サーバを必要なスペック・台数で立ち上げられる仕組みです。
+      AWS で何かをする時の最も基本的なコンピュート要素で、サーバレス全盛の今でも以下のシーンで現役です。
+    </p>
+    <ul>
+      <li>レガシーアプリ移行（オンプレ → AWS のリフト&シフト）</li>
+      <li>常駐プロセス（バッチ、デーモン、Game サーバ）</li>
+      <li>Lambda の制約（15 分タイムアウト、メモリ 10GB）に収まらない処理</li>
+      <li>GPU / 大容量メモリが必要なワークロード（ML 推論、解析）</li>
+    </ul>
+    <p>
+      <strong>AMI (Amazon Machine Image)</strong> は EC2 起動のテンプレ。OS + 初期設定 + 必要ソフトを含むスナップショットで、これを元に何台でも同じ EC2 を立てられます。
+    </p>
+
+    <h2>主な機能</h2>
+    <ul>
+      <li><strong>Instance Type</strong> — t3 (汎用)、c7g (CPU 重視)、r7g (メモリ重視)、g5 (GPU)、m7i (バランス) 等。Graviton (ARM) 系は同性能で安い。</li>
+      <li><strong>EBS (Elastic Block Store)</strong> — EC2 にアタッチするブロックストレージ。gp3 / io2 / st1。停止しても残るが、未アタッチでも課金。</li>
+      <li><strong>AMI</strong> — Amazon Linux 2023 / Ubuntu / RHEL / Windows Server。自前で作成も可能。</li>
+      <li><strong>Security Group (SG)</strong> — ステートフルなネットワーク ACL。Inbound/Outbound ルール、SG 同士の参照が推奨。</li>
+      <li><strong>User Data</strong> — 起動時に実行されるシェルスクリプト。初期設定の自動化に。</li>
+      <li><strong>Instance Profile</strong> — EC2 に IAM Role を渡す仕組み。コードに認証情報を書かずに済む。</li>
+      <li><strong>SSM Session Manager</strong> — 鍵不要で EC2 に shell に入れる機能。SSH 22 ポート開放が不要に。</li>
+      <li><strong>Auto Scaling Group</strong> — 負荷に応じて EC2 を自動増減。</li>
+      <li><strong>Spot Instance</strong> — 余剰キャパシティを最大 90% OFF で使う。中断耐性のあるバッチ向け。</li>
+    </ul>
+
+    <h2>使うべきパターン</h2>
+    <ul>
+      <li><strong>レガシーアプリ移行</strong> — Lambda / コンテナ化が困難なものを EC2 に乗せて運用負荷を AWS に寄せる。</li>
+      <li><strong>常駐デーモン / Game サーバ</strong> — TCP 接続が長時間維持される系。</li>
+      <li><strong>大量バッチ</strong> — Spot Instance + Auto Scaling で最安実装。</li>
+      <li><strong>GPU が必要</strong> — g5 系インスタンスで ML 推論。</li>
+    </ul>
+
+    <h2>使わない方が良いパターン</h2>
+    <ul>
+      <li><strong>イベントドリブンな関数実行</strong> — Lambda / Step Functions の方がコスト・運用負荷が圧倒的に低い。</li>
+      <li><strong>新規プロジェクトの API バックエンド</strong> — API Gateway + Lambda + DynamoDB のサーバレスを第一候補に。</li>
+      <li><strong>個人ポートフォリオ系</strong> — t3.nano でも月数百円かかる。S3 + CloudFront で済ませた方が安い。</li>
+      <li><strong>SSH 22 を 0.0.0.0/0 で開けたい</strong> — 鉄板の事故源。SSM Session Manager で代替。</li>
+    </ul>
+
+    <h2>Terraform 最小サンプル（SSM 接続可能な EC2）</h2>
+<pre><code>data "aws_ami" "al2023" {
+  most_recent = true
+  owners      = ["amazon"]
+  filter {
+    name   = "name"
+    values = ["al2023-ami-*-x86_64"]
+  }
+}
+
+resource "aws_iam_role" "ec2" {
+  name = "ec2-ssm-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "ec2.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ssm" {
+  role       = aws_iam_role.ec2.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+resource "aws_iam_instance_profile" "ec2" {
+  name = "ec2-ssm-profile"
+  role = aws_iam_role.ec2.name
+}
+
+resource "aws_security_group" "web" {
+  name   = "web-sg"
+  vpc_id = var.vpc_id
+
+  egress {
+    from_port = 0; to_port = 0; protocol = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  # SSH を開けない (SSM で入る)
+}
+
+resource "aws_instance" "web" {
+  ami                  = data.aws_ami.al2023.id
+  instance_type        = "t3.micro"
+  subnet_id            = var.private_subnet_id
+  vpc_security_group_ids = [aws_security_group.web.id]
+  iam_instance_profile = aws_iam_instance_profile.ec2.name
+  tags = { Name = "web-01" }
+}</code></pre>
+
+    <h2>採用評価ポイント</h2>
+    <ul>
+      <li><strong>SSM Session Manager 利用前提</strong> で SG を 22 開放しない設計ができるか（一発で「セキュリティ意識ある」判定）。</li>
+      <li><strong>Spot vs On-Demand vs Reserved の使い分け</strong> をコスト計算込みで説明できるか。</li>
+      <li><strong>Graviton (ARM) を使う発想</strong>。同性能で 20% 安い、伸び代がある。</li>
+      <li><strong>EC2 一択になる前にサーバレス / コンテナを検討する</strong> 思考順序。EC2 ありきは古さの兆候。</li>
+    </ul>
+
+    <h2>用語集</h2>
+    <dl>
+      <dt>EC2</dt><dd>Elastic Compute Cloud。AWS の仮想サーバサービス。</dd>
+      <dt>AMI</dt><dd>Amazon Machine Image。EC2 起動のテンプレ。OS + ソフトを含むスナップショット。</dd>
+      <dt>EBS</dt><dd>Elastic Block Store。EC2 にアタッチするブロックストレージ。gp3 / io2 / st1 が主要。</dd>
+      <dt>Instance Type</dt><dd>EC2 のスペック区分。t3/m6i/c7g 等。世代 (数字) と用途文字 (t,m,c,r,g) で構成。</dd>
+      <dt>Graviton (ARM)</dt><dd>AWS 自社製 ARM プロセッサ。x86 より 20% 程度安く、性能比は同等以上のことも。</dd>
+      <dt>Security Group</dt><dd>EC2 のステートフルなネットワーク ACL。Inbound/Outbound ルールを書く。</dd>
+      <dt>User Data</dt><dd>EC2 起動時に実行されるシェルスクリプト。初期設定の自動化。</dd>
+      <dt>Instance Profile</dt><dd>EC2 に IAM Role を渡す仕組み。コードに認証情報を書かずに済む。</dd>
+      <dt>SSM Session Manager</dt><dd>SSM Agent + IAM 経由で EC2 に shell 接続。SSH 鍵 / 22 開放不要。</dd>
+      <dt>Auto Scaling Group</dt><dd>負荷に応じて EC2 台数を自動増減する仕組み。</dd>
+      <dt>Spot Instance</dt><dd>余剰キャパシティを最大 90% OFF で使えるが、2 分前通知で中断される。</dd>
+    </dl>
+
+    <footer class="post-footer">
+      <a href="/blog/aws-basics/03-rds.html">← #aws-03 RDS</a>
+      <a href="/blog/aws-basics/05-lambda.html">次: #aws-05 Lambda →</a>
+    </footer>
+  </div>
+</article>
+
+
+<footer style="max-width:920px;margin:3rem auto 0;padding:1.5rem 1.6rem;border-top:1px solid #e5e5e5;color:#666;font-size:0.85rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.6rem;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','Noto Sans JP',system-ui,sans-serif;">
+  <div>&copy; 2026 iigtn &mdash; Built with Terraform &amp; GitHub Actions</div>
+  <div>
+    <a href="/learn.html" style="color:#2a6acc;text-decoration:none;">解説書</a>
+    &nbsp;&middot;&nbsp;
+    <a href="https://github.com/iigtn/iigtn-platform" style="color:#2a6acc;text-decoration:none;">GitHub</a>
+    &nbsp;&middot;&nbsp;
+    <a href="/privacy.html" style="color:#2a6acc;text-decoration:none;">プライバシーポリシー</a>
+  </div>
+</footer>
+
+</body>
+</html>

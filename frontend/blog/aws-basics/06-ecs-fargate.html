@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#aws-06 ECS / Fargate — マネージドコンテナ | AWS 基本サービス入門 | iigtn</title>
+<meta name="description" content="ECS / Fargate を「何を解決するか / 採用判断 / Terraform 最小サンプル」で解説。Cluster / Task Definition / Service / EC2 vs Fargate / EKS との比較も。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/aws-basics/06-ecs-fargate.html">
+<meta property="og:title" content="#aws-06 ECS / Fargate — マネージドコンテナ">
+<meta property="og:description" content="ECS / Fargate / EKS の特徴と採用判断、Terraform サンプル。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/aws-basics/06-ecs-fargate.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="#aws-06 ECS / Fargate">
+<meta name="twitter:description" content="ECS / Fargate / EKS の特徴と採用判断。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="stylesheet" href="/blog/style.css">
+<script type="application/ld+json">
+{ "@context":"https://schema.org","@type":"TechArticle","headline":"#aws-06 ECS / Fargate","description":"ECS / Fargate / EKS の特徴と採用判断。","datePublished":"2026-04-26","author":{"@type":"Person","name":"iigtn","url":"https://lab.iigtn.com/"},"publisher":{"@type":"Person","name":"iigtn"},"url":"https://lab.iigtn.com/blog/aws-basics/06-ecs-fargate.html","mainEntityOfPage":"https://lab.iigtn.com/blog/aws-basics/06-ecs-fargate.html","image":"https://lab.iigtn.com/assets/icon.svg","inLanguage":"ja","isPartOf":{"@id":"https://lab.iigtn.com/blog/aws-basics/#blog"} }
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="/" class="logo" aria-label="iigtn"><img src="/assets/logo.svg" alt="iigtn" height="32"></a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/" class="active">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+    </ul>
+  </nav>
+</header>
+
+<article class="post">
+  <header class="post-header">
+    <p class="post-meta">2026-04-26 · AWS 基本サービス入門 · #aws-06</p>
+    <h1>ECS / Fargate — マネージドコンテナ</h1>
+  </header>
+  <div class="post-body">
+
+    <h2>概要</h2>
+    <p>
+      <strong>Amazon ECS (Elastic Container Service)</strong> は AWS のコンテナオーケストレーションサービス。
+      Docker コンテナを「Task」という単位で実行・管理してくれます。
+      実行環境は 2 種類: <strong>EC2 起動タイプ</strong>（自分で EC2 を持つ）と <strong>Fargate 起動タイプ</strong>（サーバ管理不要のサーバレスコンテナ）。
+    </p>
+    <p>
+      <strong>Fargate</strong> はコンテナ用の「ノード管理しない実行基盤」で、Lambda の制約（15 分・10GB）を超える長時間 / 大容量処理にも対応。
+      Lambda → Fargate → EKS の順で運用負荷が上がります。
+      用途と規模で適切な選択をするのが現代的な AWS の作法です。
+    </p>
+
+    <h2>主な機能</h2>
+    <ul>
+      <li><strong>Cluster</strong> — Task の論理的なグループ。1 つのアカウントに複数作れる。</li>
+      <li><strong>Task Definition</strong> — Docker image / CPU / メモリ / 環境変数 / IAM Role / ロギング設定の定義。バージョン管理あり。</li>
+      <li><strong>Task</strong> — Task Definition から起動した実行インスタンス。Lambda の関数呼び出し相当。</li>
+      <li><strong>Service</strong> — 「Task を常に N 個動かす」管理単位。ALB / NLB と連携、Auto Scaling 可能。</li>
+      <li><strong>Fargate</strong> — サーバレス実行モード。CPU / メモリを指定すれば AWS が裏で実行。</li>
+      <li><strong>Capacity Provider</strong> — Fargate / Fargate Spot / EC2 を混在させて起動先を選択。</li>
+      <li><strong>ECR (Elastic Container Registry)</strong> — Docker image の AWS 公式リジストリ。ECS と統合。</li>
+      <li><strong>App Mesh / Service Connect</strong> — マイクロサービス間通信の制御。</li>
+    </ul>
+
+    <h2>EKS との比較</h2>
+    <table>
+      <tr><th>観点</th><th>ECS / Fargate</th><th>EKS</th></tr>
+      <tr><td>API</td><td>AWS 独自</td><td>Kubernetes 標準</td></tr>
+      <tr><td>学習コスト</td><td>低 (AWS の他サービスと同じ)</td><td>高 (Kubernetes 全体)</td></tr>
+      <tr><td>クロスクラウド可搬性</td><td>無し</td><td>高い</td></tr>
+      <tr><td>Control Plane 料金</td><td>無料</td><td>$73/月 (固定)</td></tr>
+      <tr><td>OSS エコシステム</td><td>限定的</td><td>豊富 (Helm, Argo, Istio 等)</td></tr>
+      <tr><td>マイクロサービス向き</td><td>○ (中規模まで)</td><td>◎ (大規模 + 複雑)</td></tr>
+    </table>
+    <p>
+      迷ったら <strong>ECS Fargate を第一候補</strong>。Kubernetes 必須案件 / 既存知識を活かしたい場合に EKS。
+    </p>
+
+    <h2>使うべきパターン</h2>
+    <ul>
+      <li><strong>Lambda 制約を超える処理</strong> — 15 分超 / 10GB 超メモリ / 常駐デーモン。</li>
+      <li><strong>既存 Docker 化されたアプリ</strong> — 複数言語 / レガシー / OSS をそのまま動かす。</li>
+      <li><strong>マイクロサービス（中規模）</strong> — Service Connect で内部通信、ALB で外部公開。</li>
+      <li><strong>バッチ処理</strong> — Spot Fargate で安く動かす。</li>
+    </ul>
+
+    <h2>使わない方が良いパターン</h2>
+    <ul>
+      <li><strong>イベント駆動の小さい関数</strong> — Lambda の方が安く運用も楽。</li>
+      <li><strong>静的サイト配信</strong> — S3 + CloudFront で 1 桁安い。</li>
+      <li><strong>コンテナ化されてない単発スクリプト</strong> — Lambda + Layer or Step Functions の方が早い。</li>
+      <li><strong>大規模 K8s 既存資産あり</strong> — EKS の方が学習コスト無し。</li>
+    </ul>
+
+    <h2>Terraform 最小サンプル（Fargate Service）</h2>
+<pre><code>resource "aws_ecs_cluster" "main" {
+  name = "myapp"
+}
+
+resource "aws_iam_role" "task_exec" {
+  name = "ecs-task-exec"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = { Service = "ecs-tasks.amazonaws.com" }
+      Action = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "task_exec" {
+  role       = aws_iam_role.task_exec.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
+
+resource "aws_ecs_task_definition" "web" {
+  family                   = "web"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = "256"   # 0.25 vCPU
+  memory                   = "512"   # 512 MB
+  execution_role_arn       = aws_iam_role.task_exec.arn
+
+  container_definitions = jsonencode([{
+    name      = "web"
+    image     = "${var.ecr_repo}:latest"
+    portMappings = [{ containerPort = 80 }]
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        awslogs-group         = "/ecs/web"
+        awslogs-region        = "ap-northeast-1"
+        awslogs-stream-prefix = "ecs"
+      }
+    }
+  }])
+}
+
+resource "aws_ecs_service" "web" {
+  name            = "web"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.web.arn
+  desired_count   = 2
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets          = var.private_subnet_ids
+    security_groups  = [var.app_sg_id]
+    assign_public_ip = false
+  }
+}</code></pre>
+
+    <h2>採用評価ポイント</h2>
+    <ul>
+      <li><strong>「迷ったら Fargate」</strong>と言える判断軸（EC2 起動タイプ採用は明確な理由が必要）。</li>
+      <li><strong>ECS vs EKS の使い分け</strong>を Control Plane 料金 / 学習コスト / 可搬性で語れるか。</li>
+      <li><strong>Spot Fargate</strong>を採用したコスト最適化を提案できる。</li>
+      <li><strong>awslogs ドライバ + retention 設定</strong>がデフォルトでできる（ログ垂れ流し防止）。</li>
+    </ul>
+
+    <h2>用語集</h2>
+    <dl>
+      <dt>Cluster</dt><dd>ECS の Task をまとめる論理単位。アカウント内に複数作成可。</dd>
+      <dt>Task Definition</dt><dd>image / CPU / メモリ / 環境変数 / IAM Role の定義。バージョン管理されたテンプレ。</dd>
+      <dt>Task</dt><dd>Task Definition から起動された実行インスタンス。Lambda の関数呼び出し相当。</dd>
+      <dt>Service</dt><dd>「Task を常に N 個動かす」管理単位。ALB / NLB と統合可能。</dd>
+      <dt>Fargate</dt><dd>サーバレスコンテナ実行環境。EC2 ノードを管理せずに Task を動かせる。</dd>
+      <dt>Capacity Provider</dt><dd>Fargate / Fargate Spot / EC2 の起動先を割り当てる仕組み。</dd>
+      <dt>ECR</dt><dd>Elastic Container Registry。AWS 公式の Docker registry。</dd>
+      <dt>EKS</dt><dd>AWS のマネージド Kubernetes。Control Plane $73/月、より複雑だが OSS エコシステムが豊富。</dd>
+      <dt>App Mesh / Service Connect</dt><dd>マイクロサービス間の通信制御を提供する機能。</dd>
+    </dl>
+
+    <footer class="post-footer">
+      <a href="/blog/aws-basics/05-lambda.html">← #aws-05 Lambda</a>
+      <a href="/blog/aws-basics/07-vpc.html">次: #aws-07 VPC →</a>
+    </footer>
+  </div>
+</article>
+
+
+<footer style="max-width:920px;margin:3rem auto 0;padding:1.5rem 1.6rem;border-top:1px solid #e5e5e5;color:#666;font-size:0.85rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.6rem;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','Noto Sans JP',system-ui,sans-serif;">
+  <div>&copy; 2026 iigtn &mdash; Built with Terraform &amp; GitHub Actions</div>
+  <div>
+    <a href="/learn.html" style="color:#2a6acc;text-decoration:none;">解説書</a>
+    &nbsp;&middot;&nbsp;
+    <a href="https://github.com/iigtn/iigtn-platform" style="color:#2a6acc;text-decoration:none;">GitHub</a>
+    &nbsp;&middot;&nbsp;
+    <a href="/privacy.html" style="color:#2a6acc;text-decoration:none;">プライバシーポリシー</a>
+  </div>
+</footer>
+
+</body>
+</html>

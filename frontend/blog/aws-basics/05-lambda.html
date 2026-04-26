@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#aws-05 Lambda — サーバレス関数 | AWS 基本サービス入門 | iigtn</title>
+<meta name="description" content="AWS Lambda を「何を解決するか / 採用判断 / Terraform 最小サンプル」で解説。Runtime / Layer / Concurrency / Cold Start / VPC 連携 / arm64 まで。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/aws-basics/05-lambda.html">
+<meta property="og:title" content="#aws-05 Lambda — サーバレス関数">
+<meta property="og:description" content="Lambda の特徴 / 制約 / 採用判断 / Terraform サンプル。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/aws-basics/05-lambda.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="#aws-05 Lambda — サーバレス関数">
+<meta name="twitter:description" content="Lambda の特徴 / 制約 / 採用判断 / Terraform サンプル。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="stylesheet" href="/blog/style.css">
+<script type="application/ld+json">
+{ "@context":"https://schema.org","@type":"TechArticle","headline":"#aws-05 Lambda","description":"Lambda の特徴 / 制約 / 採用判断 / Terraform サンプル。","datePublished":"2026-04-26","author":{"@type":"Person","name":"iigtn","url":"https://lab.iigtn.com/"},"publisher":{"@type":"Person","name":"iigtn"},"url":"https://lab.iigtn.com/blog/aws-basics/05-lambda.html","mainEntityOfPage":"https://lab.iigtn.com/blog/aws-basics/05-lambda.html","image":"https://lab.iigtn.com/assets/icon.svg","inLanguage":"ja","isPartOf":{"@id":"https://lab.iigtn.com/blog/aws-basics/#blog"} }
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="/" class="logo" aria-label="iigtn"><img src="/assets/logo.svg" alt="iigtn" height="32"></a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/" class="active">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+    </ul>
+  </nav>
+</header>
+
+<article class="post">
+  <header class="post-header">
+    <p class="post-meta">2026-04-26 · AWS 基本サービス入門 · #aws-05</p>
+    <h1>Lambda — サーバレス関数</h1>
+  </header>
+  <div class="post-body">
+
+    <h2>概要</h2>
+    <p>
+      <strong>AWS Lambda</strong> は「呼び出された時だけコードを実行する」サーバレス実行環境です。
+      Node.js / Python / Java / Go / Ruby / .NET / カスタムランタイム (コンテナイメージ) に対応し、
+      実行時間とメモリ × ms に対して課金される従量制。サーバを管理しなくて良いため、コードを書いて動作環境を IAM Role で固めるだけで運用が成立します。
+    </p>
+    <p>
+      AWS サーバレスの中核。API Gateway や EventBridge / S3 / DynamoDB Stream / SNS / SQS と組み合わせて、イベントドリブンに「動く」アプリを構築できます。
+      Graviton (arm64) で実行すると同性能で 20% 安いので、新規は arm64 がデフォルト推奨。
+    </p>
+
+    <h2>主な機能</h2>
+    <ul>
+      <li><strong>Runtime</strong> — Node.js 22 / Python 3.13 / Java 21 / Go / .NET 等。コンテナイメージ持ち込みも可。</li>
+      <li><strong>Memory</strong> — 128MB 〜 10240MB。CPU は メモリに比例。</li>
+      <li><strong>Timeout</strong> — 最大 15 分。長時間バッチには向かない。</li>
+      <li><strong>Layer</strong> — 共通ライブラリを別パッケージ化して複数 Lambda で共有。</li>
+      <li><strong>Concurrency</strong> — 同時実行数。Reserved / Provisioned Concurrency で制御可。</li>
+      <li><strong>Cold Start</strong> — 初回起動時のオーバーヘッド。Provisioned Concurrency で回避可（追加料金）。</li>
+      <li><strong>VPC 連携</strong> — VPC 内リソース (RDS 等) にアクセスする時に使う。ENI 周りのコールドスタート増加は改善されている。</li>
+      <li><strong>Alias / Version</strong> — 不変な Version とそれを指す可変ポインタ Alias。Blue/Green デプロイ向け。</li>
+      <li><strong>Function URL</strong> — API Gateway を介さずに Lambda を HTTPS で直接公開する機能。簡易な API に。</li>
+      <li><strong>Destinations</strong> — 非同期実行の成功/失敗イベントを SNS/SQS/EventBridge に送る。</li>
+    </ul>
+
+    <h2>使うべきパターン</h2>
+    <ul>
+      <li><strong>API バックエンド</strong> — API Gateway + Lambda + DynamoDB の三種の神器。月 100 リクエストまで無料、1M リクエストで $0.2。</li>
+      <li><strong>S3 / DynamoDB / SQS のイベント処理</strong> — オブジェクトアップロード時にサムネイル生成、行追加時に通知、等。</li>
+      <li><strong>EventBridge cron</strong> — 毎日 02:00 にクローラを動かす、月初にレポート生成、等。</li>
+      <li><strong>軽量 ETL</strong> — メモリ 10GB / 15 分以内に終わる処理。</li>
+      <li><strong>Webhook 受信</strong> — GitHub / Stripe / LINE 等の Webhook を受けて DB に書く。</li>
+    </ul>
+
+    <h2>使わない方が良いパターン</h2>
+    <ul>
+      <li><strong>15 分以上かかる処理</strong> — Step Functions / ECS Fargate / Batch を検討。</li>
+      <li><strong>常駐サーバ要件</strong> — TCP 長時間接続、WebSocket（API GW WebSocket は別）など。</li>
+      <li><strong>低レイテンシ p99 が厳しい</strong> — Cold Start で 1〜数秒かかる。Provisioned Concurrency で緩和できるが追加料金。</li>
+      <li><strong>大量バッチで CPU 性能命</strong> — EC2 / Fargate Spot の方がコスパ良い。</li>
+      <li><strong>大容量メモリが必要</strong> — Lambda は 10GB 上限。</li>
+    </ul>
+
+    <h2>Terraform 最小サンプル（zip デプロイ）</h2>
+<pre><code>data "archive_file" "fn" {
+  type        = "zip"
+  source_file = "${path.module}/handler.mjs"
+  output_path = "${path.module}/fn.zip"
+}
+
+resource "aws_iam_role" "fn" {
+  name = "myfn-exec"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "lambda.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "logs" {
+  role       = aws_iam_role.fn.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_lambda_function" "fn" {
+  function_name    = "myfn"
+  runtime          = "nodejs22.x"
+  architectures    = ["arm64"]            # Graviton で安く
+  memory_size      = 256
+  timeout          = 10
+  role             = aws_iam_role.fn.arn
+  handler          = "handler.handler"
+  filename         = data.archive_file.fn.output_path
+  source_code_hash = data.archive_file.fn.output_base64sha256
+
+  environment {
+    variables = { LOG_LEVEL = "info" }
+  }
+}
+
+resource "aws_cloudwatch_log_group" "fn" {
+  name              = "/aws/lambda/myfn"
+  retention_in_days = 14   # コスト垂れ流し防止
+}</code></pre>
+
+    <h2>採用評価ポイント</h2>
+    <ul>
+      <li><strong>arm64 をデフォルト</strong>にできるか（コスト感覚 + Graviton 把握）。</li>
+      <li><strong>CloudWatch Log Group の retention 設定</strong>を Terraform で書ける（Lambda 標準は無期限で課金垂れ流し）。</li>
+      <li><strong>Cold Start を意識した設計</strong>（重要パスは Provisioned Concurrency か EC2 / Fargate）。</li>
+      <li><strong>Lambda が向かない処理</strong>を即答できる（万能信仰してない）。</li>
+    </ul>
+
+    <h2>用語集</h2>
+    <dl>
+      <dt>Runtime</dt><dd>Lambda の言語実行環境。Node.js / Python / Java / Go 等。</dd>
+      <dt>Cold Start</dt><dd>Lambda コンテナの初回起動オーバーヘッド。100ms〜数秒。</dd>
+      <dt>Provisioned Concurrency</dt><dd>指定数を常時 warm に保つ機能。Cold Start を消すが追加料金。</dd>
+      <dt>Reserved Concurrency</dt><dd>関数の最大同時実行数を予約。他関数への影響を防ぐ。</dd>
+      <dt>Layer</dt><dd>共通ライブラリ等を別パッケージにして複数関数で共有する仕組み。最大 5 個まで。</dd>
+      <dt>Alias / Version</dt><dd>Version = 不変なコードスナップショット / Alias = それを指す可変ポインタ。Blue/Green デプロイに使う。</dd>
+      <dt>Function URL</dt><dd>API Gateway を介さずに Lambda を直接 HTTPS で公開する機能。</dd>
+      <dt>Destinations</dt><dd>非同期実行の成功 / 失敗を SNS/SQS/EventBridge へ送る仕組み。</dd>
+      <dt>arm64 (Graviton)</dt><dd>AWS 自社製 ARM プロセッサ。x86 より 20% 安い。Lambda でも選択可能。</dd>
+    </dl>
+
+    <footer class="post-footer">
+      <a href="/blog/aws-basics/04-ec2.html">← #aws-04 EC2</a>
+      <a href="/blog/aws-basics/06-ecs-fargate.html">次: #aws-06 ECS / Fargate →</a>
+    </footer>
+  </div>
+</article>
+
+
+<footer style="max-width:920px;margin:3rem auto 0;padding:1.5rem 1.6rem;border-top:1px solid #e5e5e5;color:#666;font-size:0.85rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.6rem;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','Noto Sans JP',system-ui,sans-serif;">
+  <div>&copy; 2026 iigtn &mdash; Built with Terraform &amp; GitHub Actions</div>
+  <div>
+    <a href="/learn.html" style="color:#2a6acc;text-decoration:none;">解説書</a>
+    &nbsp;&middot;&nbsp;
+    <a href="https://github.com/iigtn/iigtn-platform" style="color:#2a6acc;text-decoration:none;">GitHub</a>
+    &nbsp;&middot;&nbsp;
+    <a href="/privacy.html" style="color:#2a6acc;text-decoration:none;">プライバシーポリシー</a>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#aws-13 CloudWatch — Logs / Metrics / Alarms | AWS 基本サービス入門 | iigtn</title>
+<meta name="description" content="CloudWatch を「何を解決するか / 採用判断 / Terraform 最小サンプル」で解説。Log Group / Insights / Metric / Alarm / Dashboard / EMF まで。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/aws-basics/13-cloudwatch.html">
+<meta property="og:title" content="#aws-13 CloudWatch">
+<meta property="og:description" content="Logs / Metrics / Alarms / Dashboard の特徴と採用判断。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/aws-basics/13-cloudwatch.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="#aws-13 CloudWatch">
+<meta name="twitter:description" content="Logs / Metrics / Alarms / Dashboard。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="stylesheet" href="/blog/style.css">
+<script type="application/ld+json">
+{ "@context":"https://schema.org","@type":"TechArticle","headline":"#aws-13 CloudWatch","description":"Logs / Metrics / Alarms / Dashboard。","datePublished":"2026-04-26","author":{"@type":"Person","name":"iigtn","url":"https://lab.iigtn.com/"},"publisher":{"@type":"Person","name":"iigtn"},"url":"https://lab.iigtn.com/blog/aws-basics/13-cloudwatch.html","mainEntityOfPage":"https://lab.iigtn.com/blog/aws-basics/13-cloudwatch.html","image":"https://lab.iigtn.com/assets/icon.svg","inLanguage":"ja","isPartOf":{"@id":"https://lab.iigtn.com/blog/aws-basics/#blog"} }
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="/" class="logo" aria-label="iigtn"><img src="/assets/logo.svg" alt="iigtn" height="32"></a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/" class="active">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+    </ul>
+  </nav>
+</header>
+
+<article class="post">
+  <header class="post-header">
+    <p class="post-meta">2026-04-26 · AWS 基本サービス入門 · #aws-13</p>
+    <h1>CloudWatch — Logs / Metrics / Alarms</h1>
+  </header>
+  <div class="post-body">
+
+    <h2>概要</h2>
+    <p>
+      <strong>Amazon CloudWatch</strong> は AWS の標準モニタリング基盤。<strong>Logs</strong>（ログ集約）・<strong>Metrics</strong>（数値時系列）・<strong>Alarms</strong>（閾値通知）の 3 本柱で、AWS リソースの「壊れたら気付ける」基盤を提供します。
+      Lambda / API Gateway / EC2 / RDS など主要サービスは標準で CloudWatch にログ・メトリクスを送ってくれます。
+    </p>
+    <p>
+      設定不足で「エラーが起きてるのに気付かない」状況を作ると痛い目に遭います。最低限 Lambda Errors / Duration p95 / API GW 5xx に Alarm を仕込むのが iigtn-platform の標準。
+    </p>
+
+    <h2>主な機能</h2>
+    <ul>
+      <li><strong>Log Group / Log Stream</strong> — ログの論理単位。Group ごとに retention（保持期間）を設定。デフォルトは無期限なので必ず設定。</li>
+      <li><strong>Logs Insights</strong> — SQL 風のクエリ言語で大量ログを集計・抽出。</li>
+      <li><strong>Live Tail</strong> — Console / <code>aws logs tail --follow</code> でリアルタイム追跡。</li>
+      <li><strong>Metric</strong> — 数値時系列。Namespace + Dimensions + Statistic + Period で集約。</li>
+      <li><strong>Alarm</strong> — 閾値超過を検知して SNS に通知。OK / ALARM / INSUFFICIENT_DATA の 3 状態。</li>
+      <li><strong>Composite Alarm</strong> — 複数 Alarm を AND/OR で合成。ノイズ削減。</li>
+      <li><strong>MetricMath</strong> — <code>m1 / m2 * 100</code> で派生メトリクス（エラー率等）。</li>
+      <li><strong>Dashboard</strong> — Widget を JSON で定義、Terraform 化可能。</li>
+      <li><strong>EMF (Embedded Metric Format)</strong> — JSON ログを書くだけで CloudWatch Metrics に変換される標準仕様。</li>
+      <li><strong>Container / Lambda Insights</strong> — 追加エージェントで CPU / メモリ / 詳細を収集。</li>
+    </ul>
+
+    <h2>使うべきパターン</h2>
+    <ul>
+      <li><strong>AWS マネージドサービスの監視</strong> — Lambda Errors / Duration / Throttles、API GW 5xx、ALB 4xx/5xx、DynamoDB throttles 等。</li>
+      <li><strong>アプリログの集約</strong> — Lambda 標準出力、ECS awslogs ドライバ、EC2 CloudWatch Agent。</li>
+      <li><strong>SLI / SLO 管理</strong> — Alarm + Composite で sla 達成率を可視化。</li>
+      <li><strong>コストアラート</strong> — Budgets と組み合わせる（次記事で詳細）。</li>
+    </ul>
+
+    <h2>使わない方が良いパターン</h2>
+    <ul>
+      <li><strong>大量メトリクスの長期保管</strong> — 15 ヶ月で自動消滅、それより長く要るなら Prometheus + S3 等を検討。</li>
+      <li><strong>本格的な APM</strong> — Datadog / New Relic / Grafana Cloud の方が分析機能が豊富。</li>
+      <li><strong>ログ全文検索が頻繁</strong> — OpenSearch / Athena の方がコスパ良いことも。</li>
+    </ul>
+
+    <h2>Terraform 最小サンプル（Lambda 監視一式）</h2>
+<pre><code># Log Group (retention 必須)
+resource "aws_cloudwatch_log_group" "fn" {
+  name              = "/aws/lambda/myfn"
+  retention_in_days = 14
+}
+
+# Lambda Errors アラーム
+resource "aws_cloudwatch_metric_alarm" "fn_errors" {
+  alarm_name          = "myfn-errors"
+  alarm_description   = "Lambda errors over 1 in 5min"
+  namespace           = "AWS/Lambda"
+  metric_name         = "Errors"
+  dimensions          = { FunctionName = aws_lambda_function.fn.function_name }
+  statistic           = "Sum"
+  period              = 300
+  evaluation_periods  = 1
+  threshold           = 1
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  treat_missing_data  = "notBreaching"
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+}
+
+# Duration p95 アラーム
+resource "aws_cloudwatch_metric_alarm" "fn_duration" {
+  alarm_name          = "myfn-duration-p95"
+  metric_name         = "Duration"
+  namespace           = "AWS/Lambda"
+  dimensions          = { FunctionName = aws_lambda_function.fn.function_name }
+  extended_statistic  = "p95"
+  period              = 300
+  evaluation_periods  = 2
+  threshold           = 3000     # 3 秒以上
+  comparison_operator = "GreaterThanThreshold"
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+}
+
+# Logs Insights クエリ (Dashboard で使う)
+# fields @timestamp, @message
+# | filter @message like /ERROR/
+# | sort @timestamp desc
+# | limit 100</code></pre>
+
+    <h2>採用評価ポイント</h2>
+    <ul>
+      <li><strong>retention_in_days を必ず設定</strong>（無期限放置はコスト垂れ流し）。</li>
+      <li><strong>Lambda 監視 3 点セット</strong>（Errors / Duration p95 / Throttles）を即書ける。</li>
+      <li><strong>Logs Insights クエリ集</strong>を持っている（5 分集計 / ERROR 抽出 / Memory 80% 超え）。</li>
+      <li><strong>Alarm の treat-missing-data</strong> をビジネス要件で選択（notBreaching / breaching / missing）。</li>
+      <li><strong>SNS への通知</strong>で実運用ループを完成させている。</li>
+    </ul>
+
+    <h2>Logs Insights クエリ実用例</h2>
+<pre><code># Lambda 所要時間を 5 分集計
+filter @type = "REPORT"
+| stats avg(@duration), max(@duration), pct(@duration, 95) by bin(5m)
+
+# HTTP 5xx URL ランキング
+filter @message like /\"status\":5/
+| parse @message /"path":"(?&lt;p&gt;[^"]*)"/
+| stats count(*) as cnt by p
+| sort cnt desc | limit 20
+
+# Memory 80% 超え呼び出し
+filter @type = "REPORT"
+| filter @maxMemoryUsed / @memorySize &gt; 0.8
+| display @timestamp, @memorySize, @maxMemoryUsed</code></pre>
+
+    <h2>用語集</h2>
+    <dl>
+      <dt>Log Group / Log Stream</dt><dd>Group = 論理ログ束 (retention・暗号化単位)。Stream = 1 ファイル相当。</dd>
+      <dt>Retention</dt><dd>ログ保持期間。デフォルトは無期限なので必ず設定。1〜3653 日 + 永続。</dd>
+      <dt>Logs Insights</dt><dd>SQL 風クエリ言語。fields / filter / parse / stats / sort / limit。</dd>
+      <dt>Namespace / Dimension</dt><dd>Namespace = メトリクス分類 (AWS/Lambda 等)。Dimension = キーラベル (FunctionName=myfn 等)。</dd>
+      <dt>Statistic / Period</dt><dd>Sum / Avg / Min / Max / pNN。Period = 集約区間 (秒)。</dd>
+      <dt>MetricMath</dt><dd><code>m1 / m2 * 100</code> 等の数式で派生メトリクスを定義する機能。</dd>
+      <dt>Alarm 状態</dt><dd>OK (閾値以下) / ALARM (超過) / INSUFFICIENT_DATA (データ不足)。</dd>
+      <dt>treat-missing-data</dt><dd>データなしの時の Alarm 状態。notBreaching / breaching / missing / ignore。</dd>
+      <dt>Composite Alarm</dt><dd>複数 Alarm を AND/OR で組合わせた合成。ノイズ削減に有効。</dd>
+      <dt>EMF (Embedded Metric Format)</dt><dd>JSON ログを書くだけで CloudWatch Metrics に変換される仕様。Lambda の自前メトリクス公開に便利。</dd>
+    </dl>
+
+    <footer class="post-footer">
+      <a href="/blog/aws-basics/12-acm.html">← #aws-12 ACM</a>
+      <a href="/blog/aws-basics/14-sns-sqs.html">次: #aws-14 SNS + SQS →</a>
+    </footer>
+  </div>
+</article>
+
+
+<footer style="max-width:920px;margin:3rem auto 0;padding:1.5rem 1.6rem;border-top:1px solid #e5e5e5;color:#666;font-size:0.85rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.6rem;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','Noto Sans JP',system-ui,sans-serif;">
+  <div>&copy; 2026 iigtn &mdash; Built with Terraform &amp; GitHub Actions</div>
+  <div>
+    <a href="/learn.html" style="color:#2a6acc;text-decoration:none;">解説書</a>
+    &nbsp;&middot;&nbsp;
+    <a href="https://github.com/iigtn/iigtn-platform" style="color:#2a6acc;text-decoration:none;">GitHub</a>
+    &nbsp;&middot;&nbsp;
+    <a href="/privacy.html" style="color:#2a6acc;text-decoration:none;">プライバシーポリシー</a>
+  </div>
+</footer>
+
+</body>
+</html>

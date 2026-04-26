@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#aws-15 AWS Budgets + Cost Explorer — コスト管理 | AWS 基本サービス入門 | iigtn</title>
+<meta name="description" content="AWS Budgets と Cost Explorer を「何を解決するか / 採用判断 / Terraform 最小サンプル」で解説。予算 / 通知 / Cost Allocation Tags / コスト最適化の基本まで。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/aws-basics/15-budgets.html">
+<meta property="og:title" content="#aws-15 AWS Budgets + Cost Explorer">
+<meta property="og:description" content="コスト管理の基本と Terraform サンプル。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/aws-basics/15-budgets.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="#aws-15 AWS Budgets + Cost Explorer">
+<meta name="twitter:description" content="コスト管理の基本と Terraform サンプル。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="stylesheet" href="/blog/style.css">
+<script type="application/ld+json">
+{ "@context":"https://schema.org","@type":"TechArticle","headline":"#aws-15 AWS Budgets + Cost Explorer","description":"コスト管理の基本と Terraform サンプル。","datePublished":"2026-04-26","author":{"@type":"Person","name":"iigtn","url":"https://lab.iigtn.com/"},"publisher":{"@type":"Person","name":"iigtn"},"url":"https://lab.iigtn.com/blog/aws-basics/15-budgets.html","mainEntityOfPage":"https://lab.iigtn.com/blog/aws-basics/15-budgets.html","image":"https://lab.iigtn.com/assets/icon.svg","inLanguage":"ja","isPartOf":{"@id":"https://lab.iigtn.com/blog/aws-basics/#blog"} }
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="/" class="logo" aria-label="iigtn"><img src="/assets/logo.svg" alt="iigtn" height="32"></a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/" class="active">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+    </ul>
+  </nav>
+</header>
+
+<article class="post">
+  <header class="post-header">
+    <p class="post-meta">2026-04-26 · AWS 基本サービス入門 · #aws-15</p>
+    <h1>AWS Budgets + Cost Explorer — コスト管理</h1>
+  </header>
+  <div class="post-body">
+
+    <h2>概要</h2>
+    <p>
+      <strong>AWS Budgets</strong> は予算を設定して「閾値を超えたら通知する」サービス。
+      <strong>AWS Cost Explorer</strong> は「実際にいくら使ったか」をサービス別・タグ別・期間別に可視化する分析ツール。
+      この 2 つを組み合わせるのが AWS のコスト管理基本セットです。
+    </p>
+    <p>
+      地味だが採用評価で「個人 / 中小企業の AWS 案件をやる人ですか」を判定する重要シグナル。
+      AWS は使った分だけ課金される（しかも単価がリージョン・サービス毎に複雑）ので、
+      <strong>「気付いたら今月の請求が予想の 5 倍」</strong>事故を防ぐ責任が運用者にあります。
+    </p>
+
+    <h2>主な機能</h2>
+
+    <h3>AWS Budgets</h3>
+    <ul>
+      <li><strong>Cost Budget</strong> — 月次 / 四半期 / 年次の予算金額を設定。</li>
+      <li><strong>Usage Budget</strong> — 使用量ベース（EC2 時間、S3 容量等）。</li>
+      <li><strong>Reserved Instance Budget</strong> — RI 利用率の予算。</li>
+      <li><strong>Action</strong> — 閾値超過時に IAM Policy を切り替え、リソースを停止する自動アクション（強力だが注意）。</li>
+      <li><strong>通知</strong> — 50% / 80% / 100% 達成等で SNS / Email 通知。</li>
+    </ul>
+
+    <h3>AWS Cost Explorer</h3>
+    <ul>
+      <li><strong>サービス別 / リージョン別 / リンクアカウント別</strong> の費用集計。</li>
+      <li><strong>Cost Allocation Tags</strong> でカスタムタグ（Project / Env / Owner 等）別の集計。</li>
+      <li><strong>Forecast</strong> — 過去傾向から将来コストを予測。</li>
+      <li><strong>Reservation Recommendations</strong> — RI / Savings Plans 購入推奨。</li>
+      <li><strong>Cost Anomaly Detection</strong> — 機械学習で異常な費用増加を自動検知 + 通知。</li>
+    </ul>
+
+    <h2>使うべきパターン</h2>
+    <ul>
+      <li><strong>個人プロジェクト</strong> — 月 5,000 円・10,000 円の予算を設定して 50% / 80% / 100% 通知。</li>
+      <li><strong>クライアント案件</strong> — 月予算を取り決め、予算到達時に Slack 等へ通知し透明性を保つ。</li>
+      <li><strong>マルチアカウント</strong> — Organizations 統合で全アカウント横断の予算管理。</li>
+      <li><strong>新サービス導入後の監視</strong> — Cost Anomaly Detection で「予想外の課金」を即検知。</li>
+    </ul>
+
+    <h2>使わない方が良いパターン (≒ 設定しない言い訳)</h2>
+    <ul>
+      <li><strong>「AWS の請求は気になっていない」</strong> — 個人事業ならクレカ直撃する。必ず設定すべき。</li>
+      <li><strong>Budgets Action でリソース自動停止</strong> — 強力だが本番停止リスクあり。dev 環境のみ推奨。</li>
+    </ul>
+
+    <h2>Terraform 最小サンプル（月予算 + Email 通知）</h2>
+<pre><code>resource "aws_sns_topic" "billing" {
+  name = "billing-alerts"
+}
+
+resource "aws_sns_topic_subscription" "email" {
+  topic_arn = aws_sns_topic.billing.arn
+  protocol  = "email"
+  endpoint  = "contact@iigtn.com"
+}
+
+# 月 1万円 の予算
+resource "aws_budgets_budget" "monthly" {
+  name         = "monthly-cost-budget"
+  budget_type  = "COST"
+  limit_amount = "10000"
+  limit_unit   = "JPY"
+  time_unit    = "MONTHLY"
+
+  cost_filter {
+    name   = "Service"
+    values = ["Amazon Elastic Compute Cloud - Compute", "Amazon Simple Storage Service"]
+  }
+
+  notification {
+    comparison_operator        = "GREATER_THAN"
+    threshold                  = 50
+    threshold_type             = "PERCENTAGE"
+    notification_type          = "ACTUAL"
+    subscriber_email_addresses = ["contact@iigtn.com"]
+  }
+  notification {
+    comparison_operator        = "GREATER_THAN"
+    threshold                  = 80
+    threshold_type             = "PERCENTAGE"
+    notification_type          = "ACTUAL"
+    subscriber_email_addresses = ["contact@iigtn.com"]
+  }
+  notification {
+    comparison_operator        = "GREATER_THAN"
+    threshold                  = 100
+    threshold_type             = "PERCENTAGE"
+    notification_type          = "FORECASTED"   # 予測でも通知
+    subscriber_email_addresses = ["contact@iigtn.com"]
+  }
+}
+
+# Cost Anomaly Detection
+resource "aws_ce_anomaly_monitor" "main" {
+  name              = "service-monitor"
+  monitor_type      = "DIMENSIONAL"
+  monitor_dimension = "SERVICE"
+}
+
+resource "aws_ce_anomaly_subscription" "main" {
+  name      = "anomaly-alert"
+  frequency = "DAILY"
+  monitor_arn_list = [aws_ce_anomaly_monitor.main.arn]
+  subscriber {
+    type    = "EMAIL"
+    address = "contact@iigtn.com"
+  }
+  threshold_expression {
+    dimension {
+      key           = "ANOMALY_TOTAL_IMPACT_ABSOLUTE"
+      values        = ["1000"]   # 1000 円超の異常で通知
+      match_options = ["GREATER_THAN_OR_EQUAL"]
+    }
+  }
+}</code></pre>
+
+    <h2>コスト最適化の基本パターン</h2>
+    <ul>
+      <li><strong>S3 Lifecycle</strong> — 30 日後 IA、90 日後 Glacier、365 日後 Deep Archive。</li>
+      <li><strong>CloudWatch Logs retention</strong> — 14 日 or 30 日。デフォルト無期限を放置しない。</li>
+      <li><strong>Lambda arm64</strong> — x86 より 20% 安い。</li>
+      <li><strong>EC2 Graviton (t4g/c7g/r7g)</strong> — 同性能で 20% 安い。</li>
+      <li><strong>Spot Instance / Spot Fargate</strong> — バッチ系は最大 90% OFF。</li>
+      <li><strong>NAT Gateway 削減</strong> — VPC Endpoint (Gateway 型は無料) で S3/DynamoDB アクセスは NAT 不要。</li>
+      <li><strong>未アタッチ EBS / 未使用 EIP</strong> — 月額数百円の小コストだが、放置すると累積。</li>
+      <li><strong>Reserved Instances / Savings Plans</strong> — 1〜3 年コミットで最大 72% 割引。</li>
+    </ul>
+
+    <h2>採用評価ポイント</h2>
+    <ul>
+      <li><strong>Budgets Email 通知 3 段階</strong>（50% / 80% / 100% Forecasted）を即書ける。</li>
+      <li><strong>Cost Anomaly Detection</strong>を IaC 化してデフォルト導入する。</li>
+      <li><strong>Cost Allocation Tags</strong> を Terraform module で必須タグ化する設計。</li>
+      <li><strong>NAT Gateway / Logs / EBS</strong> 等の地味なコスト穴を即指摘できる。</li>
+      <li><strong>「無料利用枠で済むケース」と「必ず課金されるケース」</strong>を明確に区別している。</li>
+    </ul>
+
+    <h2>用語集</h2>
+    <dl>
+      <dt>AWS Budgets</dt><dd>予算設定 + 閾値通知サービス。Cost / Usage / RI / Savings Plans の各種類あり。</dd>
+      <dt>AWS Cost Explorer</dt><dd>実費を可視化する分析ツール。サービス / タグ / 期間で集計、Forecast 機能も。</dd>
+      <dt>Cost Allocation Tags</dt><dd>Project / Env / Owner 等のカスタムタグでコストを集計する仕組み。</dd>
+      <dt>Cost Anomaly Detection</dt><dd>機械学習で「予想外の課金増加」を自動検知する機能。閾値ベース通知。</dd>
+      <dt>Reserved Instances (RI)</dt><dd>1〜3 年コミットで EC2/RDS 等を最大 72% 割引で使える購入オプション。</dd>
+      <dt>Savings Plans</dt><dd>RI の柔軟版。インスタンス種類を限定せず時間単位の支払額をコミット。</dd>
+      <dt>Forecasted Notification</dt><dd>「このまま行くと予算超過する」予測ベースの通知。早期警告に有効。</dd>
+      <dt>Budgets Action</dt><dd>予算超過時に IAM Policy 切替や EC2 停止等を自動実行する機能。dev 環境向け。</dd>
+    </dl>
+
+    <h2>シリーズ完結</h2>
+    <p>
+      これで「AWS 基本サービス入門」シリーズ全 15 記事が完結しました。
+      個別サービスの詳細は <a href="/blog/ref/">現場コマンドリファレンス</a> で、
+      実際の構築過程は <a href="/blog/">構築日誌</a> で深掘りしています。あわせてご覧ください。
+    </p>
+
+    <footer class="post-footer">
+      <a href="/blog/aws-basics/14-sns-sqs.html">← #aws-14 SNS + SQS</a>
+      <a href="/blog/aws-basics/">シリーズ目次</a>
+    </footer>
+  </div>
+</article>
+
+
+<footer style="max-width:920px;margin:3rem auto 0;padding:1.5rem 1.6rem;border-top:1px solid #e5e5e5;color:#666;font-size:0.85rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.6rem;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','Noto Sans JP',system-ui,sans-serif;">
+  <div>&copy; 2026 iigtn &mdash; Built with Terraform &amp; GitHub Actions</div>
+  <div>
+    <a href="/learn.html" style="color:#2a6acc;text-decoration:none;">解説書</a>
+    &nbsp;&middot;&nbsp;
+    <a href="https://github.com/iigtn/iigtn-platform" style="color:#2a6acc;text-decoration:none;">GitHub</a>
+    &nbsp;&middot;&nbsp;
+    <a href="/privacy.html" style="color:#2a6acc;text-decoration:none;">プライバシーポリシー</a>
+  </div>
+</footer>
+
+</body>
+</html>

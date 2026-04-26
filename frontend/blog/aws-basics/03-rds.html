@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#aws-03 RDS — マネージドリレーショナル DB | AWS 基本サービス入門 | iigtn</title>
+<meta name="description" content="Amazon RDS を「何を解決するか / 使うべきパターン / 使わない方が良いパターン / Terraform 最小サンプル」で解説。Multi-AZ / Read Replica / Aurora との比較も。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/aws-basics/03-rds.html">
+<meta property="og:title" content="#aws-03 RDS — マネージドリレーショナル DB">
+<meta property="og:description" content="RDS の特徴 / Aurora との比較 / Terraform サンプル。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/aws-basics/03-rds.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="#aws-03 RDS — マネージドリレーショナル DB">
+<meta name="twitter:description" content="RDS の特徴 / Aurora との比較 / Terraform サンプル。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="stylesheet" href="/blog/style.css">
+<script type="application/ld+json">
+{ "@context":"https://schema.org","@type":"TechArticle","headline":"#aws-03 RDS","description":"RDS / Aurora 特徴と使い分け、Terraform サンプル。","datePublished":"2026-04-26","author":{"@type":"Person","name":"iigtn","url":"https://lab.iigtn.com/"},"publisher":{"@type":"Person","name":"iigtn"},"url":"https://lab.iigtn.com/blog/aws-basics/03-rds.html","mainEntityOfPage":"https://lab.iigtn.com/blog/aws-basics/03-rds.html","image":"https://lab.iigtn.com/assets/icon.svg","inLanguage":"ja","isPartOf":{"@id":"https://lab.iigtn.com/blog/aws-basics/#blog"} }
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="/" class="logo" aria-label="iigtn"><img src="/assets/logo.svg" alt="iigtn" height="32"></a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/" class="active">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+    </ul>
+  </nav>
+</header>
+
+<article class="post">
+  <header class="post-header">
+    <p class="post-meta">2026-04-26 · AWS 基本サービス入門 · #aws-03</p>
+    <h1>RDS — マネージドリレーショナル DB</h1>
+  </header>
+  <div class="post-body">
+
+    <h2>概要</h2>
+    <p>
+      <strong>Amazon RDS (Relational Database Service)</strong> は PostgreSQL / MySQL / MariaDB / Oracle / SQL Server / Db2 を AWS 上でマネージドに動かすサービス。
+      バックアップ、パッチ適用、Multi-AZ レプリケーション、Read Replica、暗号化、モニタリングをマネージドで提供してくれます。
+      アプリ側は普通に DB クライアントから繋ぐだけ、運用は AWS コンソール / IaC で完結。
+    </p>
+    <p>
+      RDB が必要な業務系 / トランザクション系のシステムでまず選ばれるサービス。
+      似たサービスに <strong>Aurora</strong> があり、互換 API でより高性能・高可用な選択肢として併記されることが多いです。
+    </p>
+
+    <h2>主な機能</h2>
+    <ul>
+      <li><strong>エンジン選択</strong> — PostgreSQL / MySQL / MariaDB / Oracle / SQL Server / Db2。</li>
+      <li><strong>Multi-AZ</strong> — 同期レプリカを別 AZ に配置。プライマリ障害時に自動フェイルオーバー（30 秒〜数分）。</li>
+      <li><strong>Read Replica</strong> — 非同期レプリカで読み取りスケール。最大 15 個（エンジンによる）。</li>
+      <li><strong>自動バックアップ</strong> — 毎日 1 回のスナップショット + トランザクションログによる任意時点リストア。</li>
+      <li><strong>Performance Insights</strong> — クエリ単位の負荷分析。</li>
+      <li><strong>パラメータグループ / オプショングループ</strong> — DB エンジン設定 / 拡張機能を Terraform 管理可能。</li>
+      <li><strong>Storage Auto-Scaling</strong> — ディスクが埋まりそうになると自動拡張。</li>
+      <li><strong>暗号化</strong> — KMS で保存時暗号化、TLS で通信暗号化。</li>
+    </ul>
+
+    <h2>Aurora との比較</h2>
+    <table>
+      <tr><th>観点</th><th>RDS</th><th>Aurora</th></tr>
+      <tr><td>互換性</td><td>純正エンジンそのまま</td><td>MySQL / PostgreSQL 互換 (微妙な差あり)</td></tr>
+      <tr><td>性能</td><td>標準</td><td>MySQL の最大 5 倍 / PostgreSQL の最大 3 倍</td></tr>
+      <tr><td>可用性</td><td>Multi-AZ で 1 レプリカ</td><td>3 AZ × 6 コピーをストレージ層で自動分散</td></tr>
+      <tr><td>Read Replica</td><td>最大 15 個</td><td>最大 15 個 + 全レプリカ ms 級フェイルオーバー</td></tr>
+      <tr><td>料金</td><td>安い</td><td>RDS の 1.2〜1.5 倍</td></tr>
+      <tr><td>Serverless</td><td>無し</td><td>v2 で本格利用可（自動スケール）</td></tr>
+    </table>
+
+    <h2>使うべきパターン</h2>
+    <ul>
+      <li><strong>業務系の OLTP</strong> — 受注 / 在庫 / 顧客管理など、トランザクションと整合性が重要。</li>
+      <li><strong>既存 SQL アプリの移行</strong> — オンプレ / EC2 上の MySQL / PostgreSQL を RDS に持ってきて運用負荷を減らす。</li>
+      <li><strong>JOIN や集計が多い</strong> — DynamoDB ではなく RDB が合う典型。</li>
+      <li><strong>本番運用で 99.95% 以上の可用性が要件</strong> — Multi-AZ で冗長化。</li>
+    </ul>
+
+    <h2>使わない方が良いパターン</h2>
+    <ul>
+      <li><strong>サーバレス前提のアプリで瞬間スケールが必要</strong> — RDS の接続数管理が苦手。Aurora Serverless v2 や DynamoDB を検討。</li>
+      <li><strong>1 桁ミリ秒の低レイテンシが必須</strong> — DynamoDB / ElastiCache の方が速い。</li>
+      <li><strong>突発的なスパイクが多い ワークロード</strong> — インスタンスサイズの上下に時間がかかる。</li>
+      <li><strong>無人運用したい個人プロジェクト</strong> — On-Demand 料金がそれなりなので、件数が少ない用途では DynamoDB / SQLite + S3 の方が圧倒的に安い。</li>
+    </ul>
+
+    <h2>Terraform 最小サンプル（PostgreSQL Multi-AZ）</h2>
+<pre><code>resource "aws_db_subnet_group" "main" {
+  name       = "main"
+  subnet_ids = var.private_subnet_ids
+}
+
+resource "aws_security_group" "rds" {
+  name   = "rds-sg"
+  vpc_id = var.vpc_id
+
+  ingress {
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [var.app_sg_id]   # アプリ SG だけ許可
+  }
+}
+
+resource "aws_db_instance" "main" {
+  identifier             = "myapp-prod"
+  engine                 = "postgres"
+  engine_version         = "16.3"
+  instance_class         = "db.t4g.small"   # ARM 系は安い
+  allocated_storage      = 20
+  max_allocated_storage  = 100              # Storage Auto-Scaling 上限
+  storage_encrypted      = true
+  username               = "appuser"
+  manage_master_user_password = true        # KMS + Secrets Manager で自動管理
+
+  multi_az               = true
+  db_subnet_group_name   = aws_db_subnet_group.main.name
+  vpc_security_group_ids = [aws_security_group.rds.id]
+
+  backup_retention_period = 7
+  deletion_protection     = true
+  skip_final_snapshot     = false
+}</code></pre>
+
+    <h2>採用評価ポイント</h2>
+    <ul>
+      <li><strong>Multi-AZ + Read Replica の使い分け</strong> ― 可用性と読み取りスケールは別物として理解できているか。</li>
+      <li><strong>RDS vs Aurora vs DynamoDB</strong> の判断軸を持っているか。万能なものは無いと言えるか。</li>
+      <li><strong>SG / Subnet Group / Parameter Group</strong> を IaC で書ける人は実運用経験あり。</li>
+      <li><strong>Secrets Manager 連携 + KMS 暗号化</strong> をデフォルトにできるとセキュリティ意識も伝わる。</li>
+    </ul>
+
+    <h2>用語集</h2>
+    <dl>
+      <dt>Multi-AZ</dt><dd>同期レプリカを別 AZ に配置する高可用性構成。プライマリ障害時に自動フェイルオーバー。</dd>
+      <dt>Read Replica</dt><dd>非同期レプリカで読み取り処理をスケールする仕組み。エンジンにより最大 15 個。</dd>
+      <dt>Aurora</dt><dd>RDS と同じ API で互換、ストレージ層を独自実装した高性能 / 高可用版。料金は 1.2〜1.5 倍。</dd>
+      <dt>パラメータグループ</dt><dd>DB エンジン設定（max_connections 等）の集合。Terraform で管理可能。</dd>
+      <dt>オプショングループ</dt><dd>DB エンジン拡張機能（Oracle の OEM など）の有効化設定。</dd>
+      <dt>Performance Insights</dt><dd>クエリ単位で待機イベントや CPU 使用率を可視化する分析機能。</dd>
+      <dt>Storage Auto-Scaling</dt><dd>使用量がしきい値を超えると自動でディスクを拡張する仕組み。</dd>
+      <dt>Aurora Serverless v2</dt><dd>Aurora の自動スケール版。0.5〜128 ACU の範囲で秒単位にスケール。</dd>
+    </dl>
+
+    <footer class="post-footer">
+      <a href="/blog/aws-basics/02-dynamodb.html">← #aws-02 DynamoDB</a>
+      <a href="/blog/aws-basics/04-ec2.html">次: #aws-04 EC2 →</a>
+    </footer>
+  </div>
+</article>
+
+
+<footer style="max-width:920px;margin:3rem auto 0;padding:1.5rem 1.6rem;border-top:1px solid #e5e5e5;color:#666;font-size:0.85rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.6rem;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','Noto Sans JP',system-ui,sans-serif;">
+  <div>&copy; 2026 iigtn &mdash; Built with Terraform &amp; GitHub Actions</div>
+  <div>
+    <a href="/learn.html" style="color:#2a6acc;text-decoration:none;">解説書</a>
+    &nbsp;&middot;&nbsp;
+    <a href="https://github.com/iigtn/iigtn-platform" style="color:#2a6acc;text-decoration:none;">GitHub</a>
+    &nbsp;&middot;&nbsp;
+    <a href="/privacy.html" style="color:#2a6acc;text-decoration:none;">プライバシーポリシー</a>
+  </div>
+</footer>
+
+</body>
+</html>

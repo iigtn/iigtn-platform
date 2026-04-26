@@ -61,6 +61,27 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://lab.iigtn.com/blog/aws-basics/</loc>
+    <lastmod>2026-04-26</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url><loc>https://lab.iigtn.com/blog/aws-basics/01-s3.html</loc><lastmod>2026-04-26</lastmod><changefreq>yearly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lab.iigtn.com/blog/aws-basics/02-dynamodb.html</loc><lastmod>2026-04-26</lastmod><changefreq>yearly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lab.iigtn.com/blog/aws-basics/03-rds.html</loc><lastmod>2026-04-26</lastmod><changefreq>yearly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lab.iigtn.com/blog/aws-basics/04-ec2.html</loc><lastmod>2026-04-26</lastmod><changefreq>yearly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lab.iigtn.com/blog/aws-basics/05-lambda.html</loc><lastmod>2026-04-26</lastmod><changefreq>yearly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lab.iigtn.com/blog/aws-basics/06-ecs-fargate.html</loc><lastmod>2026-04-26</lastmod><changefreq>yearly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lab.iigtn.com/blog/aws-basics/07-vpc.html</loc><lastmod>2026-04-26</lastmod><changefreq>yearly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lab.iigtn.com/blog/aws-basics/08-cloudfront.html</loc><lastmod>2026-04-26</lastmod><changefreq>yearly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lab.iigtn.com/blog/aws-basics/09-route53.html</loc><lastmod>2026-04-26</lastmod><changefreq>yearly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lab.iigtn.com/blog/aws-basics/10-api-gateway.html</loc><lastmod>2026-04-26</lastmod><changefreq>yearly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lab.iigtn.com/blog/aws-basics/11-iam-sts.html</loc><lastmod>2026-04-26</lastmod><changefreq>yearly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lab.iigtn.com/blog/aws-basics/12-acm.html</loc><lastmod>2026-04-26</lastmod><changefreq>yearly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lab.iigtn.com/blog/aws-basics/13-cloudwatch.html</loc><lastmod>2026-04-26</lastmod><changefreq>yearly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lab.iigtn.com/blog/aws-basics/14-sns-sqs.html</loc><lastmod>2026-04-26</lastmod><changefreq>yearly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lab.iigtn.com/blog/aws-basics/15-budgets.html</loc><lastmod>2026-04-26</lastmod><changefreq>yearly</changefreq><priority>0.7</priority></url>
+  <url>
     <loc>https://lab.iigtn.com/blog/ref/01-linux-files.html</loc>
     <lastmod>2026-04-26</lastmod>
     <changefreq>yearly</changefreq>

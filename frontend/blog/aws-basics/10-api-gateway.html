@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#aws-10 API Gateway — API ホスティング | AWS 基本サービス入門 | iigtn</title>
+<meta name="description" content="API Gateway を「何を解決するか / 採用判断 / Terraform 最小サンプル」で解説。HTTP API vs REST API / Lambda Proxy / カスタムドメイン / 認可 / WebSocket まで。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/aws-basics/10-api-gateway.html">
+<meta property="og:title" content="#aws-10 API Gateway">
+<meta property="og:description" content="HTTP API vs REST API / Lambda Proxy / 採用判断。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/aws-basics/10-api-gateway.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="#aws-10 API Gateway">
+<meta name="twitter:description" content="HTTP API vs REST API / Lambda Proxy / 採用判断。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="stylesheet" href="/blog/style.css">
+<script type="application/ld+json">
+{ "@context":"https://schema.org","@type":"TechArticle","headline":"#aws-10 API Gateway","description":"HTTP API vs REST API / Lambda Proxy / 採用判断。","datePublished":"2026-04-26","author":{"@type":"Person","name":"iigtn","url":"https://lab.iigtn.com/"},"publisher":{"@type":"Person","name":"iigtn"},"url":"https://lab.iigtn.com/blog/aws-basics/10-api-gateway.html","mainEntityOfPage":"https://lab.iigtn.com/blog/aws-basics/10-api-gateway.html","image":"https://lab.iigtn.com/assets/icon.svg","inLanguage":"ja","isPartOf":{"@id":"https://lab.iigtn.com/blog/aws-basics/#blog"} }
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="/" class="logo" aria-label="iigtn"><img src="/assets/logo.svg" alt="iigtn" height="32"></a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/" class="active">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+    </ul>
+  </nav>
+</header>
+
+<article class="post">
+  <header class="post-header">
+    <p class="post-meta">2026-04-26 · AWS 基本サービス入門 · #aws-10</p>
+    <h1>API Gateway — API ホスティング</h1>
+  </header>
+  <div class="post-body">
+
+    <h2>概要</h2>
+    <p>
+      <strong>Amazon API Gateway</strong> は HTTP/REST/WebSocket API を AWS 上にホストするフルマネージドサービス。
+      Lambda / DynamoDB / SQS / その他 HTTP バックエンドへのルーティング、認証認可、レート制限、ロギングを設定するだけで API が立ち上がります。
+    </p>
+    <p>
+      バリエーションは 3 つ: <strong>HTTP API (v2)</strong>、<strong>REST API (v1)</strong>、<strong>WebSocket API</strong>。
+      新規開発はまず HTTP API、複雑な要件があれば REST API、双方向通信なら WebSocket、と覚えると迷わない。
+    </p>
+
+    <h2>HTTP API vs REST API</h2>
+    <table>
+      <tr><th>観点</th><th>HTTP API (v2)</th><th>REST API (v1)</th></tr>
+      <tr><td>料金</td><td>$1.0 / 100万リクエスト</td><td>$3.5 / 100万リクエスト</td></tr>
+      <tr><td>レイテンシ</td><td>低 (60% 速い)</td><td>標準</td></tr>
+      <tr><td>OAuth/JWT</td><td>標準対応</td><td>Lambda Authorizer 自前</td></tr>
+      <tr><td>API Key / Usage Plan</td><td>無し</td><td>あり</td></tr>
+      <tr><td>SDK 自動生成</td><td>無し</td><td>あり</td></tr>
+      <tr><td>WAF 直接統合</td><td>無し (CloudFront 経由)</td><td>あり</td></tr>
+      <tr><td>カスタムドメイン</td><td>ACM 必要</td><td>ACM 必要</td></tr>
+    </table>
+    <p>
+      <strong>新規開発は HTTP API</strong> がデフォルト推奨。安く速い。API Key 必須・WAF 直接統合が要る案件は REST API。
+    </p>
+
+    <h2>主な機能</h2>
+    <ul>
+      <li><strong>Route</strong> — HTTP メソッド + パスのマッピング。<code>POST /contact</code> 等。</li>
+      <li><strong>Integration</strong> — Route から流す先。AWS_PROXY (Lambda) / HTTP_PROXY / AWS Service / Mock。</li>
+      <li><strong>Stage</strong> — 環境分離 (dev/stg/prod) と auto-deploy 設定。</li>
+      <li><strong>Authorizer</strong> — JWT / Lambda 認可関数 / IAM。</li>
+      <li><strong>Throttling</strong> — リクエスト/秒の上限制御。</li>
+      <li><strong>CORS</strong> — オリジン許可設定。HTTP API は YAML だけで完結。</li>
+      <li><strong>Custom Domain Name</strong> — <code>api.example.com</code> 等の独自ドメイン割り当て。ACM 証明書必要。</li>
+      <li><strong>WebSocket API</strong> — 双方向通信。チャットや通知。</li>
+      <li><strong>Access Log</strong> — JSON 形式のリクエストログを CloudWatch Logs / S3 へ出力。</li>
+    </ul>
+
+    <h2>使うべきパターン</h2>
+    <ul>
+      <li><strong>Lambda + サーバレス API</strong> — 三種の神器の中核。</li>
+      <li><strong>静的サイトに /api/* を生やす</strong> — CloudFront で /api/* を API Gateway に振り分けて 1 ドメイン化。</li>
+      <li><strong>OAuth/JWT 認証</strong> — Cognito User Pool や Auth0 と統合。</li>
+      <li><strong>外部公開 API</strong> — Throttling / Access Log で安全運用。</li>
+    </ul>
+
+    <h2>使わない方が良いパターン</h2>
+    <ul>
+      <li><strong>VPC 内専用 API</strong> — ALB + EC2/Fargate の方が直接的。Private API も可能だが要件が複雑なら ALB。</li>
+      <li><strong>低レイテンシ p99 が厳しい (50ms 未満)</strong> — API Gateway 自体が 30-50ms 加算する。直接 Lambda Function URL で繋ぐ方が速い。</li>
+      <li><strong>Lambda Function URL で十分</strong> — 単純な Webhook 受信なら Function URL の方が安く速い。</li>
+    </ul>
+
+    <h2>Terraform 最小サンプル（HTTP API + Lambda Proxy）</h2>
+<pre><code>resource "aws_apigatewayv2_api" "main" {
+  name          = "myapi"
+  protocol_type = "HTTP"
+
+  cors_configuration {
+    allow_origins = ["https://lab.iigtn.com"]
+    allow_methods = ["GET", "POST", "OPTIONS"]
+    allow_headers = ["Content-Type"]
+    max_age       = 3600
+  }
+}
+
+resource "aws_apigatewayv2_integration" "lambda" {
+  api_id                 = aws_apigatewayv2_api.main.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.fn.invoke_arn
+  payload_format_version = "2.0"
+}
+
+resource "aws_apigatewayv2_route" "post_contact" {
+  api_id    = aws_apigatewayv2_api.main.id
+  route_key = "POST /contact"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+}
+
+resource "aws_apigatewayv2_stage" "default" {
+  api_id      = aws_apigatewayv2_api.main.id
+  name        = "$default"
+  auto_deploy = true
+
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.api.arn
+    format = jsonencode({
+      requestId       = "$context.requestId"
+      ip              = "$context.identity.sourceIp"
+      method          = "$context.httpMethod"
+      path            = "$context.path"
+      status          = "$context.status"
+      responseLatency = "$context.responseLatency"
+    })
+  }
+}
+
+# Lambda の Resource Policy (API GW から呼べるようにする)
+resource "aws_lambda_permission" "apigw" {
+  statement_id  = "AllowAPIGW"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.fn.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
+}</code></pre>
+
+    <h2>採用評価ポイント</h2>
+    <ul>
+      <li><strong>HTTP API デフォルト</strong>を選択できる（料金 1/3、3 倍速）。</li>
+      <li><strong>Lambda Proxy 統合 + payload v2</strong> をデフォルトで書ける。</li>
+      <li><strong>Access Log を JSON で構造化</strong>して CloudWatch Logs Insights でクエリしやすくする発想。</li>
+      <li><strong>Lambda Permission の SourceArn 指定</strong>で「特定 API のみ呼べる」最小権限。</li>
+    </ul>
+
+    <h2>用語集</h2>
+    <dl>
+      <dt>HTTP API (v2) / REST API (v1)</dt><dd>API Gateway の 2 系統。新規は HTTP API、API Key/Usage Plan 必須なら REST API。</dd>
+      <dt>Lambda Proxy 統合 (AWS_PROXY)</dt><dd>HTTP リクエスト全体を Lambda Event に変換して渡す統合方式。</dd>
+      <dt>payload v2</dt><dd>HTTP API 用の新しい Event 形式。よりシンプルで使いやすい。</dd>
+      <dt>Stage</dt><dd>API のデプロイ環境分離。$default が標準。</dd>
+      <dt>Route</dt><dd>HTTP メソッド + パスの組合せ。<code>POST /contact</code> 等。</dd>
+      <dt>Integration</dt><dd>Route から流す先。AWS_PROXY (Lambda) / HTTP_PROXY / AWS Service / Mock。</dd>
+      <dt>Authorizer</dt><dd>JWT / Lambda / IAM の 3 種類で API 全体or Route 単位の認可を制御。</dd>
+      <dt>Throttling</dt><dd>リクエスト/秒上限の制御。アカウント / API / Route 単位で設定可。</dd>
+      <dt>WebSocket API</dt><dd>双方向通信用 API。チャットや通知向け。connection-id で同時接続を識別。</dd>
+      <dt>Lambda Function URL</dt><dd>API Gateway を介さずに Lambda を直接 HTTPS で公開する代替機能。</dd>
+    </dl>
+
+    <footer class="post-footer">
+      <a href="/blog/aws-basics/09-route53.html">← #aws-09 Route 53</a>
+      <a href="/blog/aws-basics/11-iam-sts.html">次: #aws-11 IAM + STS →</a>
+    </footer>
+  </div>
+</article>
+
+
+<footer style="max-width:920px;margin:3rem auto 0;padding:1.5rem 1.6rem;border-top:1px solid #e5e5e5;color:#666;font-size:0.85rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.6rem;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','Noto Sans JP',system-ui,sans-serif;">
+  <div>&copy; 2026 iigtn &mdash; Built with Terraform &amp; GitHub Actions</div>
+  <div>
+    <a href="/learn.html" style="color:#2a6acc;text-decoration:none;">解説書</a>
+    &nbsp;&middot;&nbsp;
+    <a href="https://github.com/iigtn/iigtn-platform" style="color:#2a6acc;text-decoration:none;">GitHub</a>
+    &nbsp;&middot;&nbsp;
+    <a href="/privacy.html" style="color:#2a6acc;text-decoration:none;">プライバシーポリシー</a>
+  </div>
+</footer>
+
+</body>
+</html>
