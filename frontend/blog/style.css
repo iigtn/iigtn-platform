@@ -14,7 +14,7 @@
   --c-info-bg: #e3f2fd;
   --c-info-border: #90caf9;
   --c-code-bg: #f6f8fa;
-  --max-width: 760px;
+  --max-width: 920px;
 }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
@@ -46,7 +46,22 @@ nav.top a:hover { color: var(--c-accent); }
 article.post {
   max-width: var(--max-width);
   margin: 0 auto;
-  padding: 2.5rem 1.2rem 4rem;
+  padding: 2.5rem 1.6rem 4rem;
+}
+/* 本文の文字列は読みやすさを保つため、コード/テーブルは横幅いっぱい使うが、
+   段落テキストは最大幅を制限して目線移動の幅を抑える */
+.post-body p,
+.post-body ul,
+.post-body ol,
+.post-body blockquote,
+.post-glossary {
+  max-width: 760px;
+}
+.post-body pre,
+.post-body table,
+.post-body .ascii,
+.post-body .callout {
+  max-width: 100%;
 }
 .post-header { margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--c-border); }
 .post-meta {
