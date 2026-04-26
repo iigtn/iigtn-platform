@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⑳ フリーランスポートフォリオ標準構成への再設計 + SES 通知稼働 | iigtn 構築日誌</title>
+<meta name="description" content="Web 検索でフリーランスエンジニアのポートフォリオ標準構成 (Hero / About / Skills / Works / Blog / Contact) を調査し、サイトを再構成。SES sandbox から問い合わせメール送信稼働までの最終仕上げ記録。">
+<link rel="stylesheet" href="/blog/style.css">
+</head>
+<body>
+
+<nav class="top">
+  <div class="nav-inner">
+    <a href="/">トップ</a>
+    <a href="/blog/">Blog 目次</a>
+    <a href="/learn.html">解説書</a>
+  </div>
+</nav>
+
+<article class="post">
+<header class="post-header">
+  <p class="post-meta">2026-04-26 · 構築日誌 #20</p>
+  <h1>ポートフォリオ標準構成への再設計 + SES 通知稼働</h1>
+</header>
+
+<div class="post-body">
+
+<p>インフラ・CI/CD・監視がすべて整ったところで、最後の仕上げ <strong>「サイトの構造を ポートフォリオ向けに再設計」</strong> + <strong>「SES sandbox から問い合わせメール送信稼働まで」</strong> を 1 記事にまとめます。本シリーズの最終構築回。</p>
+
+<h2>サイト UX の再設計 — Web 調査から</h2>
+
+<p>当初、トップページは <strong>「テスト ページ + 問い合わせフォーム + 解説書リンク」</strong> という構造でした。これだと「インフラはちゃんとしてるけど、サイト自体は雑」な印象に。フリーランスのポートフォリオなら、<strong>サイト構造そのもの</strong> も評価対象になります。</p>
+
+<p>そこで Web 検索でフリーランスエンジニアの標準的なサイト構成を調査:</p>
+
+<ul>
+  <li>Hero（ファーストビュー）— 訪問者を物語に引き込む</li>
+  <li>About（自己紹介）— 「何者で何をやってきた人か」</li>
+  <li>Skills（スキル）— 技術スタックの提示</li>
+  <li>Works（実績）— ケーススタディ 3〜5 件</li>
+  <li>Blog（任意）— 継続発信の場</li>
+  <li>Contact（問い合わせ）— 案件相談の導線</li>
+</ul>
+
+<p>これがフリーランス・エンジニアサイトの黄金パターンと判明。本シリーズでも採用しました。</p>
+
+<h2>本サイトの構成（再設計後）</h2>
+
+<table>
+<tr><th>セクション</th><th>内容</th></tr>
+<tr><td><strong>Hero</strong></td><td>キャッチコピー + 「実績を見る」「お問い合わせ」「解説書を読む」3 つの CTA</td></tr>
+<tr><td><strong>About</strong></td><td>専門領域・働き方・所在の概要カード</td></tr>
+<tr><td><strong>Skills</strong></td><td>6 カテゴリ × タグクラウド（AWS / IaC / Linux / アプリ / 観測 / セキュリティ）</td></tr>
+<tr><td><strong>Works</strong></td><td>iigtn-platform を最初の実績として、今後追加予定の枠付き</td></tr>
+<tr><td><strong>Blog</strong></td><td>本シリーズへのリンク</td></tr>
+<tr><td><strong>Contact</strong></td><td>問い合わせフォーム（既存の API GW + Lambda + DDB に接続）</td></tr>
+</table>
+
+<p>Sticky なナビゲーションを上に固定して、各セクションへ anchor リンクで飛べる構造に。スマホでも Nav が flex-wrap で折り返す。</p>
+
+<h2>Hero のデザイン</h2>
+
+<p>シンプルな 1 文字モノグラム（"i"）+ キャッチコピーで構成:</p>
+
+<pre><code>&lt;section class="hero"&gt;
+  &lt;div class="hero-monogram"&gt;i&lt;/div&gt;
+  &lt;h1&gt;サーバレス × IaC で&lt;br&gt;
+      動かし続ける &lt;span class="accent"&gt;インフラ&lt;/span&gt; を。&lt;/h1&gt;
+  &lt;p class="tagline"&gt;
+    AWS / Linux / Terraform を軸に、フリーランス・インフラエンジニアとして…
+  &lt;/p&gt;
+  &lt;div class="hero-cta"&gt;
+    &lt;a href="#works" class="btn btn-primary"&gt;実績を見る&lt;/a&gt;
+    &lt;a href="#contact" class="btn btn-ghost"&gt;お問い合わせ&lt;/a&gt;
+    &lt;a href="/learn.html" class="btn btn-ghost"&gt;解説書を読む →&lt;/a&gt;
+  &lt;/div&gt;
+&lt;/section&gt;
+</code></pre>
+
+<p>顔写真の代わりにモノグラム使用。CSS の linear-gradient + box-shadow で「ちゃんと作った感」を出す。</p>
+
+<h2>Skills セクション</h2>
+
+<p>カテゴリ別にカードを並べ、タグクラウドで表現:</p>
+
+<pre><code>&lt;div class="skill-card"&gt;
+  &lt;h3&gt;☁️ AWS&lt;/h3&gt;
+  &lt;ul class="skill-tags"&gt;
+    &lt;li class="skill-tag"&gt;CloudFront&lt;/li&gt;
+    &lt;li class="skill-tag"&gt;S3&lt;/li&gt;
+    &lt;li class="skill-tag"&gt;Lambda&lt;/li&gt;
+    ...
+  &lt;/ul&gt;
+&lt;/div&gt;
+</code></pre>
+
+<p>カテゴリは 6 個（AWS / IaC・自動化 / Linux・ネットワーク / アプリ・言語 / 観測・運用 / セキュリティ）。1 カード = 1 専門領域で見せる。</p>
+
+<h2>SES 通知の有効化</h2>
+
+<p>サイト構造ができたところで、最後に問い合わせフォームの <strong>メール送信</strong> を有効化しました。Lambda コードは最初から SES 対応済でしたが、SES の Identity verify と環境変数設定が必要。</p>
+
+<h2>SES sandbox の制約</h2>
+
+<p>新規 AWS アカウントの SES は <strong>sandbox 状態</strong> で始まります:</p>
+
+<ul>
+  <li>送信元 / 送信先 の両方が verify 済み必須</li>
+  <li>1 日 200 通まで</li>
+  <li>1 秒に 1 通まで</li>
+</ul>
+
+<p>個人ポートフォリオの問い合わせ流量なら十分すぎる。本番化したい時は Production Access 申請（1〜2 営業日）で解除可能。</p>
+
+<h2>verify の手順</h2>
+
+<p>contact@iigtn.com を SES に Identity 登録:</p>
+
+<pre><code>aws sesv2 create-email-identity \
+  --region ap-northeast-1 \
+  --email-identity contact@iigtn.com
+</code></pre>
+
+<p>これで AWS から「Amazon Web Services – Email Address Verification Request」のメールが contact@iigtn.com に届く。<strong>「Verify this email address」リンクをクリック</strong> すると verify 完了。</p>
+
+<pre><code>aws sesv2 get-email-identity \
+  --region ap-northeast-1 \
+  --email-identity contact@iigtn.com \
+  --query 'VerificationStatus'
+# "SUCCESS"
+</code></pre>
+
+<h2>Lambda 環境変数の更新</h2>
+
+<p>Terraform の tfvars に SES 設定を追加:</p>
+
+<pre><code># terraform/envs/prod/terraform.tfvars
+ses_from = "contact@iigtn.com"
+ses_to   = "contact@iigtn.com"
+</code></pre>
+
+<p><code>terraform apply</code> で Lambda の環境変数 <code>SES_FROM</code> / <code>SES_TO</code> が更新されます。</p>
+
+<h2>動作確認</h2>
+
+<pre><code># 本番フォーム経由でテスト送信
+curl -X POST "https://lab.iigtn.com/api/contact" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Test","email":"a@b.com","message":"SES verification test"}'
+# {"ok":true}
+
+# SES の送信実績確認
+aws sesv2 get-account --region ap-northeast-1 \
+  --query 'SendQuota'
+# {
+#   "Max24HourSend": 200.0,
+#   "MaxSendRate": 1.0,
+#   "SentLast24Hours": 1.0  ← 1 通送信実績
+# }
+</code></pre>
+
+<p>contact@iigtn.com の受信ボックスにメールが届けば成功:</p>
+
+<pre><code>From: contact@iigtn.com
+To:   contact@iigtn.com
+Subject: [iigtn] New contact: Test
+
+New contact submission
+ID: &lt;UUID&gt;
+Time: 2026-04-26T13:00:00.000Z
+Name: Test
+Email: a@b.com
+Source IP: ...
+
+Message:
+SES verification test
+</code></pre>
+
+<h2>Lambda コードの SES 連携</h2>
+
+<p>Lambda 内では try/catch で SES エラーを吸収:</p>
+
+<pre><code>// SES でメール送信 (失敗しても致命的扱いはしない)
+if (SES_FROM &amp;&amp; SES_TO) {
+  try {
+    await sesClient.send(new SendEmailCommand({
+      FromEmailAddress: SES_FROM,
+      Destination: { ToAddresses: [SES_TO] },
+      Content: {
+        Simple: {
+          Subject: { Data: `[iigtn] New contact: ${item.name}`, Charset: "UTF-8" },
+          Body:    { Text: { Data: emailBody, Charset: "UTF-8" } },
+        },
+      },
+    }));
+  } catch (err) {
+    // sandbox 制限などで送信失敗 → ログだけ残し、フロントには成功扱い
+    console.warn("SES SendEmail failed (continuing)", { id, err: err.message });
+  }
+}
+</code></pre>
+
+<p>SES が落ちても DDB には保存される。フォームの体験を壊さない設計。</p>
+
+<h2>本シリーズで完成したもの全部</h2>
+
+<table>
+<tr><th>領域</th><th>状態</th></tr>
+<tr><td>Terraform モジュール 5 個</td><td>✅ network_dns / frontend_cdn / backend_api / ci_oidc / observability</td></tr>
+<tr><td>静的サイト</td><td>✅ S3 + CloudFront + OAC + ACM</td></tr>
+<tr><td>動的 API</td><td>✅ API Gateway + Lambda + DynamoDB</td></tr>
+<tr><td>CI/CD</td><td>✅ GitHub Actions OIDC（静的キーレス）</td></tr>
+<tr><td>監視</td><td>✅ CloudWatch Alarms + SNS（ap-northeast-1 + us-east-1）</td></tr>
+<tr><td>予算アラート</td><td>✅ AWS Budgets 3 段階通知</td></tr>
+<tr><td>メール通知</td><td>✅ SES（sandbox 内、contact@iigtn.com 宛）</td></tr>
+<tr><td>解説書</td><td>✅ /learn.html（インライン drawio 図 4 個）</td></tr>
+<tr><td>サイト UX</td><td>✅ Hero / About / Skills / Works / Blog / Contact</td></tr>
+<tr><td>ブログシリーズ</td><td>✅ 全 21 記事（このシリーズ）</td></tr>
+</table>
+
+<h2>これから追加していく予定</h2>
+
+<ul>
+  <li>SES Production Access 申請（任意のメアドへ送信可能化）</li>
+  <li>WAF 動的有効化（攻撃検知時に自動 ON）</li>
+  <li>実案件のケーススタディ追加（匿名化）</li>
+  <li>月次運用メトリクスのブログ化</li>
+  <li>ADR（Architecture Decision Records）の継続執筆</li>
+  <li>本格 CMS 化（外部寄稿者が増えた時）</li>
+</ul>
+
+<h2>シリーズ振り返り</h2>
+
+<p>本シリーズは個人サイト 1 つを構築する記録ですが、書いてみて気付いたのは <strong>「設計 / 実装 / 運用 / 観測 / ドキュメント / UX のすべてを通しでやる経験」が、案件で一番効く</strong> ということ。</p>
+
+<p>1 つの技術を深く知ることも大事ですが、フリーランスとしてクライアントに提案するなら、<strong>「全部繋がる経験」</strong> こそが信用になります。</p>
+
+<h2>最後に</h2>
+
+<p>本シリーズで使った全リソースの <strong>月額コストは約 200 円</strong>。1 万円の本を 1 冊買うより安い金額で、AWS / Terraform / GitHub Actions の実戦経験が手に入ります。</p>
+
+<p>「やってみたい」と思ったら、まず最小構成（S3 + CloudFront）から始めれば 1 日でサイトが立ちます。本シリーズが、その最初の一歩の参考になれば嬉しいです。</p>
+
+<h2>次の記事（最終回）</h2>
+
+<p>次は本シリーズの <strong>付録: 構築で使ったコマンド早見表</strong>。PowerShell / Git / AWS CLI / Terraform / curl / npm 等の頻出コマンドを 1 ページにまとめます。手元に置いてリファレンスとして使えます。</p>
+
+</div>
+
+<section class="post-glossary">
+<h2>📚 用語集</h2>
+<dl>
+<dt>Hero (ファーストビュー)</dt>
+<dd>サイトのトップで最初に表示されるエリア。キャッチコピー + メイン画像 + CTA で訪問者を引き込む。</dd>
+
+<dt>CTA (Call To Action)</dt>
+<dd>「行動を促すボタン・リンク」。「実績を見る」「お問い合わせ」「資料請求」等。Hero に複数置くのが定番。</dd>
+
+<dt>About セクション</dt>
+<dd>「私は誰で、何ができるか」を伝えるエリア。プロフィール・写真・経歴・価値観等。</dd>
+
+<dt>Skills セクション</dt>
+<dd>技術スタック・スキルセットを提示するエリア。タグクラウド形式が見やすい。</dd>
+
+<dt>Works (実績・制作物)</dt>
+<dd>これまでの制作・案件を紹介するエリア。3〜5 件のケーススタディが推奨。</dd>
+
+<dt>Blog セクション</dt>
+<dd>継続的な発信の場。技術ブログ / 月次運用レポート / Post-mortem 等を載せる。</dd>
+
+<dt>Contact セクション</dt>
+<dd>問い合わせフォーム。フリーランスサイトでは案件相談の導線として最重要。</dd>
+
+<dt>sticky navigation</dt>
+<dd>スクロールしても画面上部に固定されるナビゲーション。CSS の <code>position: sticky</code> で実現。</dd>
+
+<dt>SES (Simple Email Service)</dt>
+<dd>AWS のメール送信サービス。sandbox 状態と Production 状態がある。</dd>
+
+<dt>SES sandbox</dt>
+<dd>新規アカウントの SES の初期状態。送信元 / 送信先の verify 必須・1 日 200 通までの制限。</dd>
+
+<dt>SES Production Access</dt>
+<dd>SES sandbox から本番モードへの移行。AWS にユースケース説明を申請して承認を得る（1〜2 営業日）。</dd>
+
+<dt>Email Identity (SES)</dt>
+<dd>SES に登録するメールアドレスや送信ドメイン。verify 完了で送信元 / 送信先として使える。</dd>
+
+<dt>SendEmail / SendRawEmail (SES API)</dt>
+<dd>SES のメール送信 API。SendEmail はシンプル、SendRawEmail は MIME 全制御。本シリーズでは SESv2 の SendEmail を使用。</dd>
+
+<dt>SendQuota</dt>
+<dd>SES の送信制限。<code>Max24HourSend</code>（1 日上限）/ <code>MaxSendRate</code>（1 秒上限）/ <code>SentLast24Hours</code>（実績）。</dd>
+
+<dt>DKIM (DomainKeys Identified Mail)</dt>
+<dd>送信ドメイン認証の仕組み。SES でドメイン verify する時に必要。Squarespace 等で TXT レコードを追加。</dd>
+
+<dt>SPF (Sender Policy Framework)</dt>
+<dd>送信元 IP の正当性を DNS で宣言する仕組み。SES 利用時は SPF レコードに <code>include:amazonses.com</code> を追加。</dd>
+</dl>
+</section>
+
+<footer class="post-footer">
+<span>← 前 <a href="/blog/19-drawio.html">⑲ drawio (AWS 公式アイコン) でアーキテクチャ図</a></span>
+<span>次 → <a href="/blog/21-command-cheatsheet.html">㉑ 付録: 構築で使ったコマンド早見表</a></span>
+</footer>
+
+</article>
+
+</body>
+</html>

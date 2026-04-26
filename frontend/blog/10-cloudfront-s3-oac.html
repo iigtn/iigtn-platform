@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⑩ CloudFront + S3 + OAC でセキュアな静的サイト配信 | iigtn 構築日誌</title>
+<meta name="description" content="非公開 S3 バケットを CloudFront 経由で世界に配信する構成。OAC (Origin Access Control) と Bucket Policy の SourceArn 条件で、CloudFront だけがアクセスできる「公開しないバケット」を実現。">
+<link rel="stylesheet" href="/blog/style.css">
+</head>
+<body>
+
+<nav class="top">
+  <div class="nav-inner">
+    <a href="/">トップ</a>
+    <a href="/blog/">Blog 目次</a>
+    <a href="/learn.html">解説書</a>
+  </div>
+</nav>
+
+<article class="post">
+<header class="post-header">
+  <p class="post-meta">2026-04-26 · 構築日誌 #10</p>
+  <h1>CloudFront + S3 + OAC でセキュアな静的サイト配信</h1>
+</header>
+
+<div class="post-body">
+
+<p>静的サイトの配信構成として最も枯れていてセキュアなのが <strong>S3 (非公開) + CloudFront + OAC</strong> の組み合わせです。本記事ではこの 3 点セットで「公開しないバケットを世界に配信する」仕組みと、Terraform での実装を解説します。</p>
+
+<h2>なぜ S3 を直接公開しないのか</h2>
+
+<p>S3 は静的ホスティング機能を持っていて、バケットを Public にすればそれだけでサイト配信できます。便利ですが、運用するなら避けたほうが良い理由が複数あります:</p>
+
+<ul>
+  <li><strong>HTTPS が無料で付かない</strong>（独自ドメインで HTTPS 配信したいなら CloudFront は事実上必須）</li>
+  <li><strong>キャッシュが効かない</strong>（毎リクエスト S3 を叩く → 遅い・S3 リクエスト課金が増える）</li>
+  <li><strong>誤公開リスク</strong>（Bucket Policy 1 行で全世界に意図しないファイルが見える事故）</li>
+  <li><strong>セキュリティヘッダ付与不可</strong>（X-Frame-Options 等を返せない）</li>
+</ul>
+
+<p>結論、S3 は<strong>「ファイル置き場」</strong>として完全非公開、世界に見せるのは<strong>「CloudFront だけ」</strong>。これがベストプラクティス。</p>
+
+<h2>OAC (Origin Access Control) とは</h2>
+
+<p>「CloudFront だけが S3 を読める」を実現する仕組みが OAC。CloudFront 経由のリクエストに AWS SigV4 署名を付与し、S3 はその署名をチェックして「これは認可された CloudFront からのアクセスだな」と判断します。</p>
+
+<table>
+<tr><th></th><th>OAC（推奨）</th><th>OAI（旧式）</th></tr>
+<tr><td>方式</td><td>SigV4 署名</td><td>IAM Principal</td></tr>
+<tr><td>SSE-KMS S3 対応</td><td>○</td><td>×</td></tr>
+<tr><td>S3 以外の Origin</td><td>○（Lambda 関数 URL 等）</td><td>×（S3 専用）</td></tr>
+<tr><td>新規構築</td><td>こちらを使う</td><td>非推奨</td></tr>
+</table>
+
+<p>面接で「OAC と OAI の違いは？」は定番質問。新規構築は OAC 一択です。</p>
+
+<h2>本シリーズの frontend_cdn モジュール</h2>
+
+<p>このモジュールが作るリソースは 7 個:</p>
+
+<ol>
+  <li><code>aws_s3_bucket</code> — バケット本体</li>
+  <li><code>aws_s3_bucket_public_access_block</code> — 公開ブロック 4 種</li>
+  <li><code>aws_s3_bucket_versioning</code> — ロールバック用</li>
+  <li><code>aws_s3_bucket_server_side_encryption_configuration</code> — AES256 暗号化</li>
+  <li><code>aws_cloudfront_origin_access_control</code> — OAC</li>
+  <li><code>aws_cloudfront_distribution</code> — CDN 本体</li>
+  <li><code>aws_s3_bucket_policy</code> — CloudFront だけ許可</li>
+</ol>
+
+<h2>S3 バケット + 安全装置 3 種</h2>
+
+<p>5.x 系の AWS Provider では、バケット作成と「公開ブロック・暗号化・バージョニング」は別リソースに分かれています:</p>
+
+<pre><code>resource "aws_s3_bucket" "this" {
+  bucket = var.bucket_name
+  tags   = var.tags
+}
+
+# 公開ブロック 4 種すべて true
+resource "aws_s3_bucket_public_access_block" "this" {
+  bucket = aws_s3_bucket.this.id
+
+  block_public_acls       = true   # ACL の public 設定をブロック
+  ignore_public_acls      = true   # 既存の public ACL を無視
+  block_public_policy     = true   # public な Bucket Policy をブロック
+  restrict_public_buckets = true   # public Bucket Policy を持つバケットを完全制限
+}
+
+# バージョニング ON
+resource "aws_s3_bucket_versioning" "this" {
+  bucket = aws_s3_bucket.this.id
+  versioning_configuration { status = "Enabled" }
+}
+
+# AES256 暗号化
+resource "aws_s3_bucket_server_side_encryption_configuration" "this" {
+  bucket = aws_s3_bucket.this.id
+  rule {
+    apply_server_side_encryption_by_default { sse_algorithm = "AES256" }
+  }
+}
+</code></pre>
+
+<h2>OAC リソース</h2>
+
+<pre><code>resource "aws_cloudfront_origin_access_control" "this" {
+  name                              = "${var.bucket_name}-oac"
+  origin_access_control_origin_type = "s3"
+  signing_behavior                  = "always"   # 常に SigV4 署名
+  signing_protocol                  = "sigv4"
+}
+</code></pre>
+
+<h2>CloudFront Distribution の origin に OAC を紐付け</h2>
+
+<pre><code>resource "aws_cloudfront_distribution" "this" {
+  enabled         = true
+  is_ipv6_enabled = true
+  http_version    = "http2and3"
+  aliases         = [var.domain_name]
+  price_class     = "PriceClass_200"
+  default_root_object = "index.html"
+
+  origin {
+    domain_name              = aws_s3_bucket.this.bucket_regional_domain_name
+    origin_id                = "s3-${var.bucket_name}"
+    origin_access_control_id = aws_cloudfront_origin_access_control.this.id
+  }
+
+  # ... default_cache_behavior, viewer_certificate, etc.
+}
+</code></pre>
+
+<h2>Bucket Policy の Source ARN 条件</h2>
+
+<p>OAC を作っただけでは S3 側で「お前を許可してない」と弾かれます（403）。Bucket Policy で「この Distribution からの GetObject だけ許可」を明示します:</p>
+
+<pre><code>data "aws_iam_policy_document" "bucket" {
+  statement {
+    sid    = "AllowCloudFrontReadViaOAC"
+    effect = "Allow"
+
+    principals {
+      type        = "Service"
+      identifiers = ["cloudfront.amazonaws.com"]
+    }
+
+    actions   = ["s3:GetObject"]
+    resources = ["${aws_s3_bucket.this.arn}/*"]
+
+    # この Distribution からのリクエストだけに絞る
+    condition {
+      test     = "StringEquals"
+      variable = "aws:SourceArn"
+      values   = [aws_cloudfront_distribution.this.arn]
+    }
+  }
+}
+
+resource "aws_s3_bucket_policy" "this" {
+  bucket = aws_s3_bucket.this.id
+  policy = data.aws_iam_policy_document.bucket.json
+}
+</code></pre>
+
+<p>SourceArn 条件があるから、<strong>他人の CloudFront から自分の S3 を読まれる事故</strong> が物理的に起きません。これが OAC + SourceArn の合わせ技の強さ。</p>
+
+<h2>OAC のハマりポイント: 両側設定</h2>
+
+<p>OAC は「Distribution 側」と「Bucket Policy 側」の両方を設定して初めて動きます。片方だけだと <strong>黙って 403</strong> を返すので「設定したつもり」事故が起きやすい。</p>
+
+<div class="callout warn">
+症状: <code>https://lab.iigtn.com/</code> が <code>AccessDenied</code> XML を返す
+原因: 9 割は OAC ↔ Bucket Policy の片方だけ設定 or SourceArn が古い ARN
+対処: Bucket Policy の <code>aws:SourceArn</code> condition と CloudFront Distribution ARN が一致しているか確認
+</div>
+
+<h2>Distribution の作成時間</h2>
+
+<p>CloudFront Distribution の <code>terraform apply</code> は <strong>10〜15 分</strong> かかります。これは世界中の Edge ロケーションへの設定配布が必要だから。「Still creating... [10m elapsed]」と出ても異常ではありません。</p>
+
+<p>本シリーズの初回構築では 3 分 10 秒で完了しました。AWS 側の状況により変動します。</p>
+
+<h2>動作確認</h2>
+
+<p>apply 後、CloudFront ドメインに直接アクセスして 200 を確認:</p>
+
+<pre><code>curl -sI https://dXXXXXXXXX.cloudfront.net/
+# HTTP/1.1 200 OK
+# Content-Type: text/html
+# x-amz-server-side-encryption: AES256   ← S3 暗号化が効いている証拠
+# Server: AmazonS3
+# Via: 1.1 ...cloudfront.net (CloudFront)
+# X-Cache: Miss from cloudfront            ← 初回はキャッシュ未ヒット
+# X-Amz-Cf-Pop: NRT12-P4                    ← 東京 Edge から配信
+</code></pre>
+
+<p>S3 を直接（バケット URL）叩くと 403。CloudFront 経由なら 200。これが OAC が効いている証拠です。</p>
+
+<h2>Bucket Policy 適用順序の罠</h2>
+
+<p>Public Access Block と Bucket Policy は <strong>適用順序</strong> に注意:</p>
+
+<pre><code>resource "aws_s3_bucket_policy" "this" {
+  bucket = aws_s3_bucket.this.id
+  policy = data.aws_iam_policy_document.bucket.json
+
+  depends_on = [aws_s3_bucket_public_access_block.this]   # ← 明示的に依存を指定
+}
+</code></pre>
+
+<p><code>depends_on</code> を入れる理由: 先に Bucket Policy を作ると Public Access Block の <code>BlockPublicPolicy=true</code> に弾かれることがある。先に Public Access Block を確定させてから Bucket Policy を書くべき。</p>
+
+<h2>次の記事</h2>
+
+<p>CloudFront の基本構成ができたところで、次は <strong>キャッシュ動作・セキュリティヘッダ・SPA 用エラーフォールバック</strong> など、Distribution の設定深堀りに入ります。AWS マネージドの Cache Policy / Response Headers Policy の使いどころを解説します。</p>
+
+</div>
+
+<section class="post-glossary">
+<h2>📚 用語集</h2>
+<dl>
+<dt>S3 静的ホスティング</dt>
+<dd>S3 バケット単体で「サイトとして公開」する機能。HTTPS が無料で付かない・キャッシュなし等の制約があるため、本格運用では CloudFront と組み合わせる。</dd>
+
+<dt>CloudFront Distribution</dt>
+<dd>CloudFront の設定単位。1 ドメイン分の CDN 構成。世界中の Edge ロケーションに展開される。</dd>
+
+<dt>Origin (CloudFront)</dt>
+<dd>CloudFront が大元のファイルを取りに行く先。S3・API Gateway・カスタムオリジン等。</dd>
+
+<dt>OAC (Origin Access Control)</dt>
+<dd>CloudFront から S3 へのアクセスを認証する最新の仕組み。SigV4 署名を使う。OAI の後継で、KMS 暗号化バケットや S3 以外のオリジンにも対応。</dd>
+
+<dt>OAI (Origin Access Identity)</dt>
+<dd>OAC の旧式。IAM Principal を使う方式。新規構築では OAC 推奨。</dd>
+
+<dt>SigV4 署名</dt>
+<dd>AWS API 呼び出しの認証署名方式。リクエストに HMAC-SHA256 ベースの署名を付ける。OAC はこれを使う。</dd>
+
+<dt>Bucket Policy</dt>
+<dd>S3 バケットへのアクセス権を JSON で定義するポリシー。Principal（誰）・Action（何を）・Resource（どれに）・Condition（どんな条件で）を記述。</dd>
+
+<dt>aws:SourceArn condition</dt>
+<dd>Bucket Policy の条件で「特定のサービス・リソースからのリクエストだけ許可」と絞る記法。これで「自分の Distribution からのみ」を実現。</dd>
+
+<dt>Public Access Block</dt>
+<dd>S3 バケットの「うっかり public 化」を構造的に防ぐ 4 つのスイッチ。<code>BlockPublicAcls</code> / <code>IgnorePublicAcls</code> / <code>BlockPublicPolicy</code> / <code>RestrictPublicBuckets</code>。全部 true が定石。</dd>
+
+<dt>Versioning (S3)</dt>
+<dd>S3 オブジェクトの旧バージョン保持機能。誤デプロイのロールバックに有効。</dd>
+
+<dt>SSE-S3 (AES256)</dt>
+<dd>AWS 管理キーでの自動暗号化。コスト 0、設定 1 行。</dd>
+
+<dt>http2and3 (HTTP/3)</dt>
+<dd>CloudFront でサポートする HTTP プロトコル。HTTP/3（QUIC）対応で新しいクライアントの体感速度が向上。</dd>
+
+<dt>Price Class</dt>
+<dd>CloudFront の Edge 範囲設定。<code>PriceClass_100</code>（北米欧州のみ・最安）/ <code>PriceClass_200</code>（+ アジア）/ <code>PriceClass_All</code>（全世界）。</dd>
+
+<dt>default_root_object</dt>
+<dd>CloudFront でルート URL（<code>/</code>）にアクセスされた時に返すデフォルトファイル。通常 <code>index.html</code>。</dd>
+
+<dt>X-Cache: Miss/Hit from cloudfront</dt>
+<dd>CloudFront のレスポンスヘッダ。Hit ならキャッシュから返した、Miss なら Origin に取りに行ったことを示す。</dd>
+
+<dt>X-Amz-Cf-Pop</dt>
+<dd>CloudFront のレスポンスヘッダで、配信した Edge ロケーション識別子。<code>NRT12-P4</code> なら東京（成田）の Edge。</dd>
+
+<dt>depends_on (Terraform)</dt>
+<dd>「このリソースは別のリソースが先に作られていることを必要とする」を明示する記法。通常は参照関係で自動推論されるが、暗黙の依存があるときに使う。</dd>
+</dl>
+</section>
+
+<footer class="post-footer">
+<span>← 前 <a href="/blog/09-squarespace-dns.html">⑨ Squarespace の NS 委譲問題</a></span>
+<span>次 → <a href="/blog/11-cloudfront-cache-spa.html">⑪ CloudFront のキャッシュ・セキュリティ・SPA 設定</a></span>
+</footer>
+
+</article>
+
+</body>
+</html>

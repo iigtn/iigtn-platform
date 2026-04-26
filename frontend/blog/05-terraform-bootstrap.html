@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⑤ Terraform Bootstrap — 鶏卵問題の解決 | iigtn 構築日誌</title>
+<meta name="description" content="Terraform の state を S3 + DynamoDB Lock で集中管理する構成。「state を置く場所自体を Terraform で作れない」鶏卵問題と、bootstrap シェルスクリプトで解決した手順を解説。">
+<link rel="stylesheet" href="/blog/style.css">
+</head>
+<body>
+
+<nav class="top">
+  <div class="nav-inner">
+    <a href="/">トップ</a>
+    <a href="/blog/">Blog 目次</a>
+    <a href="/learn.html">解説書</a>
+  </div>
+</nav>
+
+<article class="post">
+<header class="post-header">
+  <p class="post-meta">2026-04-25 · 構築日誌 #05</p>
+  <h1>Terraform Bootstrap — 鶏卵問題の解決</h1>
+</header>
+
+<div class="post-body">
+
+<p>Terraform を使うと、最初にぶつかる構造的な問題が <strong>「state ファイルをどこに置くか」</strong>。本記事ではその解決策である <strong>S3 backend + DynamoDB Lock</strong> 構成と、それを「Terraform 自身では作れない」鶏卵問題、そして bootstrap シェルスクリプトでの解消について書きます。</p>
+
+<h2>そもそも state とは</h2>
+
+<p>Terraform は <code>.tf</code> ファイルに「望ましい状態」を書きます。実際の AWS の状態は刻々と変わるので、Terraform は「いま自分が管理しているリソース」を記録するファイルを持っています。これが <strong>state</strong>（<code>terraform.tfstate</code>）です。</p>
+
+<p>state はマシンの中で「現実とコードの差分計算」に使われます。これが無いと <code>terraform plan</code> ができません。</p>
+
+<h2>state をローカルに置くとマズい理由</h2>
+
+<p>初心者向けチュートリアルでは <code>terraform.tfstate</code> がローカルに作られます。これを本番運用するとすぐに事故ります:</p>
+
+<ul>
+  <li><strong>消えると詰む</strong>: マシン故障や誤って <code>rm</code> したら、AWS 上のリソースを「Terraform が知らないもの」として扱う羽目になる</li>
+  <li><strong>共有不可</strong>: チームで Terraform を回せない（複数人が独自の state を持つことになる）</li>
+  <li><strong>同時 apply の事故</strong>: 複数人が同時に <code>terraform apply</code> すると state が壊れる</li>
+  <li><strong>機密値が含まれる</strong>: state には IAM Role ARN や ACM 証明書 ARN などが平文で入る → ローカルに置くとうっかり commit する</li>
+</ul>
+
+<h2>S3 backend + DynamoDB Lock 構成</h2>
+
+<p>これらの問題を解決する定石が、Terraform の S3 backend + DynamoDB Lock です:</p>
+
+<ul>
+  <li><strong>S3 バケット</strong>: tfstate ファイルを保存。バージョニング ON でロールバック可能</li>
+  <li><strong>DynamoDB テーブル</strong>: <code>terraform apply</code> 中に排他ロックを取り、同時実行を防ぐ</li>
+</ul>
+
+<p>本シリーズでは以下の名前で作りました:</p>
+
+<table>
+<tr><th>用途</th><th>名前</th><th>設定</th></tr>
+<tr><td>state バケット</td><td><code>iigtn-tfstate-XXXXXXXXXXXX</code></td><td>バージョニング ON, AES256, Public Access Block 全 ON</td></tr>
+<tr><td>ロックテーブル</td><td><code>iigtn-tflock</code></td><td>PK = LockID (String), On-demand</td></tr>
+</table>
+
+<p>S3 バケット名にアカウント ID を入れているのは、<strong>S3 バケット名は AWS 全体でグローバル一意</strong> という制約があるため。アカウント ID を suffix にするのが慣例です。</p>
+
+<h2>鶏卵問題</h2>
+
+<p>ここで問題が発生します。S3 バケットと DynamoDB テーブルを Terraform で作ろうとすると…</p>
+
+<div class="callout warn">
+「state を S3 に置きたい」 → 「S3 を Terraform で作る」 → 「でも Terraform を動かすには state を置く場所が必要」 → 「その場所がまだ無い」 → 詰み
+</div>
+
+<p>これが Terraform 始めの定番の鶏卵問題です。S3 backend を初めて使う人がここで詰まります。</p>
+
+<h2>解決策: bootstrap だけ AWS CLI で手動</h2>
+
+<p>解決法はシンプル: <strong>state を置く S3 バケットと DynamoDB テーブルだけは AWS CLI で手動で作る</strong>。これら 2 個は Terraform で管理しません。それ以降のすべてのリソースは Terraform で管理します。</p>
+
+<p>本シリーズでは、これを <code>terraform/bootstrap/setup.sh</code> という idempotent なシェルスクリプトにまとめました。何度実行しても安全（既に存在すればスキップ）。</p>
+
+<h2>setup.sh の中身</h2>
+
+<pre><code>#!/usr/bin/env bash
+set -euo pipefail
+
+REGION="${REGION:-ap-northeast-1}"
+ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
+BUCKET="iigtn-tfstate-${ACCOUNT_ID}"
+TABLE="iigtn-tflock"
+
+# ── S3 バケット作成 (idempotent) ────────────────────
+if aws s3api head-bucket --bucket "$BUCKET" 2&gt;/dev/null; then
+  echo "[skip] $BUCKET already exists"
+else
+  aws s3api create-bucket \
+    --bucket "$BUCKET" \
+    --region "$REGION" \
+    --create-bucket-configuration LocationConstraint="$REGION"
+fi
+
+# バージョニング ON
+aws s3api put-bucket-versioning \
+  --bucket "$BUCKET" \
+  --versioning-configuration Status=Enabled
+
+# 暗号化 (AES256)
+aws s3api put-bucket-encryption \
+  --bucket "$BUCKET" \
+  --server-side-encryption-configuration \
+  '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
+
+# Public Block 全 ON
+aws s3api put-public-access-block \
+  --bucket "$BUCKET" \
+  --public-access-block-configuration \
+    BlockPublicAcls=true,IgnorePublicAcls=true,\
+BlockPublicPolicy=true,RestrictPublicBuckets=true
+
+# ── DynamoDB テーブル作成 (idempotent) ──────────────
+if aws dynamodb describe-table --table-name "$TABLE" --region "$REGION" &gt;/dev/null 2&gt;&amp;1; then
+  echo "[skip] $TABLE already exists"
+else
+  aws dynamodb create-table \
+    --table-name "$TABLE" \
+    --attribute-definitions AttributeName=LockID,AttributeType=S \
+    --key-schema AttributeName=LockID,KeyType=HASH \
+    --billing-mode PAY_PER_REQUEST \
+    --region "$REGION"
+  aws dynamodb wait table-exists --table-name "$TABLE" --region "$REGION"
+fi
+
+echo "Done."
+</code></pre>
+
+<h2>実行手順</h2>
+
+<p>AWS CLI のプロファイルを prod に切り替えて、まず <code>aws sts get-caller-identity</code> で確認してから実行します:</p>
+
+<pre><code>export AWS_PROFILE=aws-prod
+aws sts get-caller-identity
+# Account: XXXXXXXXXXXX (期待通りの prod アカウントか確認)
+
+bash terraform/bootstrap/setup.sh
+</code></pre>
+
+<div class="callout warn">
+プロファイルの確認をサボると、dev 側に bootstrap してしまう事故を起こします（私自身、最初これをやらかしました）。
+</div>
+
+<p>実行後の確認:</p>
+
+<pre><code>aws s3 ls | grep iigtn-tfstate
+# 2026-04-25 12:00:00 iigtn-tfstate-XXXXXXXXXXXX
+
+aws dynamodb list-tables --region ap-northeast-1
+# "TableNames": ["iigtn-tflock", ...]
+</code></pre>
+
+<h2>Terraform 側の backend 設定</h2>
+
+<p>bootstrap が終わったら、Terraform の各環境ディレクトリに <code>backend.tf</code> を書きます:</p>
+
+<pre><code># terraform/envs/prod/backend.tf
+terraform {
+  backend "s3" {
+    bucket         = "iigtn-tfstate-XXXXXXXXXXXX"
+    key            = "envs/prod/terraform.tfstate"
+    region         = "ap-northeast-1"
+    dynamodb_table = "iigtn-tflock"
+    encrypt        = true
+  }
+}
+</code></pre>
+
+<p><code>key</code> は state ファイルのパス。<code>envs/prod/</code> と <code>envs/dev/</code> で別 key にすれば、同じバケットに複数環境の state を置けます。</p>
+
+<div class="callout info">
+backend ブロックには <strong>変数（<code>var.xxx</code>）が使えません</strong>。アカウント ID 等もハードコードする必要があります。これは Terraform の仕様で、init 時に backend が確定している必要があるためです。
+</div>
+
+<h2>terraform init で接続</h2>
+
+<pre><code>cd terraform/envs/prod
+terraform init
+</code></pre>
+
+<p>init が成功すると、Terraform は <code>iigtn-tfstate-XXXXXXXXXXXX</code> バケットの <code>envs/prod/terraform.tfstate</code> を state として使うようになります。</p>
+
+<h2>destroy したくなった時</h2>
+
+<p>Terraform で作ったリソースは <code>terraform destroy</code> で消せますが、bootstrap の S3 + DynamoDB は Terraform 管理外なので手動で消します:</p>
+
+<pre><code># DynamoDB テーブル削除
+aws dynamodb delete-table --table-name iigtn-tflock --region ap-northeast-1
+
+# S3 バケット中身削除 (バージョン付きなので version も消す必要)
+aws s3 rm "s3://iigtn-tfstate-XXXXXXXXXXXX" --recursive
+aws s3api delete-objects --bucket iigtn-tfstate-XXXXXXXXXXXX \
+  --delete "$(aws s3api list-object-versions \
+    --bucket iigtn-tfstate-XXXXXXXXXXXX \
+    --output json \
+    --query '{Objects: Versions[].{Key: Key, VersionId: VersionId}}')"
+
+# バケット削除
+aws s3api delete-bucket --bucket iigtn-tfstate-XXXXXXXXXXXX
+</code></pre>
+
+<div class="callout warn">
+これを実行すると Terraform が「現状」を見失います。本番運用後にやってはいけません。
+</div>
+
+<h2>State Lock の効果を体感する</h2>
+
+<p>setup.sh の DynamoDB テーブルは「同時に 2 人が <code>terraform apply</code> しないようにする」仕組みです。試しに同じディレクトリで 2 つの Git Bash を開き、両方で同時に <code>terraform plan</code> を打つと、片方が次のメッセージで待たされます:</p>
+
+<pre><code>Acquiring state lock. This may take a few moments...
+</code></pre>
+
+<p>ロックが取れた方が処理を進め、もう片方は待つか諦めます。これが効いていれば、複数人が同時に apply して state が壊れる事故は起きません。</p>
+
+<h2>Lock が取れない時の force-unlock</h2>
+
+<p>Terraform が異常終了して Lock が残ってしまった時:</p>
+
+<pre><code>terraform force-unlock &lt;LOCK_ID&gt;
+</code></pre>
+
+<p>Lock ID はエラーメッセージに表示されます。それでも消えなければ、DynamoDB テーブルの該当アイテムを直接削除します（最終手段）。</p>
+
+<h2>次の記事</h2>
+
+<p>Bootstrap が終わったら、いよいよ <code>terraform init</code> をやります… が、実は Windows + Git Bash 環境だと、ここで <strong>「TLS bad record MAC」</strong> という見たことのないエラーが出てプロバイダがダウンロードできない事故に遭遇しました。</p>
+
+<p>次の記事ではその原因究明と回避策について書きます。Windows で Terraform を使うすべての人に役立つ内容です。</p>
+
+</div>
+
+<section class="post-glossary">
+<h2>📚 用語集</h2>
+<dl>
+<dt>state (tfstate)</dt>
+<dd>Terraform が「いま自分が管理しているリソースの状態」を記録する JSON ファイル。<code>terraform.tfstate</code>。これが無いと差分計算ができない。</dd>
+
+<dt>backend</dt>
+<dd>Terraform が state ファイルを保管する場所の設定。ローカルファイル / S3 / Terraform Cloud などがある。本シリーズでは S3 を使う。</dd>
+
+<dt>S3 バケット</dt>
+<dd>S3 のファイル保管単位。名前は AWS 全体で一意でなければならない。</dd>
+
+<dt>バージョニング (Versioning)</dt>
+<dd>S3 オブジェクトの旧バージョンを保持する機能。state ファイルがこわれた時に旧版に戻せる。tfstate バケットでは必須。</dd>
+
+<dt>SSE-S3 (AES256)</dt>
+<dd>S3 がデフォルトで提供する保存時暗号化。AWS 管理キーで完全無料。tfstate には機密値が含まれるので暗号化必須。</dd>
+
+<dt>Public Access Block</dt>
+<dd>S3 バケットの「うっかり public 化」を構造的に防ぐ 4 つのスイッチ。tfstate バケットでは全部 true にする。</dd>
+
+<dt>DynamoDB Lock</dt>
+<dd>Terraform の S3 backend オプションで、DynamoDB テーブルを使って state ロックを取る仕組み。同時 apply 防止。</dd>
+
+<dt>PAY_PER_REQUEST (On-demand)</dt>
+<dd>DynamoDB の課金モード。読み書き回数で課金。アクセス薄いなら最安。</dd>
+
+<dt>idempotent (冪等)</dt>
+<dd>「何度実行しても同じ結果になる」性質。bootstrap スクリプトは idempotent にしておくと、エラー時の再実行が安全。</dd>
+
+<dt>鶏卵問題</dt>
+<dd>「A を作るには B が必要、B を作るには A が必要」という相互依存。bootstrap を Terraform 管理外にすることで解決する。</dd>
+
+<dt>terraform init</dt>
+<dd>Terraform の初期化コマンド。プロバイダ（AWS など）のダウンロード、backend への接続、モジュールの取得を行う。</dd>
+
+<dt>terraform plan</dt>
+<dd>「いま apply したら何が変わるか」を表示するコマンド。実際の変更はしない、安全に何度でも流せる。</dd>
+
+<dt>terraform apply</dt>
+<dd>plan の内容を実際に AWS に反映するコマンド。state lock を取る。</dd>
+
+<dt>terraform destroy</dt>
+<dd>Terraform 管理下のリソースをすべて削除するコマンド。本番運用後は基本的に使わない。</dd>
+
+<dt>terraform force-unlock</dt>
+<dd>異常終了等で残った state lock を強制的に解除するコマンド。Lock ID を引数で指定する。</dd>
+
+<dt>aws s3api</dt>
+<dd>AWS CLI の S3 低レベル API。<code>aws s3</code>（高レベル）と違って、バケットレベルの設定（バージョニング・暗号化・Public Block 等）はこちらで操作する。</dd>
+</dl>
+</section>
+
+<footer class="post-footer">
+<span>← 前 <a href="/blog/04-dev-env.html">④ 開発環境セットアップ</a></span>
+<span>次 → <a href="/blog/06-terraform-tls.html">⑥ Windows での Terraform Provider TLS 干渉</a></span>
+</footer>
+
+</article>
+
+</body>
+</html>

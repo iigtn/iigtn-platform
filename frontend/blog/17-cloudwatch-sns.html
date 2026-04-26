@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⑰ CloudWatch Alarms + SNS でアラート構築 — 壊れたら気付ける運用 | iigtn 構築日誌</title>
+<meta name="description" content="Lambda Errors / Lambda Duration p95 / API Gateway 5xx の CloudWatch アラーム設計と、SNS Topic を経由したメール通知の組み立て。閾値の判断基準も解説。">
+<link rel="stylesheet" href="/blog/style.css">
+</head>
+<body>
+
+<nav class="top">
+  <div class="nav-inner">
+    <a href="/">トップ</a>
+    <a href="/blog/">Blog 目次</a>
+    <a href="/learn.html">解説書</a>
+  </div>
+</nav>
+
+<article class="post">
+<header class="post-header">
+  <p class="post-meta">2026-04-26 · 構築日誌 #17</p>
+  <h1>CloudWatch Alarms + SNS でアラート構築 — 壊れたら気付ける運用</h1>
+</header>
+
+<div class="post-body">
+
+<p>個人運用のインフラで一番怖いのは、<strong>「壊れているのに気付かない」</strong> 状態です。本記事では CloudWatch Alarms + SNS で「壊れたら気付ける」仕組みを作った記録を書きます。</p>
+
+<h2>監視対象の選び方</h2>
+
+<p>すべてを監視するとコスト・通知ノイズが増えます。<strong>「壊れたら困る基幹リソースだけ」</strong> に絞ります:</p>
+
+<table>
+<tr><th>リソース</th><th>メトリクス</th><th>閾値</th><th>意味</th></tr>
+<tr><td>Lambda</td><td>Errors</td><td>5 分で 1 件超</td><td>関数が落ちている</td></tr>
+<tr><td>Lambda</td><td>Duration p95</td><td>3 秒超</td><td>レイテンシ悪化</td></tr>
+<tr><td>API Gateway</td><td>5xx</td><td>5 分で 5 件超</td><td>サーバ側エラー連発</td></tr>
+<tr><td>CloudFront</td><td>4xxErrorRate</td><td>5% 超 (10 分継続)</td><td>クライアントエラーの異常率</td></tr>
+</table>
+
+<p>4xx は「ユーザーが間違ったリクエストしている」「攻撃」「リンク切れ」等を示します。完全に 0 にはできませんが、急に 5% を超えたら何か異常です。</p>
+
+<h2>本シリーズの observability モジュール</h2>
+
+<p>このモジュールが作るリソース:</p>
+
+<ul>
+  <li><code>aws_sns_topic</code> — アラーム通知のハブ</li>
+  <li><code>aws_sns_topic_subscription</code> — メール購読（任意）</li>
+  <li>Lambda Errors アラーム</li>
+  <li>Lambda Duration p95 アラーム</li>
+  <li>API Gateway 5xx アラーム</li>
+  <li>AWS Budgets — 月額予算超過アラート</li>
+</ul>
+
+<p>CloudFront 4xx アラームは <strong>us-east-1 必須</strong> という別の罠があるので、次の記事で別途扱います。</p>
+
+<h2>SNS Topic — 通知のハブ</h2>
+
+<pre><code>resource "aws_sns_topic" "alarms" {
+  name = "${var.name_prefix}-alarms"
+  tags = var.tags
+}
+
+resource "aws_sns_topic_subscription" "email" {
+  count     = var.alarm_email == "" ? 0 : 1     # email 指定時のみ
+  topic_arn = aws_sns_topic.alarms.arn
+  protocol  = "email"
+  endpoint  = var.alarm_email
+}
+</code></pre>
+
+<p>SNS Topic を作って、そこにメールを購読させる設計。<strong>SNS は「中継ハブ」</strong> なので、後で Slack や Lambda（チャットボット連携）等に切替可能。</p>
+
+<div class="callout info">
+SNS Topic を email subscribe すると、AWS から「Confirm subscription」のメールが届きます。これをクリックしないと通知が届きません。
+</div>
+
+<h2>Lambda Errors アラーム</h2>
+
+<pre><code>resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
+  alarm_name          = "${var.name_prefix}-lambda-errors"
+  alarm_description   = "Contact Lambda errors &gt; 1 over 5 min"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1                      # 1 回でも超えたらアラーム
+  threshold           = 1
+  period              = 300                    # 5 分
+  statistic           = "Sum"                  # 5 分間の合計
+  metric_name         = "Errors"
+  namespace           = "AWS/Lambda"
+  treat_missing_data  = "notBreaching"         # データ無は「正常」扱い
+
+  dimensions = {
+    FunctionName = var.lambda_function_name
+  }
+
+  alarm_actions = [aws_sns_topic.alarms.arn]   # アラーム発火時
+  ok_actions    = [aws_sns_topic.alarms.arn]   # 復旧時
+}
+</code></pre>
+
+<p>重要パラメータの意味:</p>
+
+<table>
+<tr><th>項目</th><th>意味</th></tr>
+<tr><td><code>comparison_operator</code></td><td>閾値との比較。<code>GreaterThanThreshold</code> = 「閾値超過」</td></tr>
+<tr><td><code>evaluation_periods</code></td><td>「連続何回」超えたらアラーム。1 だと一発、2 だと 2 周期連続必要</td></tr>
+<tr><td><code>period</code></td><td>1 周期の長さ（秒）。300 = 5 分</td></tr>
+<tr><td><code>statistic</code></td><td>集計方法。<code>Sum</code> / <code>Average</code> / <code>p95</code> 等</td></tr>
+<tr><td><code>treat_missing_data</code></td><td>データ無の時の扱い。<code>notBreaching</code> = 正常扱い（オススメ）</td></tr>
+</table>
+
+<h2>Lambda Duration p95 アラーム</h2>
+
+<pre><code>resource "aws_cloudwatch_metric_alarm" "lambda_duration" {
+  alarm_name          = "${var.name_prefix}-lambda-duration-p95"
+  alarm_description   = "Contact Lambda p95 duration &gt; 3s"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 2                       # 2 周期連続で発火
+  threshold           = 3000                    # 3 秒（ミリ秒単位）
+  period              = 300
+  extended_statistic  = "p95"                   # statistic ではなく extended_statistic
+  metric_name         = "Duration"
+  namespace           = "AWS/Lambda"
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    FunctionName = var.lambda_function_name
+  }
+
+  alarm_actions = [aws_sns_topic.alarms.arn]
+}
+</code></pre>
+
+<p>p95 などのパーセンタイルは <code>statistic</code> ではなく <code>extended_statistic</code> に書きます。これは Terraform / CloudWatch API の仕様。</p>
+
+<p>閾値 3 秒は「明らかに遅い」基準。本シリーズの Lambda は通常 280ms（warm）/ 1.3s（cold start）程度なので、3 秒越えは異常事態。</p>
+
+<h2>API Gateway 5xx アラーム</h2>
+
+<pre><code>resource "aws_cloudwatch_metric_alarm" "apigw_5xx" {
+  alarm_name          = "${var.name_prefix}-apigw-5xx"
+  alarm_description   = "API Gateway 5xx errors &gt; 5 over 5 min"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  threshold           = 5                       # 5 分で 5 件
+  period              = 300
+  statistic           = "Sum"
+  metric_name         = "5xx"
+  namespace           = "AWS/ApiGateway"
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    ApiId = var.api_id
+  }
+
+  alarm_actions = [aws_sns_topic.alarms.arn]
+}
+</code></pre>
+
+<p>HTTP API のメトリクス名は <code>5xx</code>（REST API は <code>5XXError</code>）。namespace は両方 <code>AWS/ApiGateway</code>。</p>
+
+<h2>AWS Budgets — 月額予算アラート</h2>
+
+<pre><code>resource "aws_budgets_budget" "monthly" {
+  count = var.alarm_email == "" ? 0 : 1
+
+  name              = "${var.name_prefix}-monthly"
+  budget_type       = "COST"
+  limit_amount      = tostring(var.monthly_budget_usd)
+  limit_unit        = "USD"
+  time_unit         = "MONTHLY"
+  time_period_start = "2026-04-01_00:00"
+
+  notification {
+    comparison_operator        = "GREATER_THAN"
+    threshold                  = 50
+    threshold_type             = "PERCENTAGE"
+    notification_type          = "ACTUAL"
+    subscriber_email_addresses = [var.alarm_email]
+  }
+
+  notification {
+    comparison_operator        = "GREATER_THAN"
+    threshold                  = 100
+    threshold_type             = "PERCENTAGE"
+    notification_type          = "ACTUAL"
+    subscriber_email_addresses = [var.alarm_email]
+  }
+
+  notification {
+    comparison_operator        = "GREATER_THAN"
+    threshold                  = 80
+    threshold_type             = "PERCENTAGE"
+    notification_type          = "FORECASTED"     # 予測値で 80% 超
+    subscriber_email_addresses = [var.alarm_email]
+  }
+}
+</code></pre>
+
+<p>3 段階で通知:</p>
+
+<ul>
+  <li><strong>50%</strong>（実績）: 「半月で半分使ってる」 → 月後半でペース注意</li>
+  <li><strong>100%</strong>（実績）: 予算超過。即対応</li>
+  <li><strong>80%</strong>（予測）: AWS 側の機械学習で「このペースだと 80% 超えそう」 → 早期検知</li>
+</ul>
+
+<p>本シリーズでは <code>monthly_budget_usd = 10</code>（約 1,500 円）。個人ポートフォリオなら十分。</p>
+
+<h2>アラーム発火時のメール</h2>
+
+<p>例（Lambda Errors アラームが発火した時）:</p>
+
+<pre><code>From: AWS Notifications &lt;no-reply@sns.amazonaws.com&gt;
+Subject: ALARM: "iigtn-lab-prod-lambda-errors" in Asia Pacific (Tokyo)
+
+You are receiving this email because your Amazon CloudWatch Alarm
+"iigtn-lab-prod-lambda-errors" in the Asia Pacific (Tokyo) region has
+entered the ALARM state, because "Threshold Crossed: 1 datapoint
+[2.0 (...)] was greater than the threshold (1.0)."
+
+State Change Time: 2026-04-26T14:23:10.000+0000
+Reason for State Change: ...
+</code></pre>
+
+<p>携帯のメールアプリでも届くので、外出中でも気付ける。</p>
+
+<h2>本シリーズで実際にあったアラート見逃し（仮想再現）</h2>
+
+<p>運用ノートに書いた仮想ケース: <strong>「03:42 JST に Lambda Errors アラームが発火、メール通知が届いていたが、スマホ通知が OFF だったため翌朝 8:30 まで気付かなかった」</strong>。</p>
+
+<p>対策:</p>
+
+<ul>
+  <li>CRITICAL アラームだけは Slack や LINE に分岐</li>
+  <li>深夜帯は LINE Notify（音が鳴る）で起こされる設計</li>
+  <li>メール通知だけだと「見ない時間帯」がある前提</li>
+</ul>
+
+<p>これが「壊れたら気付ける」を本当に機能させるための運用設計。技術より <strong>通知経路の設計</strong> が抜けがち。</p>
+
+<h2>動作確認</h2>
+
+<p>テストでアラームを発火させたい時:</p>
+
+<pre><code># アラーム手動でアラート状態に
+aws cloudwatch set-alarm-state \
+  --alarm-name iigtn-lab-prod-lambda-errors \
+  --state-value ALARM \
+  --state-reason "Manual test"
+</code></pre>
+
+<p>これで通知メールが届けば、SNS 経由のフローが正しく動いている確認になる。確認後は OK 状態に戻す:</p>
+
+<pre><code>aws cloudwatch set-alarm-state \
+  --alarm-name iigtn-lab-prod-lambda-errors \
+  --state-value OK \
+  --state-reason "Test complete"
+</code></pre>
+
+<h2>次の記事</h2>
+
+<p>監視はだいたい揃いましたが、CloudFront 4xx アラームには <strong>「us-east-1 限定」</strong> という独特の罠があります。次の記事ではその落とし穴と、ついでに AWS Budgets の細かい設定について書きます。</p>
+
+</div>
+
+<section class="post-glossary">
+<h2>📚 用語集</h2>
+<dl>
+<dt>CloudWatch Alarm (CloudWatch アラーム)</dt>
+<dd>AWS のメトリクスに対して閾値を設定し、超過時に通知を送る仕組み。<code>aws_cloudwatch_metric_alarm</code> リソースで作る。</dd>
+
+<dt>SNS Topic</dt>
+<dd>AWS のメッセージングハブ。Topic に publish されたメッセージを、複数の subscriber（Email / Lambda / SQS / HTTPS endpoint 等）に配信。</dd>
+
+<dt>SNS Subscription</dt>
+<dd>SNS Topic に紐付く受信先。Email subscription なら確認リンクを踏むまでアクティブにならない。</dd>
+
+<dt>metric (メトリクス)</dt>
+<dd>監視対象の数値時系列データ。Errors / Duration / Latency / Throttles 等、サービスごとに定義されている。</dd>
+
+<dt>namespace (CloudWatch)</dt>
+<dd>メトリクスのグループ。<code>AWS/Lambda</code> / <code>AWS/ApiGateway</code> / <code>AWS/CloudFront</code> 等。</dd>
+
+<dt>dimensions</dt>
+<dd>メトリクスを特定するための識別子。<code>FunctionName</code> / <code>ApiId</code> / <code>DistributionId</code> 等。</dd>
+
+<dt>statistic (統計)</dt>
+<dd>メトリクスの集計方法。<code>Sum</code> / <code>Average</code> / <code>Maximum</code> / <code>Minimum</code> / <code>SampleCount</code>。</dd>
+
+<dt>extended_statistic (拡張統計)</dt>
+<dd>パーセンタイル統計。<code>p95</code> / <code>p99</code> 等。<code>statistic</code> と排他的に使う。</dd>
+
+<dt>p95 / p99</dt>
+<dd>パーセンタイル。p95 = 全データの 95% がこの値以下。「最悪値ではなく実用上の代表値」を表す。</dd>
+
+<dt>evaluation_periods</dt>
+<dd>「連続何周期、閾値を超えたらアラーム発火」の設定。瞬間的な変動でアラームが鳴らないようにするため 2〜3 にすることも多い。</dd>
+
+<dt>period</dt>
+<dd>メトリクス集計の 1 周期の長さ（秒）。Lambda 等では 60s / 300s（5 分）が定番。</dd>
+
+<dt>threshold</dt>
+<dd>アラーム発火の閾値。比較演算子（<code>GreaterThanThreshold</code> 等）と組合せて使う。</dd>
+
+<dt>treat_missing_data</dt>
+<dd>メトリクスデータが無い場合の扱い。<code>notBreaching</code>（正常扱い）/ <code>breaching</code>（異常扱い）/ <code>missing</code>（無視）/ <code>ignore</code>（最後の状態を維持）。</dd>
+
+<dt>alarm_actions</dt>
+<dd>アラーム状態 (ALARM) になった時に実行する SNS Topic 等の ARN リスト。</dd>
+
+<dt>ok_actions</dt>
+<dd>正常状態 (OK) に復旧した時に実行する ARN リスト。「復旧通知」に使う。</dd>
+
+<dt>insufficient_data_actions</dt>
+<dd>データ不足状態 (INSUFFICIENT_DATA) になった時の通知。あまり使わない。</dd>
+
+<dt>AWS Budgets</dt>
+<dd>月額予算とアラート閾値を設定する AWS 標準サービス。50% / 80% / 100% で通知が定番。</dd>
+
+<dt>FORECASTED (予測)</dt>
+<dd>AWS が機械学習で予測した「月末時点の見込み額」。実績で気付くより早く異常を検知できる。</dd>
+
+<dt>NotBreaching</dt>
+<dd>「データ欠損は正常扱い」を意味する <code>treat_missing_data</code> の値。低トラフィックなアラームでよく使う。</dd>
+</dl>
+</section>
+
+<footer class="post-footer">
+<span>← 前 <a href="/blog/16-cloudfront-api-routing.html">⑯ CloudFront /api/* で 1 ドメイン化</a></span>
+<span>次 → <a href="/blog/18-cross-region-sns.html">⑱ Cross-Region SNS の落とし穴と Budgets</a></span>
+</footer>
+
+</article>
+
+</body>
+</html>

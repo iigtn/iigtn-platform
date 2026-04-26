@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⑲ drawio (AWS 公式アイコン) でアーキテクチャ図を組み込む — Mermaid との使い分け | iigtn 構築日誌</title>
+<meta name="description" content="ASCII art → Mermaid → drawio aws4 公式アイコンへとアーキテクチャ図の表現を進化させた記録。Mermaid は GitHub README で native レンダリング、drawio は本サイトに viewer-static.js でインライン埋込。">
+<link rel="stylesheet" href="/blog/style.css">
+</head>
+<body>
+
+<nav class="top">
+  <div class="nav-inner">
+    <a href="/">トップ</a>
+    <a href="/blog/">Blog 目次</a>
+    <a href="/learn.html">解説書</a>
+  </div>
+</nav>
+
+<article class="post">
+<header class="post-header">
+  <p class="post-meta">2026-04-26 · 構築日誌 #19</p>
+  <h1>drawio (AWS 公式アイコン) でアーキテクチャ図を組み込む — Mermaid との使い分け</h1>
+</header>
+
+<div class="post-body">
+
+<p>本シリーズではアーキテクチャ図を <strong>3 段階</strong> で進化させました: ASCII art → Mermaid → drawio (AWS 公式 aws4 アイコン)。それぞれの利点・欠点と、最終的にどう住み分けたかを書きます。</p>
+
+<h2>段階 1: ASCII art</h2>
+
+<p>最初は HTML の <code>&lt;pre&gt;</code> で ASCII art:</p>
+
+<pre><code>[ブラウザ]
+   │
+   ▼
+[CloudFront] ◀── ACM (us-east-1)
+   │
+   ▼
+[S3 バケット (非公開)]
+</code></pre>
+
+<table>
+<tr><th>長所</th><th>短所</th></tr>
+<tr><td>編集が楽</td><td>見栄えが地味</td></tr>
+<tr><td>テキストなので diff が綺麗</td><td>複雑な構造を表現できない</td></tr>
+<tr><td>レンダリング不要</td><td>採用評価で「設計能力をアピール」できない</td></tr>
+</table>
+
+<p>軽量だけど、ポートフォリオサイトに載せるには弱い。</p>
+
+<h2>段階 2: Mermaid</h2>
+
+<p>次に Mermaid に移行:</p>
+
+<pre><code>flowchart TD
+    Browser["🌐 ブラウザ"]
+    DNS["Squarespace DNS"]
+    CF["CloudFront"]
+    S3[("S3 Bucket")]
+
+    Browser --&gt; DNS
+    DNS --&gt; CF
+    CF --&gt; S3
+</code></pre>
+
+<table>
+<tr><th>長所</th><th>短所</th></tr>
+<tr><td>テキストで書ける（diff 友好）</td><td>AWS 公式アイコンが使えない</td></tr>
+<tr><td>GitHub README で native 描画</td><td>細かいレイアウト制御が困難</td></tr>
+<tr><td>mermaid.js で HTML に簡単埋込</td><td>大規模図は煩雑になる</td></tr>
+<tr><td>軽量（CDN 1 行で導入）</td><td></td></tr>
+</table>
+
+<p>Mermaid は「テキストで管理できる図表」の決定版。<strong>GitHub README には Mermaid が最強</strong>（コードブロックに <code>```mermaid</code> と書くだけで GitHub が描画してくれる）。</p>
+
+<h2>段階 3: drawio (AWS 公式 aws4 アイコン)</h2>
+
+<p>本サイト（lab.iigtn.com）の解説書には、もう一段リッチな表現がほしくて drawio に切替:</p>
+
+<ul>
+  <li>AWS 公式の aws4 アイコンセット（最新 2025 リリース）が使える</li>
+  <li>採用評価で「ちゃんと AWS Architecture Diagram を描けてる」アピール</li>
+  <li>個別アイコンに公式の色（CloudFront 紫 / S3 緑 / Lambda 橙）が付く</li>
+</ul>
+
+<p>drawio XML はこんな感じ（抜粋）:</p>
+
+<pre><code>&lt;mxCell id="cf" value="CloudFront" style="
+  shape=mxgraph.aws4.resourceIcon;
+  resIcon=mxgraph.aws4.cloudfront;
+  fillColor=#8C4FFF;
+  ..." vertex="1" parent="1"&gt;
+  &lt;mxGeometry x="311" y="290" width="78" height="78" as="geometry"/&gt;
+&lt;/mxCell&gt;
+</code></pre>
+
+<table>
+<tr><th>長所</th><th>短所</th></tr>
+<tr><td>AWS 公式アイコンが使える</td><td>XML が長くて手書きしんどい</td></tr>
+<tr><td>細かいレイアウト制御可能</td><td>HTML への埋込にコツがいる</td></tr>
+<tr><td>GUI エディタ（app.diagrams.net）も使える</td><td>diff が見づらい</td></tr>
+<tr><td>SVG / PNG エクスポートも可能</td><td>GitHub README には不向き</td></tr>
+</table>
+
+<h2>aws4 アイコンの使い方</h2>
+
+<p>各 AWS サービスは <code>mxgraph.aws4.resourceIcon</code> 形式で参照します。色（fillColor）はサービスカテゴリ別:</p>
+
+<table>
+<tr><th>カテゴリ</th><th>色</th><th>例</th></tr>
+<tr><td>Compute</td><td>#ED7100（橙）</td><td>Lambda, EC2</td></tr>
+<tr><td>Storage</td><td>#7AA116（緑）</td><td>S3, EBS</td></tr>
+<tr><td>Database</td><td>#C925D1（紫桃）</td><td>DynamoDB, RDS</td></tr>
+<tr><td>Networking & Content Delivery</td><td>#8C4FFF（紫）</td><td>CloudFront, Route 53</td></tr>
+<tr><td>Application Integration</td><td>#E7157B（桃）</td><td>API Gateway, SNS</td></tr>
+<tr><td>Security, Identity & Compliance</td><td>#DD344C（赤）</td><td>IAM, ACM, SES</td></tr>
+<tr><td>Management & Governance</td><td>#E7157B（桃）</td><td>CloudWatch, CloudTrail</td></tr>
+</table>
+
+<p>これを覚えておくと、AWS 公式の Architecture Diagram と整合する図が作れます。</p>
+
+<h2>HTML への埋込</h2>
+
+<p>drawio 図を Web ページにインラインで埋め込む方法は 3 つ:</p>
+
+<ol>
+  <li><strong>iframe</strong> で viewer.diagrams.net を読み込む</li>
+  <li><strong>SVG エクスポート</strong> して <code>&lt;img&gt;</code> で埋込</li>
+  <li><strong>viewer-static.js</strong> でインライン描画</li>
+</ol>
+
+<p>本サイトでは 3 番目の方式を採用:</p>
+
+<pre><code>&lt;div class="mxgraph" data-mxgraph='{"xml": "&lt;mxfile&gt;...&lt;/mxfile&gt;"}'&gt;&lt;/div&gt;
+&lt;script src="https://viewer.diagrams.net/js/viewer-static.min.js"&gt;&lt;/script&gt;
+</code></pre>
+
+<p><code>data-mxgraph</code> 属性に JSON 形式で XML を埋め込むと、ページ読込時に viewer-static.js が自動で図を描画してくれる。iframe や別ファイルが要らずクリーン。</p>
+
+<h2>JSON エンコードの罠</h2>
+
+<p>drawio XML を <code>data-mxgraph='{"xml": "..."}'</code> に入れる時の罠:</p>
+
+<ul>
+  <li>XML 内の <code>"</code> は JSON 文字列として <code>\"</code> にエスケープ必須</li>
+  <li>HTML の単一クォート属性内なので、JSON の <code>'</code> も HTML エスケープ（<code>&amp;#39;</code>）必須</li>
+  <li>改行や特殊文字も適切に処理</li>
+</ul>
+
+<p>本シリーズでは PowerShell の <code>ConvertTo-Json -Compress</code> で自動変換するスクリプトを書きました:</p>
+
+<pre><code>$xml = [System.IO.File]::ReadAllText("diagram.drawio", [System.Text.Encoding]::UTF8)
+$payload = @{ xml = [string]$xml; nav = $true } | ConvertTo-Json -Compress
+$payload_attr = $payload -replace "'", '&amp;#39;'
+
+"&lt;div class=&quot;mxgraph&quot; data-mxgraph='$payload_attr'&gt;&lt;/div&gt;"
+</code></pre>
+
+<p>これで .drawio ファイルから HTML スニペットを自動生成。</p>
+
+<h2>結局どう住み分けたか</h2>
+
+<table>
+<tr><th>場所</th><th>使うフォーマット</th><th>理由</th></tr>
+<tr><td>GitHub README.md</td><td>Mermaid</td><td>GitHub が native 描画、軽量</td></tr>
+<tr><td>本サイト解説書 (learn.html)</td><td>drawio (aws4 アイコン)</td><td>採用評価でリッチに見せたい</td></tr>
+<tr><td>本ブログ各記事</td><td>テーブル + 適宜 Mermaid</td><td>記事の本文と diff 友好性を優先</td></tr>
+<tr><td>外部公開する設計書</td><td>drawio + SVG エクスポート</td><td>クライアントへの提示物</td></tr>
+</table>
+
+<h2>図のソース管理</h2>
+
+<p>drawio ファイルもリポジトリで管理します:</p>
+
+<pre><code>frontend/diagrams/
+├── 01-visitor-static.drawio
+├── 02-form-flow.drawio
+├── 03-deploy-flow.drawio
+└── 04-overall-architecture.drawio
+</code></pre>
+
+<p>これらの .drawio ファイルは GitHub 上でクリックすると <strong>GitHub が自動で描画</strong> してくれます（GitHub は drawio ネイティブサポート）。app.diagrams.net で開けば GUI で編集も可能。</p>
+
+<h2>「採用評価」での効果</h2>
+
+<p>アーキテクチャ図の質は採用評価に直結します:</p>
+
+<ul>
+  <li><strong>ASCII art</strong>: 「最低限の説明をしている人」</li>
+  <li><strong>Mermaid</strong>: 「コード化志向の人」「diff 管理を意識する人」</li>
+  <li><strong>drawio + AWS 公式アイコン</strong>: 「設計書を書く文化がある人」「クライアント提案資料を作れる人」</li>
+</ul>
+
+<p>個人サイトでも 3 つ使い分けると、技術力の幅が見える設計になります。</p>
+
+<h2>次の記事</h2>
+
+<p>残りは仕上げの 2 記事。次は <strong>「Web 系を調査した上でフリーランスポートフォリオ標準構成にサイトを再設計」</strong> + <strong>SES 通知稼働まで</strong> を 1 記事にまとめて書きます。最終回は <strong>付録: 構築で使ったコマンド早見表</strong>。</p>
+
+</div>
+
+<section class="post-glossary">
+<h2>📚 用語集</h2>
+<dl>
+<dt>Mermaid</dt>
+<dd>テキストベースで図を書く DSL。flowchart / sequenceDiagram / gantt 等多数のチャート形式に対応。GitHub README で native 描画。</dd>
+
+<dt>mermaid.js</dt>
+<dd>Mermaid を Web ページで描画する JavaScript ライブラリ。CDN 1 行で導入可能。</dd>
+
+<dt>drawio (diagrams.net)</dt>
+<dd>無料の図表作成ツール。Web 版（app.diagrams.net）/ デスクトップアプリ版がある。XML フォーマットで保存。</dd>
+
+<dt>aws4 アイコンセット</dt>
+<dd>drawio が提供する AWS 公式アイコンの最新版（2020+）。サービスカテゴリ別の色分けが特徴。</dd>
+
+<dt>mxGraph</dt>
+<dd>drawio の内部で使われている JavaScript グラフ描画ライブラリ。drawio XML は mxGraph 形式。</dd>
+
+<dt>resourceIcon (aws4)</dt>
+<dd>aws4 アイコンの定型形状。色付き枠の中に AWS サービスのアイコンを配置。<code>shape=mxgraph.aws4.resourceIcon</code>。</dd>
+
+<dt>fillColor</dt>
+<dd>drawio で図形の塗りつぶし色を指定。AWS 公式色を入れることでサービスカテゴリが視覚的に分かる。</dd>
+
+<dt>viewer-static.min.js</dt>
+<dd>drawio が提供するインライン描画用 JavaScript。<code>&lt;div class="mxgraph" data-mxgraph="..."&gt;</code> 形式の要素を自動で描画する。</dd>
+
+<dt>data-mxgraph 属性</dt>
+<dd>drawio viewer がインライン描画に使う HTML 属性。JSON 形式で XML や設定を持つ。</dd>
+
+<dt>SVG エクスポート</dt>
+<dd>drawio 図を SVG（拡張可能ベクターグラフィックス）形式に出力する機能。<code>&lt;img&gt;</code> で埋込んだり、PowerPoint に貼ったりできる。</dd>
+
+<dt>iframe 埋込</dt>
+<dd>drawio 図を別ページとして埋め込む方式。viewer.diagrams.net?url=... のような URL を src に指定。</dd>
+
+<dt>app.diagrams.net</dt>
+<dd>drawio の Web 版エディタ URL。アカウント登録不要で使える。</dd>
+
+<dt>diff 友好性</dt>
+<dd>テキスト形式のため、git diff で変更箇所が見やすい性質。Mermaid / コード生成系のフォーマットの利点。</dd>
+
+<dt>GitHub の drawio ネイティブサポート</dt>
+<dd>GitHub は <code>.drawio</code> ファイルをクリックすると、その場で図として描画する機能を内蔵。リポジトリで .drawio を管理しやすい。</dd>
+
+<dt>サービスカテゴリ別配色</dt>
+<dd>AWS Architecture Diagram の慣習で、Compute / Storage / Database 等のカテゴリ別に統一された色を使う。視覚的に「どのカテゴリのサービスか」が一目で分かる。</dd>
+</dl>
+</section>
+
+<footer class="post-footer">
+<span>← 前 <a href="/blog/18-cross-region-sns.html">⑱ Cross-Region SNS の落とし穴</a></span>
+<span>次 → <a href="/blog/20-portfolio-ses.html">⑳ ポートフォリオ標準構成への再設計 + SES 通知</a></span>
+</footer>
+
+</article>
+
+</body>
+</html>

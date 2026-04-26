@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⑫ GitHub Actions OIDC の仕組み — JWT で AWS を静的キーレス操作 | iigtn 構築日誌</title>
+<meta name="description" content="GitHub Actions から AWS を「アクセスキーなし」で操作する OIDC + AssumeRoleWithWebIdentity の仕組みと、Terraform での IAM Role 設定 (Trust Policy / Permissions Policy)。">
+<link rel="stylesheet" href="/blog/style.css">
+</head>
+<body>
+
+<nav class="top">
+  <div class="nav-inner">
+    <a href="/">トップ</a>
+    <a href="/blog/">Blog 目次</a>
+    <a href="/learn.html">解説書</a>
+  </div>
+</nav>
+
+<article class="post">
+<header class="post-header">
+  <p class="post-meta">2026-04-26 · 構築日誌 #12</p>
+  <h1>GitHub Actions OIDC の仕組み — JWT で AWS を静的キーレス操作</h1>
+</header>
+
+<div class="post-body">
+
+<p>GitHub Actions から AWS を操作する時、過去は IAM ユーザーのアクセスキーを GitHub Secrets に置く方式が主流でした。今は <strong>OIDC + AssumeRole</strong> でアクセスキーなしに一時クレデンシャルを取得する方式が標準。本記事ではその仕組みと、Terraform での IAM Role 設定を解説します。</p>
+
+<h2>静的アクセスキーの危険性</h2>
+
+<p>GitHub Secrets に <code>AWS_ACCESS_KEY_ID</code> と <code>AWS_SECRET_ACCESS_KEY</code> を入れる方式の問題点:</p>
+
+<ul>
+  <li><strong>有効期限が無い</strong>: ローテーションしないと永続的に使える</li>
+  <li><strong>漏洩リスク</strong>: ログに出力される事故・誤って Issue に貼る事故が定期的に話題になる</li>
+  <li><strong>権限スコープが粗い</strong>: 「このリポジトリの main ブランチからのみ」のような細かい制御が困難</li>
+  <li><strong>監査が難しい</strong>: 誰が・どこから・いつ使ったかが追跡しづらい</li>
+</ul>
+
+<p>OIDC は <strong>これらをすべて構造的に解決</strong> します。</p>
+
+<h2>OIDC + AssumeRole の流れ</h2>
+
+<p>処理は 5 ステップ:</p>
+
+<ol>
+  <li>GitHub Actions のワークフロー実行時、<strong>OIDC ID トークン (JWT)</strong> を GitHub から発行</li>
+  <li>JWT には <code>sub: repo:owner/repo:ref:refs/heads/main</code> 等の claim（主張）が入っている</li>
+  <li>このトークンを AWS STS の <code>AssumeRoleWithWebIdentity</code> API に渡す</li>
+  <li>AWS は IAM Role の Trust Policy で「このトークンは信頼できるか」を検証</li>
+  <li>OK なら <strong>1 時間有効</strong> の AccessKey / SecretKey / SessionToken を返す</li>
+</ol>
+
+<p>Runner はこの一時クレデンシャルを使って AWS API を叩きます。終わったらクレデンシャルは破棄。永続的なキーは存在しません。</p>
+
+<h2>JWT の claim を見てみる</h2>
+
+<p>GitHub が発行する OIDC JWT には次のような claim が含まれます:</p>
+
+<pre><code>{
+  "iss": "https://token.actions.githubusercontent.com",
+  "aud": "sts.amazonaws.com",
+  "sub": "repo:iigtn/iigtn-platform:ref:refs/heads/main",
+  "repository": "iigtn/iigtn-platform",
+  "ref": "refs/heads/main",
+  "ref_type": "branch",
+  "actor": "&lt;github-username&gt;",
+  "workflow": "frontend-deploy",
+  "run_id": "12345678",
+  ...
+}
+</code></pre>
+
+<p><code>sub</code> claim が「誰が・どこのリポジトリの・どのブランチから」を表します。これを Trust Policy で検証することで、<strong>「特定のリポジトリの main ブランチからの実行だけ許可」</strong> が実現できます。</p>
+
+<h2>本シリーズの ci_oidc モジュール</h2>
+
+<p>このモジュールが作るリソースは 3 個:</p>
+
+<ol>
+  <li><code>aws_iam_openid_connect_provider</code> — GitHub を AWS の IdP として登録</li>
+  <li><code>aws_iam_role</code> — GitHub Actions が AssumeRole する役割</li>
+  <li><code>aws_iam_role_policy</code> — Role になった結果できる API（最小権限）</li>
+</ol>
+
+<h2>OIDC Provider の登録</h2>
+
+<pre><code>resource "aws_iam_openid_connect_provider" "github" {
+  url             = "https://token.actions.githubusercontent.com"
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
+}
+</code></pre>
+
+<table>
+<tr><th>引数</th><th>意味</th></tr>
+<tr><td><code>url</code></td><td>GitHub の OIDC token 発行 URL（固定値）</td></tr>
+<tr><td><code>client_id_list</code></td><td>audience。AWS STS は <code>sts.amazonaws.com</code> 固定</td></tr>
+<tr><td><code>thumbprint_list</code></td><td>GitHub IdP の TLS 証明書サムプリント。AWS が内部で自動検証する</td></tr>
+</table>
+
+<p>1 アカウントに 1 個だけ作れば良い。複数のリポジトリで共有可能。</p>
+
+<h2>Trust Policy（誰が AssumeRole できるか）</h2>
+
+<p>Trust Policy は「この Role を AssumeRole できる Principal の条件」を定義:</p>
+
+<pre><code>data "aws_iam_policy_document" "trust" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+
+    principals {
+      type        = "Federated"
+      identifiers = [aws_iam_openid_connect_provider.github.arn]
+    }
+
+    # 条件 1: aud (audience) は AWS STS のみ
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+
+    # 条件 2: sub (subject) は指定 owner/repo の指定ブランチのみ
+    condition {
+      test     = "StringLike"
+      variable = "token.actions.githubusercontent.com:sub"
+      values = [
+        for branch in var.allowed_branches :
+        "repo:${var.github_owner}/${var.github_repo}:ref:refs/heads/${branch}"
+      ]
+    }
+  }
+}
+</code></pre>
+
+<p>これにより:</p>
+
+<ul>
+  <li>他人のリポジトリは AssumeRole 不可</li>
+  <li>自リポジトリの PR からも AssumeRole 不可（main ブランチ等のみ許可）</li>
+  <li>fork 先からも AssumeRole 不可</li>
+</ul>
+
+<h2>Permissions Policy（Role になって何ができるか）</h2>
+
+<p>本シリーズの GitHub Actions は「フロントエンドのデプロイ」のみ行うので、必要最低限の権限:</p>
+
+<pre><code>data "aws_iam_policy_document" "deploy" {
+  # S3: バケット情報の読み取り
+  statement {
+    actions   = ["s3:ListBucket", "s3:GetBucketLocation"]
+    resources = [var.deploy_bucket_arn]                 # この 1 バケットだけ
+  }
+
+  # S3: オブジェクト操作 (sync で必要)
+  statement {
+    actions   = ["s3:GetObject", "s3:PutObject",
+                 "s3:DeleteObject", "s3:PutObjectAcl"]
+    resources = ["${var.deploy_bucket_arn}/*"]
+  }
+
+  # CloudFront: 特定 Distribution の Invalidation のみ
+  statement {
+    actions = [
+      "cloudfront:CreateInvalidation",
+      "cloudfront:GetInvalidation",
+      "cloudfront:ListInvalidations"
+    ]
+    resources = [var.cloudfront_distribution_arn]       # この 1 Distribution だけ
+  }
+}
+</code></pre>
+
+<p>このポリシーでは <strong>他のバケット・他の Distribution・IAM・Lambda・etc には一切触れない</strong>。万が一 Role が乗っ取られても被害が限定的。</p>
+
+<h2>IAM Role 本体</h2>
+
+<pre><code>resource "aws_iam_role" "deploy" {
+  name = var.role_name                                  # iigtn-github-actions-deploy
+  description        = "GitHub Actions OIDC deploy role for ${var.github_owner}/${var.github_repo}"
+  assume_role_policy = data.aws_iam_policy_document.trust.json
+  tags               = var.tags
+}
+
+resource "aws_iam_role_policy" "deploy" {
+  name   = "${var.role_name}-policy"
+  role   = aws_iam_role.deploy.id
+  policy = data.aws_iam_policy_document.deploy.json
+}
+</code></pre>
+
+<div class="callout warn">
+<strong>IAM Role の <code>description</code> は ASCII / Latin-1 のみ</strong>。日本語を入れると <code>ValidationError</code> で apply 失敗します。本シリーズで実際にハマりました。
+</div>
+
+<h2>GitHub Actions ワークフロー側の最小実装</h2>
+
+<pre><code>permissions:
+  id-token: write       # ← OIDC token を発行するために必須
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::XXXXXXXXXXXX:role/iigtn-github-actions-deploy
+          aws-region: ap-northeast-1
+</code></pre>
+
+<p><code>id-token: write</code> permission を忘れると、OIDC token 発行が拒否されて AssumeRole が失敗します。これも初見でハマるポイント。</p>
+
+<h2>動作確認の見方</h2>
+
+<pre><code>- name: Verify caller identity
+  run: aws sts get-caller-identity
+
+# 出力例
+{
+  "UserId": "AROAxxxxx:gha-frontend-deploy-12345",  ← Session ID 付き = AssumeRole 経由
+  "Account": "XXXXXXXXXXXX",
+  "Arn": "arn:aws:sts::XXXXXXXXXXXX:assumed-role/iigtn-github-actions-deploy/gha-frontend-deploy-12345"
+}
+</code></pre>
+
+<p>ARN に <code>assumed-role</code> が含まれていれば「Role を AssumeRole した状態」が確認できます。</p>
+
+<h2>OIDC のメリット再掲</h2>
+
+<table>
+<tr><th>項目</th><th>静的キー</th><th>OIDC</th></tr>
+<tr><td>有効期限</td><td>無期限</td><td>1 時間</td></tr>
+<tr><td>漏洩時の被害</td><td>大（永続）</td><td>限定（1 時間で失効）</td></tr>
+<tr><td>repo / branch 限定</td><td>困難</td><td>Trust Policy で完結</td></tr>
+<tr><td>ローテーション</td><td>手動</td><td>毎回自動</td></tr>
+<tr><td>監査</td><td>難</td><td>CloudTrail で session 単位で追跡可能</td></tr>
+</table>
+
+<p>静的キーをまだ使っている人は、<strong>今すぐ OIDC に移行する価値があります</strong>。本シリーズの実装をテンプレに使えば 30 分で切替可能。</p>
+
+<h2>次の記事</h2>
+
+<p>OIDC で IAM Role が用意できたところで、次の記事では実際の <strong>GitHub Actions ワークフロー YAML</strong> を書き、<code>git push</code> から CloudFront 反映までを自動化します。</p>
+
+</div>
+
+<section class="post-glossary">
+<h2>📚 用語集</h2>
+<dl>
+<dt>OIDC (OpenID Connect)</dt>
+<dd>OAuth 2.0 の上に乗った認証プロトコル。ID トークン (JWT) を発行する標準仕様。</dd>
+
+<dt>JWT (JSON Web Token)</dt>
+<dd>Header / Payload / Signature の 3 部からなる署名付きトークン。Payload に claim を入れて、署名で改ざん検知する。</dd>
+
+<dt>claim (クレーム)</dt>
+<dd>JWT の Payload に入る「主張」。<code>sub</code>（誰）/ <code>aud</code>（audience）/ <code>exp</code>（有効期限）等。</dd>
+
+<dt>sub claim</dt>
+<dd>「subject = この JWT が誰を表すか」の claim。GitHub の場合 <code>repo:owner/repo:ref:refs/heads/branch</code> 形式。</dd>
+
+<dt>aud claim (audience)</dt>
+<dd>「この JWT は誰宛か」の claim。AWS STS 経由で使う場合は <code>sts.amazonaws.com</code> 固定。</dd>
+
+<dt>STS (Security Token Service)</dt>
+<dd>AWS の一時クレデンシャル発行サービス。AssumeRole 系 API がここで提供される。</dd>
+
+<dt>AssumeRoleWithWebIdentity</dt>
+<dd>OIDC や OAuth 等の Web Identity を使って IAM Role を Assume する STS API。</dd>
+
+<dt>IdP (Identity Provider)</dt>
+<dd>認証情報を発行する側。GitHub Actions OIDC では GitHub が IdP。</dd>
+
+<dt>OIDC Provider (AWS IAM)</dt>
+<dd>AWS 側で「この IdP を信頼する」と登録する IAM リソース。<code>aws_iam_openid_connect_provider</code>。</dd>
+
+<dt>Federated Principal</dt>
+<dd>IAM の Principal タイプの 1 つで、外部 IdP からの認証を受け入れる。</dd>
+
+<dt>Trust Policy (信頼ポリシー)</dt>
+<dd>「この IAM Role を誰が AssumeRole できるか」を定義するポリシー。<code>aws_iam_role.assume_role_policy</code> に書く。</dd>
+
+<dt>Permissions Policy (権限ポリシー)</dt>
+<dd>「IAM Role になった結果、何ができるか」を定義するポリシー。Role に attach する。</dd>
+
+<dt>最小権限 (Least Privilege)</dt>
+<dd>「必要最小限の権限だけ与える」セキュリティ原則。漏洩時の被害を限定する。</dd>
+
+<dt>Resource ARN</dt>
+<dd>AWS リソースを一意に指す文字列。Permissions Policy の Resource 句で「このバケットだけ」「この Distribution だけ」と絞る。</dd>
+
+<dt>thumbprint</dt>
+<dd>TLS 証明書のフィンガープリント（ハッシュ）。OIDC Provider 登録時に GitHub IdP の thumbprint を指定する（AWS が自動検証）。</dd>
+
+<dt>id-token: write permission</dt>
+<dd>GitHub Actions のワークフロー permission の 1 つ。これが無いと OIDC token 発行が拒否される。OIDC を使う Job では必須。</dd>
+
+<dt>aws-actions/configure-aws-credentials@v4</dt>
+<dd>AWS が公式提供する GitHub Actions。OIDC で AssumeRole し、後続 step に一時クレデンシャルを env vars として注入。</dd>
+
+<dt>session credentials</dt>
+<dd>AssumeRole で発行される一時クレデンシャル。AccessKey / SecretKey / SessionToken の 3 点セット。有効期限あり。</dd>
+
+<dt>CloudTrail</dt>
+<dd>AWS の API コール履歴サービス。AssumeRole の session ID 単位で「誰が何を叩いたか」が追跡できる。</dd>
+</dl>
+</section>
+
+<footer class="post-footer">
+<span>← 前 <a href="/blog/11-cloudfront-cache-spa.html">⑪ CloudFront キャッシュ・セキュリティ・SPA</a></span>
+<span>次 → <a href="/blog/13-cicd-workflow.html">⑬ 静的キーレス CI/CD ワークフロー実装</a></span>
+</footer>
+
+</article>
+
+</body>
+</html>

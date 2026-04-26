@@ -9,6 +9,8 @@
   <meta property="og:description" content="AWS / Linux / Terraform 軸のフリーランス・インフラエンジニア iigtn のポートフォリオ。">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://lab.iigtn.com/">
+  <link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+  <link rel="apple-touch-icon" href="/assets/icon.svg">
   <style>
     :root {
       --c-bg: #fafafa;
@@ -61,10 +63,15 @@
       justify-content: space-between;
     }
     .nav .logo {
-      font-weight: 700;
-      font-size: 1.15rem;
+      display: inline-flex;
+      align-items: center;
       color: var(--c-text);
-      letter-spacing: 0.05em;
+      line-height: 0;
+    }
+    .nav .logo img {
+      height: 32px;
+      width: auto;
+      display: block;
     }
     .nav ul {
       display: flex;
@@ -80,7 +87,7 @@
     .nav ul a:hover { color: var(--c-accent); text-decoration: none; }
     @media (max-width: 700px) {
       .nav ul { gap: 0.8rem; font-size: 0.82rem; flex-wrap: wrap; justify-content: flex-end; }
-      .nav .logo { font-size: 1rem; }
+      .nav .logo img { height: 26px; }
     }
 
     /* ── Sections common ─────────────────────────── */
@@ -345,7 +352,9 @@
 <!-- ─── Header / Nav ─────────────────────────────────────── -->
 <header class="site-header">
   <nav class="nav">
-    <a href="#top" class="logo">iigtn</a>
+    <a href="#top" class="logo" aria-label="iigtn">
+      <img src="/assets/logo.svg" alt="iigtn" height="32">
+    </a>
     <ul>
       <li><a href="#about">About</a></li>
       <li><a href="#skills">Skills</a></li>
@@ -530,11 +539,26 @@
   <!-- ─── Blog ───────────────────────────────────────────── -->
   <section id="blog">
     <h2>Blog</h2>
-    <p class="lead">運用記録・コスト分析・障害復旧などを月次で記録予定</p>
+    <p class="lead">構築の記録・運用メトリクス・障害復旧・技術選定の判断記録 (ADR) を執筆中</p>
 
-    <div class="blog-empty">
-      ブログは準備中です。最初の記事は <a href="/learn.html">iigtn-platform 解説書</a> として公開しています。
-      今後は月次の運用メトリクス・障害ポストモーテム・技術選定の判断記録 (ADR) を追加していきます。
+    <div class="works-list">
+      <article class="work-card">
+        <div class="work-meta">2026-04-26 · 全 21 記事 · 完結</div>
+        <h3><a href="/blog/">iigtn 構築日誌 — フリーランスがゼロから AWS サーバレスポートフォリオを作るまで</a></h3>
+        <p class="work-summary">
+          AWS サーバレス + Terraform + GitHub Actions OIDC で、ポートフォリオサイト
+          <code>lab.iigtn.com</code> を 0 から構築した記録の全 21 記事シリーズ。
+          設計思想・構築手順・ハマりどころ・運用判断を、各記事 3,500〜5,000 字 + 用語集付きで解説。
+        </p>
+        <ul class="skill-tags">
+          <li class="skill-tag">AWS</li>
+          <li class="skill-tag">Terraform</li>
+          <li class="skill-tag">GitHub Actions OIDC</li>
+          <li class="skill-tag">CloudFront / S3 / Lambda</li>
+          <li class="skill-tag">DynamoDB / SES</li>
+          <li class="skill-tag">構築日誌</li>
+        </ul>
+      </article>
     </div>
   </section>
 

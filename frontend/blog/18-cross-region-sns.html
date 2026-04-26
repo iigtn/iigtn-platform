@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⑱ Cross-Region SNS の落とし穴と AWS Budgets — CloudFront アラームの罠 | iigtn 構築日誌</title>
+<meta name="description" content="CloudFront のメトリクスは us-east-1 限定。それを監視する CloudWatch Alarm の alarm_actions に渡す SNS Topic も同一 region 必須という制約と、provider alias で別リージョンに SNS を作る回避策。">
+<link rel="stylesheet" href="/blog/style.css">
+</head>
+<body>
+
+<nav class="top">
+  <div class="nav-inner">
+    <a href="/">トップ</a>
+    <a href="/blog/">Blog 目次</a>
+    <a href="/learn.html">解説書</a>
+  </div>
+</nav>
+
+<article class="post">
+<header class="post-header">
+  <p class="post-meta">2026-04-26 · 構築日誌 #18</p>
+  <h1>Cross-Region SNS の落とし穴と AWS Budgets — CloudFront アラームの罠</h1>
+</header>
+
+<div class="post-body">
+
+<p>CloudFront 4xx アラームを作ろうとして、半日くらい悩んだ罠について書きます。「provider alias を正しく書いてるのに、なぜか us-east-1 で alarm が作れない」現象の正体は、<strong>SNS Topic の region 不一致</strong> でした。</p>
+
+<h2>事象</h2>
+
+<p>CloudFront 4xx アラームは us-east-1 必須なので、Terraform でこう書きました:</p>
+
+<pre><code>resource "aws_cloudwatch_metric_alarm" "cf_4xx_rate" {
+  provider = aws.us_east_1                          # us-east-1 alias
+
+  alarm_name          = "iigtn-lab-prod-cf-4xx-rate"
+  metric_name         = "4xxErrorRate"
+  namespace           = "AWS/CloudFront"
+  ...
+
+  dimensions = {
+    DistributionId = var.cloudfront_distribution_id
+    Region         = "Global"
+  }
+
+  alarm_actions = [aws_sns_topic.alarms.arn]        # ← 東京の SNS topic
+}
+</code></pre>
+
+<p>この <code>terraform apply</code> がエラーで落ちる:</p>
+
+<pre><code>Error: creating CloudWatch Metric Alarm: ValidationError:
+Invalid region ap-northeast-1 specified. Only us-east-1 is supported.
+</code></pre>
+
+<p>「provider が ap-northeast-1 になってる？でも <code>provider = aws.us_east_1</code> と書いてるのに…」と混乱。</p>
+
+<h2>原因の特定</h2>
+
+<p>plan 出力をよく見ると:</p>
+
+<pre><code># aws_cloudwatch_metric_alarm.cf_4xx_rate will be created
++ resource "aws_cloudwatch_metric_alarm" "cf_4xx_rate" {
+    + alarm_actions = [
+        + "arn:aws:sns:ap-northeast-1:XXXXXXXXXXXX:iigtn-lab-prod-alarms",  # ← 東京の SNS!
+      ]
+    ...
+  }
+</code></pre>
+
+<p>ここで気付きました。<strong>「<code>alarm_actions</code> に渡している SNS Topic ARN が <code>ap-northeast-1</code>」</strong>。CloudFront アラームは us-east-1 で作る必要があるが、AWS の制約として <strong>「アラーム本体と alarm_actions の SNS は同一 region 必須」</strong> という規則がある。</p>
+
+<p>エラーメッセージの「Invalid region ap-northeast-1」は、provider の region ではなく、<strong>alarm_actions に含まれる ARN の region</strong> が us-east-1 と整合してないことを示していた、というのが正解。</p>
+
+<h2>解決策: us-east-1 用 SNS Topic を別途作る</h2>
+
+<p>SNS Topic も us-east-1 に作って、CloudFront アラームはそちらを参照する設計に変更:</p>
+
+<pre><code># envs/prod/main.tf に追加
+
+# us-east-1 用 SNS Topic
+resource "aws_sns_topic" "alarms_us_east_1" {
+  provider = aws.us_east_1
+  name     = "iigtn-lab-prod-alarms-use1"
+}
+
+resource "aws_sns_topic_subscription" "alarms_us_east_1_email" {
+  count    = var.alarm_email == "" ? 0 : 1
+  provider = aws.us_east_1
+
+  topic_arn = aws_sns_topic.alarms_us_east_1.arn
+  protocol  = "email"
+  endpoint  = var.alarm_email
+}
+
+# CloudFront 4xx アラーム
+resource "aws_cloudwatch_metric_alarm" "cf_4xx_rate" {
+  provider = aws.us_east_1
+
+  alarm_name          = "iigtn-lab-prod-cf-4xx-rate"
+  metric_name         = "4xxErrorRate"
+  namespace           = "AWS/CloudFront"
+  ...
+
+  alarm_actions = [aws_sns_topic.alarms_us_east_1.arn]   # ← us-east-1 SNS
+}
+</code></pre>
+
+<p>これで apply が通り、CloudFront 4xx アラームが us-east-1 で動き始めました。</p>
+
+<h2>結果として 2 つの SNS Topic を持つ構成</h2>
+
+<table>
+<tr><th>SNS Topic</th><th>Region</th><th>用途</th></tr>
+<tr><td><code>iigtn-lab-prod-alarms</code></td><td>ap-northeast-1（東京）</td><td>Lambda / API Gateway アラーム</td></tr>
+<tr><td><code>iigtn-lab-prod-alarms-use1</code></td><td>us-east-1（バージニア北部）</td><td>CloudFront アラーム</td></tr>
+</table>
+
+<p>email subscription も両方に設定。同じメアドが両方に登録される設計。Confirm メールが 2 通来ます。</p>
+
+<h2>クロスリージョン制約の他の例</h2>
+
+<p>AWS でリージョン跨ぎがダメなパターンは結構あります:</p>
+
+<table>
+<tr><th>パターン</th><th>制約</th></tr>
+<tr><td>CloudWatch Alarm ↔ SNS Topic</td><td>同一 region 必須</td></tr>
+<tr><td>CloudWatch Logs ↔ Subscription Filter</td><td>同一 region 必須</td></tr>
+<tr><td>CloudFront ↔ ACM 証明書</td><td>ACM が us-east-1 必須</td></tr>
+<tr><td>CloudFront メトリクス</td><td>us-east-1 でのみ取得可能</td></tr>
+<tr><td>S3 Bucket Policy ↔ Bucket</td><td>同一（バケットの region）</td></tr>
+</table>
+
+<p>CloudFront 系は特に「グローバルだけど中身は us-east-1」という設計が多く、初学者の混乱の元。</p>
+
+<h2>今回のハマりで得た教訓</h2>
+
+<ol>
+  <li><strong>エラーメッセージの「Invalid region xxx」を読み違えない</strong>。provider の region ではなく、参照している ARN の region を疑う</li>
+  <li><strong>plan 出力をよく読む</strong>。「期待しない値」が混入してないか確認</li>
+  <li><strong>クロスリージョン制約は AWS の至るところに散在</strong>。CloudFront / WAF / Global Accelerator などグローバル系は要注意</li>
+  <li><strong>同じ責務のリソース（SNS Topic）が region ごとに 2 個ある状態は許容</strong>。料金も微々たるもの</li>
+</ol>
+
+<h2>AWS Budgets の細かい設定</h2>
+
+<p>前記事で Budgets の基本を書きましたが、もう少し細かい設定について。</p>
+
+<h3>サービス別予算</h3>
+
+<p>「全体予算」ではなく「Lambda 予算」「S3 予算」など特定サービスに絞った予算も作れます:</p>
+
+<pre><code>resource "aws_budgets_budget" "lambda_only" {
+  name              = "lambda-only-monthly"
+  budget_type       = "COST"
+  limit_amount      = "5"
+  limit_unit        = "USD"
+  time_unit         = "MONTHLY"
+
+  cost_filter {
+    name = "Service"
+    values = ["Amazon Elastic Compute Cloud - Compute"]   # Lambda
+  }
+
+  notification {
+    comparison_operator        = "GREATER_THAN"
+    threshold                  = 80
+    threshold_type             = "PERCENTAGE"
+    notification_type          = "ACTUAL"
+    subscriber_email_addresses = [var.alarm_email]
+  }
+}
+</code></pre>
+
+<h3>cost_filter で他にも絞れる</h3>
+
+<table>
+<tr><th>filter</th><th>意味</th></tr>
+<tr><td><code>Service</code></td><td>サービス別（Lambda / S3 / EC2 等）</td></tr>
+<tr><td><code>LinkedAccount</code></td><td>サブアカウント別（Organizations 構成時）</td></tr>
+<tr><td><code>Operation</code></td><td>API オペレーション別</td></tr>
+<tr><td><code>UsageType</code></td><td>料金タイプ別（DataTransfer-Out 等）</td></tr>
+<tr><td><code>TagKeyValue</code></td><td>リソースタグ別（<code>Project=iigtn</code> 等）</td></tr>
+</table>
+
+<p>本シリーズでは <code>default_tags</code> で全リソースに <code>Project=iigtn</code> を付けているので、後で「iigtn プロジェクトだけの予算」を Tag フィルタで作れます。</p>
+
+<h2>Cost Explorer との併用</h2>
+
+<p>Budgets はアラート、<strong>Cost Explorer</strong> は分析ツール。これで月末に「何にいくら使ったか」を可視化:</p>
+
+<pre><code>aws ce get-cost-and-usage \
+  --time-period Start=2026-04-01,End=2026-05-01 \
+  --granularity MONTHLY \
+  --metrics "UnblendedCost" \
+  --group-by Type=DIMENSION,Key=SERVICE
+</code></pre>
+
+<p>Cost Explorer は GUI だと Web コンソールから「Bills」「Cost Explorer」で確認可能。Budget アラートが鳴った時の犯人特定に必須。</p>
+
+<h2>本シリーズの実際の月額（参考）</h2>
+
+<table>
+<tr><th>サービス</th><th>月額（円・概算）</th></tr>
+<tr><td>S3 (state + web)</td><td>~5</td></tr>
+<tr><td>DynamoDB (lock + contacts)</td><td>~2</td></tr>
+<tr><td>CloudFront 転送量 (5 GB)</td><td>~85</td></tr>
+<tr><td>API Gateway HTTP API</td><td>~0.2</td></tr>
+<tr><td>Lambda 実行</td><td>0（無料枠内）</td></tr>
+<tr><td>Lambda CloudWatch Logs</td><td>~10</td></tr>
+<tr><td>CloudWatch Alarms (4 個)</td><td>~60</td></tr>
+<tr><td>SNS</td><td>~0</td></tr>
+<tr><td><strong>合計</strong></td><td><strong>約 170〜200 円</strong></td></tr>
+</table>
+
+<p>個人運用の最安ライン。月額 1,000 円超えたら何かおかしいと思って Cost Explorer で詳細見る、というのが運用ルール。</p>
+
+<h2>次の記事</h2>
+
+<p>監視・コスト管理が一通り揃ったところで、次は <strong>「ドキュメントとアーキテクチャ図を作る」</strong> 話に入ります。本シリーズではアーキテクチャ図を <strong>Mermaid → drawio (AWS 公式アイコン)</strong> に進化させた経緯があり、その記録を書きます。</p>
+
+</div>
+
+<section class="post-glossary">
+<h2>📚 用語集</h2>
+<dl>
+<dt>クロスリージョン制約</dt>
+<dd>AWS で「リソース A は region X、リソース B は region Y にある時、両者を直接参照できない」という制約。CloudWatch Alarm ↔ SNS / CloudFront ↔ ACM 等で発生。</dd>
+
+<dt>4xxErrorRate (CloudFront メトリクス)</dt>
+<dd>CloudFront のレスポンスが 4xx エラーだった割合（パーセント）。攻撃や Bot 流入の早期検知に使える。</dd>
+
+<dt>Region dimension (CloudFront)</dt>
+<dd>CloudFront メトリクスのディメンション。値は <code>Global</code>（全 Edge 合算）/ 個別 region コード（特定 Edge）が指定できる。</dd>
+
+<dt>cost_filter (AWS Budgets)</dt>
+<dd>予算を特定サービス・タグ・アカウント等に絞り込むフィルタ。「Lambda だけ月 $5」のような設定が可能。</dd>
+
+<dt>UnblendedCost</dt>
+<dd>AWS の請求データの基本となるコスト形式。Reserved Instance 等の割引適用前。</dd>
+
+<dt>Cost Explorer</dt>
+<dd>AWS の課金分析ツール。月別・サービス別・タグ別等で課金を可視化できる。Budget アラート発火時の原因調査に必須。</dd>
+
+<dt>default_tags (Provider)</dt>
+<dd>AWS provider のオプション。指定したタグがその provider で作られる全リソースに自動付与される。Cost Allocation Tag として活用可能。</dd>
+
+<dt>Cost Allocation Tag</dt>
+<dd>AWS の課金レポートで「タグ別の課金集計」を有効にしたタグ。Billing コンソールで有効化が必要。</dd>
+
+<dt>Confirm subscription (SNS)</dt>
+<dd>SNS Email Subscription が有効になるための確認ステップ。AWS から送られる確認メールのリンクをクリック。</dd>
+
+<dt>region 跨ぎ参照</dt>
+<dd>Terraform で別 region のリソースを参照する設計。provider alias を駆使する。本シリーズでは us-east-1 と ap-northeast-1 を併用。</dd>
+
+<dt>provider alias 経由のリソース</dt>
+<dd>Terraform で <code>provider = aws.us_east_1</code> を付けたリソース。指定 region に作られる。</dd>
+
+<dt>SNS Topic ARN の region 部分</dt>
+<dd>ARN の 4 番目フィールド（<code>arn:aws:sns:&lt;REGION&gt;:...</code>）。これと CloudWatch Alarm の region が一致しないとアラーム作成失敗。</dd>
+
+<dt>FORECASTED (Budgets)</dt>
+<dd>AWS の機械学習による「月末予測値」。実績で気付くより早く異常を検知できる予算閾値タイプ。</dd>
+</dl>
+</section>
+
+<footer class="post-footer">
+<span>← 前 <a href="/blog/17-cloudwatch-sns.html">⑰ CloudWatch Alarms + SNS</a></span>
+<span>次 → <a href="/blog/19-drawio.html">⑲ drawio (AWS 公式アイコン) でアーキテクチャ図</a></span>
+</footer>
+
+</article>
+
+</body>
+</html>

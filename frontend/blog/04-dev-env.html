@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>④ 開発環境セットアップ — Windows で AWS / Terraform / GitHub を回す | iigtn 構築日誌</title>
+<meta name="description" content="Windows で AWS サーバレス構築を進めるための開発環境セットアップ。PowerShell・Git Bash・AWS CLI・Terraform・gh CLI のインストールと、Windows 固有のハマりポイントの予習。">
+<link rel="stylesheet" href="/blog/style.css">
+</head>
+<body>
+
+<nav class="top">
+  <div class="nav-inner">
+    <a href="/">トップ</a>
+    <a href="/blog/">Blog 目次</a>
+    <a href="/learn.html">解説書</a>
+  </div>
+</nav>
+
+<article class="post">
+<header class="post-header">
+  <p class="post-meta">2026-04-25 · 構築日誌 #04</p>
+  <h1>開発環境セットアップ — Windows で AWS / Terraform / GitHub を回す</h1>
+</header>
+
+<div class="post-body">
+
+<p>AWS アカウントが準備できたら、ローカルの開発環境を整えます。本シリーズはすべて Windows で構築しているので、Windows 環境固有のハマりポイントも先にまとめておきます。</p>
+
+<h2>使うツール一覧</h2>
+
+<table>
+<tr><th>ツール</th><th>用途</th><th>インストール方法</th></tr>
+<tr><td>PowerShell</td><td>Windows 標準のシェル / スクリプト実行</td><td>Windows に標準搭載（PowerShell 5.1）</td></tr>
+<tr><td>Git for Windows (Git Bash)</td><td>Unix シェル相当 / git コマンド</td><td>git-scm.com からインストーラ</td></tr>
+<tr><td>AWS CLI v2</td><td>AWS API を CLI で呼ぶ</td><td>winget / msi インストーラ</td></tr>
+<tr><td>Terraform</td><td>IaC ツール</td><td>winget / tfenv</td></tr>
+<tr><td>Node.js</td><td>Lambda コードのローカル開発</td><td>winget / Volta</td></tr>
+<tr><td>gh CLI</td><td>GitHub をコマンドラインで操作</td><td>winget</td></tr>
+</table>
+
+<p>Windows で開発を始めるなら、<strong>winget</strong>（Windows 標準のパッケージマネージャ）でほとんどがインストールできます。</p>
+
+<h2>winget での一括インストール</h2>
+
+<p>PowerShell を管理者権限で開いて、以下を順に実行します:</p>
+
+<pre><code># AWS CLI v2
+winget install --id Amazon.AWSCLI --accept-source-agreements --accept-package-agreements
+
+# Terraform
+winget install --id Hashicorp.Terraform --accept-source-agreements --accept-package-agreements
+
+# Node.js (LTS)
+winget install --id OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements
+
+# GitHub CLI
+winget install --id GitHub.cli --accept-source-agreements --accept-package-agreements
+
+# Git for Windows (Git Bash 含む)
+winget install --id Git.Git --accept-source-agreements --accept-package-agreements
+</code></pre>
+
+<p>各コマンドが「インストール完了」を返したら準備 OK。</p>
+
+<div class="callout warn">
+winget でインストールしたツールは、新しい PowerShell / Git Bash を開かないと <code>PATH</code> に反映されません。<strong>「コマンドが見つからない」エラーが出たら、まずターミナルを開き直す</strong> のが第一の対処法です。
+</div>
+
+<h2>動作確認</h2>
+
+<p>新しい PowerShell or Git Bash を開いて、各ツールのバージョンを確認します:</p>
+
+<pre><code>aws --version
+# aws-cli/2.x.x
+
+terraform version
+# Terraform v1.x.x
+
+node --version
+# v20.x.x
+
+gh --version
+# gh version 2.x.x
+
+git --version
+# git version 2.x.x
+</code></pre>
+
+<p>すべて表示されれば OK です。</p>
+
+<h2>PowerShell vs Git Bash の使い分け</h2>
+
+<p>本シリーズでは、両方を使い分けます:</p>
+
+<table>
+<tr><th>シェル</th><th>得意なこと</th><th>苦手なこと</th></tr>
+<tr><td>PowerShell</td><td>Windows ネイティブ操作 / .NET 連携 / 文字エンコード処理</td><td>Unix シェル系のスクリプト互換性</td></tr>
+<tr><td>Git Bash</td><td>shell script (sh) / git / curl / Unix 流のパイプ処理</td><td>Windows パス変換のクセ（後述）</td></tr>
+</table>
+
+<p>大体の作業は Git Bash で十分ですが、<strong>UTF-8 でファイルを書きたいとき</strong> や、<strong>Windows 特有の API を叩きたいとき</strong> は PowerShell に切り替えます。</p>
+
+<h2>Windows 特有のハマり①: Git Bash のパス変換</h2>
+
+<p>Git Bash は Unix パスっぽい引数を Windows パスに自動変換します。これが時々悪さをします:</p>
+
+<pre><code># Git Bash で AWS CLI を叩くと…
+aws logs tail /aws/lambda/my-function
+
+# 中で以下に変換されてしまう
+aws logs tail "C:/Program Files/Git/aws/lambda/my-function"
+# → InvalidParameterException: log group name 不正
+</code></pre>
+
+<p>対処は、環境変数 <code>MSYS_NO_PATHCONV=1</code> を立てるか、パスを <code>//aws/...</code> と二重スラッシュで始める:</p>
+
+<pre><code># 方法 1: パス変換を一時無効化
+export MSYS_NO_PATHCONV=1
+aws logs tail /aws/lambda/my-function
+
+# 方法 2: 二重スラッシュで自動変換を回避
+aws logs tail //aws/lambda/my-function
+</code></pre>
+
+<h2>Windows 特有のハマり②: 改行コードの自動変換</h2>
+
+<p>Git for Windows のデフォルト設定では、コミット時に LF→CRLF の自動変換が入ります。<code>git commit</code> 時にこんな警告が大量に出ます:</p>
+
+<pre><code>warning: in the working copy of 'frontend/index.html',
+LF will be replaced by CRLF the next time Git touches it
+</code></pre>
+
+<p>無害ですが、気になる人は <code>.gitattributes</code> を設定するか、<code>core.autocrlf</code> を変更します:</p>
+
+<pre><code># プロジェクト全体で LF を強制したい時
+echo "* text=auto eol=lf" &gt; .gitattributes
+git add .gitattributes
+</code></pre>
+
+<h2>Windows 特有のハマり③: PowerShell のエンコード</h2>
+
+<p>PowerShell 5.1（Windows 同梱）はデフォルト出力エンコーディングが <strong>UTF-16 LE (BOM 付き)</strong>。<code>Set-Content</code> や <code>Out-File</code> で書いたファイルが他ツールで読めない、という事故が起きます。</p>
+
+<pre><code># BOM 付き UTF-8 になってしまう
+$content | Set-Content -Path file.txt -Encoding utf8
+
+# BOM 無し UTF-8 で書く（Terraform 設定ファイル等で必須）
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText('file.txt', $content, $utf8NoBom)
+</code></pre>
+
+<p>本シリーズでも、<code>~/AppData/Roaming/terraform.rc</code> を PowerShell で書いたら BOM が混入し、Terraform が <code>illegal char</code> でパースエラーを出した事故がありました（記事 #6 で詳説）。</p>
+
+<h2>AWS プロファイルの設定</h2>
+
+<p>記事 #3 で作った <code>admin-prod</code> / <code>admin-dev</code> ユーザーのアクセスキーを、ローカルプロファイルに登録します:</p>
+
+<pre><code>aws configure --profile aws-prod
+# Access Key ID: AKIA...
+# Secret Access Key: ...
+# Default region: ap-northeast-1
+# Default output format: json
+
+aws configure --profile aws-dev
+# 同じ要領で
+</code></pre>
+
+<p>確認は必ずやります:</p>
+
+<pre><code>export AWS_PROFILE=aws-prod
+aws sts get-caller-identity
+</code></pre>
+
+<h2>Git の初期設定</h2>
+
+<p>git config がまだなら、user.name / user.email を設定:</p>
+
+<pre><code>git config --global user.name "your-name"
+git config --global user.email "your-email@example.com"
+git config --global init.defaultBranch main
+</code></pre>
+
+<p>email は GitHub に登録しているメアドに合わせます。GitHub で commit が「自分のもの」として表示されるかどうかに影響します。</p>
+
+<h2>gh CLI のログイン</h2>
+
+<p>GitHub の操作を CLI でやるための gh CLI に認証します:</p>
+
+<pre><code>gh auth login
+
+# 対話的に聞かれる:
+# ? Where do you use GitHub?     → GitHub.com
+# ? What is your preferred protocol? → HTTPS
+# ? Authenticate Git? → Yes
+# ? How would you like to authenticate? → Login with a web browser
+# 8 桁コードが表示されるので https://github.com/login/device に貼る
+</code></pre>
+
+<p>ブラウザでの認証が完了したら、<code>gh auth status</code> で確認:</p>
+
+<pre><code>gh auth status
+# ✓ Logged in to github.com account &lt;username&gt; (keyring)
+</code></pre>
+
+<h2>VS Code（任意）</h2>
+
+<p>エディタは何でも良いですが、本シリーズでは VS Code を使っています。Terraform / HCL / Markdown / Lambda コードを 1 つのウィンドウで編集できる柔軟性が便利です。</p>
+
+<p>入れた拡張機能:</p>
+
+<ul>
+  <li><code>HashiCorp.terraform</code> — Terraform の構文ハイライト・補完</li>
+  <li><code>amazonwebservices.aws-toolkit-vscode</code> — AWS の Lambda / S3 を VS Code から確認</li>
+  <li><code>esbenp.prettier-vscode</code> — JavaScript / HTML / Markdown の自動整形</li>
+  <li><code>ms-vscode.PowerShell</code> — PowerShell スクリプトの補完</li>
+</ul>
+
+<h2>これで準備完了</h2>
+
+<p>ここまでで、Terraform を回し、AWS にリソースを作り、GitHub にコードを push する準備が全部整いました。</p>
+
+<p>次の記事からは、いよいよ <strong>Terraform で AWS を構築する第一歩</strong> です。最初の関門は <strong>「Terraform の状態（state）をどこに置くか」</strong>。これが鶏卵問題で、初見では結構詰まります。</p>
+
+</div>
+
+<section class="post-glossary">
+<h2>📚 用語集</h2>
+<dl>
+<dt>winget</dt>
+<dd>Windows 10/11 に標準搭載のパッケージマネージャ。<code>winget install</code> でアプリを CLI からインストールできる。</dd>
+
+<dt>PowerShell</dt>
+<dd>Windows 標準のシェルとスクリプト言語。Bash と違い、オブジェクトをパイプで流せる設計。デフォルトはバージョン 5.1。</dd>
+
+<dt>Git Bash (MINGW64)</dt>
+<dd>Git for Windows に同梱される Unix 風シェル。<code>bash</code> / <code>curl</code> / <code>grep</code> など Unix コマンドが使える。</dd>
+
+<dt>PATH 環境変数</dt>
+<dd>OS が「どのフォルダにある実行ファイルを探すか」を定義する変数。新しいツールをインストールしても、ターミナルを開き直すまで反映されない。</dd>
+
+<dt>UTF-8 / UTF-16</dt>
+<dd>文字エンコーディングの種類。Linux / Web は UTF-8、Windows は伝統的に UTF-16 が混じる。設定ファイルは UTF-8（できれば BOM 無し）が無難。</dd>
+
+<dt>BOM (Byte Order Mark)</dt>
+<dd>UTF-8 ファイルの先頭に付く 3 バイト（<code>EF BB BF</code>）。Notepad++ や PowerShell 5.1 が勝手に付けることがある。HCL / YAML / JSON 等のパーサが嫌うので、Terraform 設定ファイルでは外す。</dd>
+
+<dt>MSYS_NO_PATHCONV</dt>
+<dd>Git Bash の「Unix パスを Windows パスに自動変換する」機能を無効化する環境変数。AWS CLI に <code>/aws/lambda/...</code> 形式のリソース名を渡すときに必要。</dd>
+
+<dt>core.autocrlf</dt>
+<dd>Git の改行コード自動変換設定。<code>true</code>（Windows デフォルト）だと、commit 時に CRLF→LF、checkout 時に LF→CRLF に変換される。</dd>
+
+<dt>.gitattributes</dt>
+<dd>リポジトリ単位で改行コードや diff の挙動を指定するファイル。チームで Windows / Mac / Linux 混在時に重要。</dd>
+
+<dt>tfenv</dt>
+<dd>Terraform のバージョン切替ツール（rbenv / nvm の Terraform 版）。<code>.terraform-version</code> ファイルでプロジェクトごとに固定できる。</dd>
+
+<dt>asdf</dt>
+<dd>複数の言語・ツールのバージョンを一元管理するツール。<code>.tool-versions</code> で Terraform / Node.js / Python 等を同時に切替可能。</dd>
+
+<dt>Volta</dt>
+<dd>Node.js 専用のバージョンマネージャ。プロジェクト毎に Node のバージョンを固定できる。</dd>
+
+<dt>VS Code 拡張機能 (Extension)</dt>
+<dd>VS Code に機能を追加するプラグイン。Terraform / AWS / Prettier 等、開発に必要なものを入れる。</dd>
+
+<dt>~/.aws/credentials, ~/.aws/config</dt>
+<dd>AWS CLI の認証情報・プロファイル設定が保存されるファイル。Windows では <code>C:\Users\&lt;ユーザー&gt;\.aws\</code> 配下。</dd>
+</dl>
+</section>
+
+<footer class="post-footer">
+<span>← 前 <a href="/blog/03-aws-accounts.html">③ AWS マルチアカウント運用と IAM 設定</a></span>
+<span>次 → <a href="/blog/05-terraform-bootstrap.html">⑤ Terraform Bootstrap — 鶏卵問題の解決</a></span>
+</footer>
+
+</article>
+
+</body>
+</html>

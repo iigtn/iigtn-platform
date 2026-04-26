@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>③ AWS マルチアカウント運用 (dev / prod) と IAM 初期設定 | iigtn 構築日誌</title>
+<meta name="description" content="AWS を本番運用する前提で、dev / prod の 2 アカウント分離と、IAM ユーザ・アクセスキーの作成について。OIDC を見据えた最小限の認証設定。">
+<link rel="stylesheet" href="/blog/style.css">
+</head>
+<body>
+
+<nav class="top">
+  <div class="nav-inner">
+    <a href="/">トップ</a>
+    <a href="/blog/">Blog 目次</a>
+    <a href="/learn.html">解説書</a>
+  </div>
+</nav>
+
+<article class="post">
+<header class="post-header">
+  <p class="post-meta">2026-04-25 · 構築日誌 #03</p>
+  <h1>AWS マルチアカウント運用 (dev / prod) と IAM 初期設定</h1>
+</header>
+
+<div class="post-body">
+
+<p>設計書ができたら、まず AWS アカウントの構造を決める必要があります。本記事では <strong>dev / prod の 2 アカウント分離</strong> と、Terraform を回す前提となる <strong>IAM ユーザの初期設定</strong> について書きます。</p>
+
+<h2>なぜマルチアカウントなのか</h2>
+
+<p>個人開発でも、AWS を 2 アカウント以上に分けるメリットは大きいです:</p>
+
+<ul>
+  <li><strong>事故の隔離</strong>: dev で <code>terraform destroy</code> を打ち間違えても prod は無傷</li>
+  <li><strong>コストの可視化</strong>: 「実験で月 1,000 円、本番で月 200 円」のように分かれて見える</li>
+  <li><strong>権限の物理分離</strong>: dev のアクセスキーが流出しても prod は影響受けない</li>
+  <li><strong>採用評価</strong>: 「アカウント分離してます」と言えるだけで「分かってる人」判定される</li>
+</ul>
+
+<p>個人で 1 アカウントで全部やってる人が多いので、ここで差が付きます。</p>
+
+<h2>本シリーズで使うアカウント構成</h2>
+
+<table>
+<tr><th>用途</th><th>アカウント</th><th>主な内容</th></tr>
+<tr><td>検証・実験</td><td><code>aws-dev</code></td><td>autoST など試験中のもの。本シリーズの構築は当初こちらで開始</td></tr>
+<tr><td>本番運用</td><td><code>aws-prod</code></td><td>公開サイト lab.iigtn.com の本番リソース</td></tr>
+</table>
+
+<p>本シリーズの本番リソースは <strong>すべて aws-prod</strong> に置き、dev には触れない方針にしました。</p>
+
+<div class="callout warn">
+<strong>初期に dev で bootstrap した経緯</strong>: 最初の <code>terraform/bootstrap/setup.sh</code> 実行時、AWS CLI のデフォルトプロファイルが dev に向いていることに気付かず、間違って dev に state バケットを作ってしまいました。すぐ削除して prod 側で作り直し。<strong>「実行前に必ず <code>aws sts get-caller-identity</code> で確認」</strong> がそこからの教訓です。
+</div>
+
+<h2>AWS アカウントの初期セキュリティ設定</h2>
+
+<p>新規 AWS アカウントを作ったら、最初に必ずやることが 4 つあります:</p>
+
+<ol>
+  <li><strong>ルートユーザーに MFA</strong>: Authenticator アプリで 2 段階認証を設定</li>
+  <li><strong>請求情報の表示権限を IAM ユーザーに付与</strong>: Billing Console を見られるようにする</li>
+  <li><strong>AWS Budgets で月額予算アラート</strong>: 想定外コスト発生の早期検知</li>
+  <li><strong>CloudTrail を有効化</strong>: 操作ログを残す（無料枠あり）</li>
+</ol>
+
+<p>これらをやらないままアクセスキーが流出すると、暗号通貨マイニング等で <strong>1 晩で 100 万円超え</strong> の請求が来る事故が定期的に話題になります。</p>
+
+<h2>IAM ユーザーの作成</h2>
+
+<p>AWS の操作は <strong>ルートユーザーで直接やらない</strong> のが原則です。代わりに IAM ユーザーを作って、そちらで操作します。</p>
+
+<p>本シリーズでは、各アカウントに 1 つずつ IAM ユーザーを作りました:</p>
+
+<table>
+<tr><th>アカウント</th><th>IAM ユーザー名</th><th>権限</th></tr>
+<tr><td>aws-dev</td><td><code>admin-dev</code></td><td>AdministratorAccess（暫定）</td></tr>
+<tr><td>aws-prod</td><td><code>admin-prod</code></td><td>AdministratorAccess（暫定）</td></tr>
+</table>
+
+<div class="callout info">
+最初は <code>AdministratorAccess</code> を付けて構築を進め、後で <strong>IAM Access Analyzer</strong> で実際に使った API を可視化して権限を絞っていく、という流れが現実的です。最初から最小権限にすると毎回 <code>AccessDenied</code> でハマって作業が進みません。
+</div>
+
+<h2>IAM ユーザー作成画面で迷うポイント</h2>
+
+<p>AWS コンソールの IAM ユーザー作成画面で、初心者が必ず迷うのが「ユースケース」のところです。本シリーズでは:</p>
+
+<table>
+<tr><th>項目</th><th>選択</th></tr>
+<tr><td>ユーザー名</td><td><code>admin-prod</code> 等</td></tr>
+<tr><td>マネジメントコンソールへのアクセス</td><td><strong>OFF</strong>（CLI / Terraform 専用にする）</td></tr>
+<tr><td>許可</td><td>「ポリシーを直接アタッチする」 → <code>AdministratorAccess</code></td></tr>
+<tr><td>アクセスキー作成時のユースケース</td><td><strong>「コマンドラインインターフェイス (CLI)」</strong></td></tr>
+</table>
+
+<p>コンソールアクセスを OFF にする理由は、<strong>「人間用とプログラム用は分ける」</strong> が原則だからです。コンソールに入るときはルート + MFA か、別途コンソール専用ユーザーを作る方が安全。</p>
+
+<h2>アクセスキーの危険性</h2>
+
+<p>IAM ユーザーのアクセスキー（Access Key ID + Secret）は、<strong>「永続的な権限の持ち運び可能なコピー」</strong> です。これが最も漏洩リスクが高い:</p>
+
+<ul>
+  <li>GitHub に誤コミット → 数分で発見されてアカウント乗っ取り</li>
+  <li>不要になったあと放置 → 古いキーが流出して悪用される</li>
+  <li>共有 PC に保存 → 退職後も使い続けられる</li>
+</ul>
+
+<p>本シリーズでは <strong>「アクセスキーを使うのは bootstrap の初回だけ」</strong> と決めました。Terraform 構築後は <strong>GitHub Actions OIDC</strong> に移行し、アクセスキーをほぼゼロに近づけます（記事 #12 で扱います）。</p>
+
+<h2>ローカルでの認証設定</h2>
+
+<p>アクセスキーが取れたら、<code>aws configure --profile</code> でローカルにプロファイルを設定します:</p>
+
+<pre><code># prod 用プロファイル
+aws configure --profile aws-prod
+
+# 聞かれる項目
+AWS Access Key ID [None]:     AKIA...（コピペ）
+AWS Secret Access Key [None]: ...（コピペ）
+Default region name [None]:   ap-northeast-1
+Default output format [None]: json
+
+# dev 用も同じ要領で
+aws configure --profile aws-dev
+</code></pre>
+
+<p>これで <code>~/.aws/credentials</code> と <code>~/.aws/config</code> に保存されます。Windows なら <code>C:\Users\&lt;ユーザー&gt;\.aws\</code> 配下です。</p>
+
+<h2>使い分けるときの落とし穴</h2>
+
+<p>AWS CLI でプロファイルを切り替えるときは、必ず確認してから操作します:</p>
+
+<pre><code># ① 切替
+export AWS_PROFILE=aws-prod
+# Windows PowerShell なら: $env:AWS_PROFILE = 'aws-prod'
+
+# ② 確認 (これを必ずやる)
+aws sts get-caller-identity
+
+# 期待される出力
+{
+  "UserId": "AIDA...",
+  "Account": "XXXXXXXXXXXX",
+  "Arn": "arn:aws:iam::XXXXXXXXXXXX:user/admin-prod"
+}
+
+# ③ 確認後に操作
+aws s3 ls
+</code></pre>
+
+<div class="callout warn">
+これを習慣にしないと、確実に「dev のつもりで prod を消した」事故を起こします。私自身、初回 bootstrap でこれをサボって dev に state を作る事故を起こしました。
+</div>
+
+<h2>2 アカウント運用での共通ファイル</h2>
+
+<p>2 つの AWS アカウントを切り替える前提なので、ローカルの設定ファイルは次のようになります:</p>
+
+<pre><code># ~/.aws/credentials
+[aws-dev]
+aws_access_key_id = AKIA-DEV-XXXXX
+aws_secret_access_key = ...
+
+[aws-prod]
+aws_access_key_id = AKIA-PROD-XXXXX
+aws_secret_access_key = ...
+
+# ~/.aws/config
+[profile aws-dev]
+region = ap-northeast-1
+output = json
+
+[profile aws-prod]
+region = ap-northeast-1
+output = json
+</code></pre>
+
+<p>この時点で <strong>default プロファイル</strong> は意図的に作りません。「明示しないと操作できない」状態にすることで、誤操作を構造的に防ぎます。</p>
+
+<h2>請求アラートの初期設定</h2>
+
+<p>IAM ユーザー作成と並行して、必ず Budgets アラートを入れておきます。本シリーズでは Terraform で後から作りますが、初期検証中は手動で設定するのも有効です。</p>
+
+<table>
+<tr><th>閾値</th><th>意味</th></tr>
+<tr><td>$1 (約 150 円)</td><td>「あれ、何か始まった？」レベル</td></tr>
+<tr><td>$10 (約 1,500 円)</td><td>「想定外の何かが回り始めた」レベル</td></tr>
+<tr><td>$50 (約 7,500 円)</td><td>「危険、即対応」レベル</td></tr>
+</table>
+
+<p>個人ポートフォリオなら $10 / 月で十分。それを超えたらメール通知が飛ぶように設定しておくと安心です。</p>
+
+<h2>次の記事</h2>
+
+<p>AWS アカウントの準備ができたら、次はローカル開発環境を整えます。次の記事では <strong>PowerShell / Git Bash / AWS CLI / Terraform / gh CLI</strong> のセットアップについて書きます。Windows 環境固有のハマりどころも紹介します。</p>
+
+</div>
+
+<section class="post-glossary">
+<h2>📚 用語集</h2>
+<dl>
+<dt>マルチアカウント運用</dt>
+<dd>1 つの組織で複数の AWS アカウントを使い分ける運用方式。ワークロード隔離・権限分離・コスト可視化のメリットがある。</dd>
+
+<dt>ルートユーザー</dt>
+<dd>AWS アカウント作成時のメールアドレスでログインする最高権限ユーザー。日常操作には絶対に使わず、IAM ユーザーを作って使う。</dd>
+
+<dt>MFA (Multi-Factor Authentication)</dt>
+<dd>多要素認証。パスワード + Authenticator アプリの 6 桁コード等。ルートユーザーには必須。</dd>
+
+<dt>IAM (Identity and Access Management)</dt>
+<dd>AWS のアクセス権管理サービス。ユーザー・ロール・ポリシーで「誰が何をできるか」を定義。</dd>
+
+<dt>IAM ユーザー</dt>
+<dd>人間に紐付く永続的な識別子。アクセスキー（プログラム用）とコンソール認証情報（人間用）を持てる。</dd>
+
+<dt>IAM ロール</dt>
+<dd>「役割」を表す概念。誰でも適切に AssumeRole できれば一時的にその役割になれる。永続的な認証情報を持たない。</dd>
+
+<dt>AdministratorAccess</dt>
+<dd>AWS が標準で提供する IAM ポリシーで、ほぼ全 API を許可する強い権限。初期構築時に使うが、運用フェーズでは Access Analyzer で絞り込む。</dd>
+
+<dt>アクセスキー (Access Key)</dt>
+<dd>Access Key ID + Secret Access Key のペア。プログラムから AWS API を叩くときの認証情報。永続的なので漏洩リスクが高い。</dd>
+
+<dt>AWS CLI</dt>
+<dd>AWS をコマンドラインから操作するツール。<code>aws</code> コマンドで提供される。</dd>
+
+<dt>profile (プロファイル)</dt>
+<dd>AWS CLI で複数のアカウント / 認証情報を切り替える仕組み。<code>aws --profile aws-prod ...</code> や環境変数 <code>AWS_PROFILE</code> で指定。</dd>
+
+<dt>aws sts get-caller-identity</dt>
+<dd>「今自分が誰として AWS に対して操作しようとしているか」を返す API。プロファイル切替後に必ず叩く確認コマンド。</dd>
+
+<dt>AWS Budgets</dt>
+<dd>月額予算とアラート閾値を設定する AWS 標準サービス。50% / 80% / 100% で通知を送るのが定番設定。</dd>
+
+<dt>CloudTrail</dt>
+<dd>AWS 上の API コール履歴を記録するサービス。「誰が何時に何をしたか」が追跡できる。一定期間まで無料。</dd>
+
+<dt>IAM Access Analyzer</dt>
+<dd>実際に使われた API を分析し、最小権限の IAM ポリシーを自動生成するツール。運用後の権限絞り込みに使う。</dd>
+
+<dt>OIDC (OpenID Connect)</dt>
+<dd>本シリーズで GitHub Actions と AWS の連携に使う認証プロトコル。アクセスキーなしで一時クレデンシャルを取得できる。記事 #12 で詳説。</dd>
+</dl>
+</section>
+
+<footer class="post-footer">
+<span>← 前 <a href="/blog/02-design-review.html">② ChatGPT と 6 ラウンドの設計レビュー</a></span>
+<span>次 → <a href="/blog/04-dev-env.html">④ 開発環境セットアップ</a></span>
+</footer>
+
+</article>
+
+</body>
+</html>

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blog — iigtn 構築日誌</title>
+<meta name="description" content="フリーランス・インフラエンジニア iigtn が AWS サーバレス + Terraform + GitHub Actions OIDC でポートフォリオサイトを構築するまでの全 21 記事シリーズ。">
+<link rel="stylesheet" href="/blog/style.css">
+</head>
+<body>
+
+<nav class="top">
+  <div class="nav-inner">
+    <a href="/">トップ</a>
+    <a href="/blog/">Blog 目次</a>
+    <a href="/learn.html">解説書</a>
+  </div>
+</nav>
+
+<div class="blog-index">
+  <h1>iigtn 構築日誌</h1>
+  <p class="lead">
+    AWS サーバレス + Terraform + GitHub Actions OIDC で、フリーランス・インフラエンジニアが
+    ポートフォリオサイト <code>lab.iigtn.com</code> を 0 から構築するまでの全 21 記事シリーズ。
+    各記事は 3,500〜5,000 字、末尾に用語集付き。
+  </p>
+
+  <ol class="post-list-index">
+
+    <li><a href="/blog/01-intro.html"><span class="post-num">#01</span>序章 — フリーランスのインフラエンジニアが AWS でポートフォリオを作る理由</a>
+      <span class="post-summary">プロジェクトの目的・設計思想 4 本柱・想定読者・全体ロードマップ</span></li>
+
+    <li><a href="/blog/02-design-review.html"><span class="post-num">#02</span>ChatGPT と 6 ラウンドの設計レビュー</a>
+      <span class="post-summary">設計書を v1 から v5 まで磨いた過程と、テンプレ感の排除・実運用視点の追加</span></li>
+
+    <li><a href="/blog/03-aws-accounts.html"><span class="post-num">#03</span>AWS マルチアカウント運用 (dev / prod) と IAM 初期設定</a>
+      <span class="post-summary">2 アカウント分離・IAM ユーザ作成・アクセスキー vs OIDC の判断</span></li>
+
+    <li><a href="/blog/04-dev-env.html"><span class="post-num">#04</span>開発環境セットアップ — Windows で AWS / Terraform / GitHub を回す</a>
+      <span class="post-summary">PowerShell / Git Bash / AWS CLI / Terraform / gh CLI のインストールと Windows 固有の罠</span></li>
+
+    <li><a href="/blog/05-terraform-bootstrap.html"><span class="post-num">#05</span>Terraform Bootstrap — 鶏卵問題の解決</a>
+      <span class="post-summary">S3 backend + DynamoDB Lock の手動初期化、setup.sh で idempotent 化</span></li>
+
+    <li><a href="/blog/06-terraform-tls.html"><span class="post-num">#06</span>Windows での Terraform Provider TLS 干渉と filesystem mirror 回避</a>
+      <span class="post-summary">tls: bad record MAC エラーの原因究明と、TLS 1.2 強制 + resume + filesystem mirror で解決</span></li>
+
+    <li><a href="/blog/07-terraform-modules.html"><span class="post-num">#07</span>Terraform モジュール設計の考え方 — modules / envs / providers alias</a>
+      <span class="post-summary">5 モジュール構成に収束した経緯、provider alias の使い方</span></li>
+
+    <li><a href="/blog/08-acm-cert.html"><span class="post-num">#08</span>ACM 証明書の発行と DNS 検証フロー</a>
+      <span class="post-summary">us-east-1 必須・DNS validation の流れ・ワイルドカード SAN・aws_acm_certificate_validation</span></li>
+
+    <li><a href="/blog/09-squarespace-dns.html"><span class="post-num">#09</span>Squarespace の NS 委譲問題とアーキテクチャ pivot</a>
+      <span class="post-summary">NS 拒否で詰まり、Route53 hosted zone を捨てて CNAME のみで運用する設計に変更</span></li>
+
+    <li><a href="/blog/10-cloudfront-s3-oac.html"><span class="post-num">#10</span>CloudFront + S3 + OAC でセキュアな静的サイト配信</a>
+      <span class="post-summary">OAC vs OAI、Bucket Policy の SourceArn 条件、両側設定のハマり</span></li>
+
+    <li><a href="/blog/11-cloudfront-cache-spa.html"><span class="post-num">#11</span>CloudFront のキャッシュ・セキュリティ・SPA 設定</a>
+      <span class="post-summary">マネージド Cache Policy / Response Headers Policy・SPA フォールバック・HTTP/3</span></li>
+
+    <li><a href="/blog/12-github-oidc.html"><span class="post-num">#12</span>GitHub Actions OIDC の仕組み — JWT で AWS を静的キーレス操作</a>
+      <span class="post-summary">JWT・sub claim・AssumeRoleWithWebIdentity・Trust Policy / Permissions Policy</span></li>
+
+    <li><a href="/blog/13-cicd-workflow.html"><span class="post-num">#13</span>静的キーレス CI/CD ワークフロー実装 — git push から本番反映まで</a>
+      <span class="post-summary">frontend-deploy.yml の各ステップ解説・concurrency・aws s3 sync・invalidation</span></li>
+
+    <li><a href="/blog/14-api-gateway-lambda.html"><span class="post-num">#14</span>API Gateway HTTP API と Lambda Proxy 統合</a>
+      <span class="post-summary">HTTP API vs REST API・Lambda Proxy 統合・payload 2.0・arm64 / 256MB / 10s</span></li>
+
+    <li><a href="/blog/15-dynamodb.html"><span class="post-num">#15</span>DynamoDB テーブル設計と PII 配慮 — On-demand と PITR</a>
+      <span class="post-summary">PK 選定（PII を主キーにしない）・On-demand・PITR・SSE</span></li>
+
+    <li><a href="/blog/16-cloudfront-api-routing.html"><span class="post-num">#16</span>CloudFront /api/* で 1 ドメイン化</a>
+      <span class="post-summary">dynamic block で条件付き origin 追加・AllViewerExceptHostHeader の罠</span></li>
+
+    <li><a href="/blog/17-cloudwatch-sns.html"><span class="post-num">#17</span>CloudWatch Alarms + SNS でアラート構築</a>
+      <span class="post-summary">Lambda Errors / Duration p95 / API GW 5xx の閾値設計と通知の組み立て</span></li>
+
+    <li><a href="/blog/18-cross-region-sns.html"><span class="post-num">#18</span>Cross-Region SNS の落とし穴と AWS Budgets</a>
+      <span class="post-summary">CloudFront アラームは us-east-1 必須、SNS Topic も同一 region 必須の罠</span></li>
+
+    <li><a href="/blog/19-drawio.html"><span class="post-num">#19</span>drawio (AWS 公式アイコン) でアーキテクチャ図を組み込む</a>
+      <span class="post-summary">ASCII art → Mermaid → drawio aws4 公式アイコンへの段階的進化と使い分け</span></li>
+
+    <li><a href="/blog/20-portfolio-ses.html"><span class="post-num">#20</span>ポートフォリオ標準構成への再設計 + SES 通知稼働</a>
+      <span class="post-summary">Hero / About / Skills / Works / Blog / Contact 構成への再設計と SES sandbox からの稼働</span></li>
+
+    <li><a href="/blog/21-command-cheatsheet.html"><span class="post-num">#21</span>付録: 構築で使ったコマンド早見表</a>
+      <span class="post-summary">PowerShell / Git / AWS CLI / Terraform / curl / npm / gh CLI の頻出コマンド集</span></li>
+
+  </ol>
+
+  <p style="margin-top: 2rem; color: var(--c-muted); font-size: 0.88rem;">
+    全 21 記事 · 約 90,000 字 · 用語集約 300 用語<br>
+    シリーズ完結: 2026-04-26
+  </p>
+
+</div>
+
+</body>
+</html>

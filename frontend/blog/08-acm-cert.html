@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⑧ ACM 証明書の発行と DNS 検証フロー — Terraform で完全自動化 | iigtn 構築日誌</title>
+<meta name="description" content="AWS ACM で TLS 証明書を発行する手順。CloudFront 用は us-east-1 必須・DNS validation の流れ・ワイルドカード SAN・aws_acm_certificate_validation リソースの意味を解説。">
+<link rel="stylesheet" href="/blog/style.css">
+</head>
+<body>
+
+<nav class="top">
+  <div class="nav-inner">
+    <a href="/">トップ</a>
+    <a href="/blog/">Blog 目次</a>
+    <a href="/learn.html">解説書</a>
+  </div>
+</nav>
+
+<article class="post">
+<header class="post-header">
+  <p class="post-meta">2026-04-26 · 構築日誌 #08</p>
+  <h1>ACM 証明書の発行と DNS 検証フロー — Terraform で完全自動化</h1>
+</header>
+
+<div class="post-body">
+
+<p>HTTPS でサイトを公開するには TLS 証明書が必要です。AWS 内で完結させるなら <strong>ACM (AWS Certificate Manager)</strong> が定石。パブリック証明書は <strong>無料・自動更新</strong> という最強コスパです。本記事では ACM 証明書の発行と DNS 検証の仕組み、それを Terraform でどう書くかを解説します。</p>
+
+<h2>ACM の特徴</h2>
+
+<table>
+<tr><th>項目</th><th>内容</th></tr>
+<tr><td>料金</td><td>パブリック証明書は完全無料</td></tr>
+<tr><td>自動更新</td><td>有効期限の前に自動更新（手動操作不要）</td></tr>
+<tr><td>連携先</td><td>CloudFront, ALB, API Gateway 等の AWS サービス</td></tr>
+<tr><td>取得方式</td><td>DNS validation（推奨）/ Email validation</td></tr>
+<tr><td>有効期間</td><td>発行から約 13 か月（自動更新で実質永続）</td></tr>
+</table>
+
+<p>「Let's Encrypt + certbot で 90 日ごとの cron 監視」みたいな手間が一切要りません。AWS と心中する覚悟があれば最強の選択肢です。</p>
+
+<h2>CloudFront 用 ACM は us-east-1 必須</h2>
+
+<p>本シリーズで最初にハマるのが、この仕様:</p>
+
+<div class="callout warn">
+<strong>CloudFront にアタッチする ACM 証明書は、必ず us-east-1（バージニア北部）リージョンで発行する</strong>必要があります。東京（ap-northeast-1）で発行した証明書は CloudFront からは使えません。
+</div>
+
+<p>これは CloudFront が「グローバルサービス」として us-east-1 にメタデータを持っている設計の名残です。最初は混乱しますが、覚えてしまえば理由は明確。</p>
+
+<p>実装上は、Terraform の provider alias で us-east-1 用 provider を別途用意して使います（記事 #7 参照）。</p>
+
+<h2>DNS validation の仕組み</h2>
+
+<p>ACM は「あなたが本当にそのドメインの持ち主か」を確認するために検証フローを通します。本シリーズでは <strong>DNS validation</strong> を使います。手順はシンプル:</p>
+
+<ol>
+  <li>ACM に「<code>lab.iigtn.com</code> の証明書を発行して」とリクエスト</li>
+  <li>ACM が「この CNAME を DNS に追加してください」とランダムな検証レコードを返す（例: <code>_2611...lab.iigtn.com → _00b9...acm-validations.aws.</code>）</li>
+  <li>あなたがそのドメインの DNS 管理画面で CNAME を追加</li>
+  <li>ACM が定期的に DNS を引いて「あ、ちゃんと CNAME 立ってる」と確認</li>
+  <li>検証成功 → 証明書ステータスが <code>ISSUED</code> になる</li>
+</ol>
+
+<p>所要時間は通常 5〜30 分。Route53 で DNS 管理しているなら、検証 CNAME も Terraform で自動投入できて、apply 1 回で完結します。</p>
+
+<h2>本シリーズの network_dns モジュール</h2>
+
+<p>これらを Terraform でこう書きました:</p>
+
+<h3>versions.tf — us_east_1 alias を要求</h3>
+
+<pre><code>terraform {
+  required_version = "&gt;= 1.5"
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~&gt; 5.0"
+      configuration_aliases = [aws.us_east_1]   # ← us-east-1 用 alias を要求
+    }
+  }
+}
+</code></pre>
+
+<h3>variables.tf — ドメイン名を入力に</h3>
+
+<pre><code>variable "domain_name" {
+  description = "発行するドメイン (例: lab.iigtn.com)"
+  type        = string
+
+  validation {
+    condition     = length(var.domain_name) &gt; 0 &amp;&amp; !can(regex("\\.$", var.domain_name))
+    error_message = "domain_name は空でなく、末尾のドット (.) を含まないこと。"
+  }
+}
+</code></pre>
+
+<h3>main.tf — 証明書発行 + 検証待ち</h3>
+
+<pre><code># 証明書本体（us-east-1 で発行）
+resource "aws_acm_certificate" "this" {
+  provider = aws.us_east_1
+
+  domain_name               = var.domain_name
+  subject_alternative_names = ["*.${var.domain_name}"]   # ワイルドカード追加
+  validation_method         = "DNS"
+
+  lifecycle {
+    create_before_destroy = true   # 差し替え時にダウン回避
+  }
+}
+
+# 検証完了を待つ
+resource "aws_acm_certificate_validation" "this" {
+  provider = aws.us_east_1
+
+  certificate_arn = aws_acm_certificate.this.arn
+
+  validation_record_fqdns = [
+    for dvo in aws_acm_certificate.this.domain_validation_options :
+    dvo.resource_record_name
+  ]
+
+  timeouts {
+    create = "75m"   # 検証用 CNAME 投入に時間が必要なケースを想定
+  }
+}
+</code></pre>
+
+<h3>outputs.tf — Distribution に渡す ARN を出力</h3>
+
+<pre><code>output "certificate_arn" {
+  description = "Validated ACM certificate ARN"
+  value       = aws_acm_certificate_validation.this.certificate_arn
+}
+
+output "validation_records" {
+  description = "DNS に追加すべき CNAME レコード（手動投入時の参考用）"
+  value = {
+    for dvo in aws_acm_certificate.this.domain_validation_options :
+    dvo.domain_name =&gt; {
+      name  = dvo.resource_record_name
+      type  = dvo.resource_record_type
+      value = dvo.resource_record_value
+    }
+  }
+}
+</code></pre>
+
+<h2>aws_acm_certificate と aws_acm_certificate_validation の違い</h2>
+
+<p>初見で混乱するのが、Terraform に <strong>ACM 関連の resource が 2 つある</strong> こと:</p>
+
+<table>
+<tr><th>resource</th><th>役割</th></tr>
+<tr><td><code>aws_acm_certificate</code></td><td>「証明書の発行リクエスト」を表す。これだけだとステータスは <code>PENDING_VALIDATION</code> のまま</td></tr>
+<tr><td><code>aws_acm_certificate_validation</code></td><td>「検証完了まで apply をブロック」する仕組み。完了するまで他のリソース作成を待たせる</td></tr>
+</table>
+
+<p>後者は実際には何も作らない「待機専用」のリソース。<strong>これを <code>certificate_arn</code> で参照しないと、検証前の証明書が CloudFront にアタッチされて apply が失敗します</strong>。</p>
+
+<h2>ワイルドカード SAN を入れる理由</h2>
+
+<p>本シリーズでは <code>lab.iigtn.com</code> 単体ではなく、<code>*.lab.iigtn.com</code> も SAN に追加しています:</p>
+
+<pre><code>subject_alternative_names = ["*.${var.domain_name}"]
+</code></pre>
+
+<p>これで <code>status.lab.iigtn.com</code> や <code>api.lab.iigtn.com</code> など、後でサブドメインを増やしたい時に <strong>証明書を再発行する必要がなくなる</strong>。1 回の DNS validation で 1 つのドメイン + すべてのサブドメインがカバーされます。</p>
+
+<div class="callout info">
+ACM は「<code>lab.iigtn.com</code>」と「<code>*.lab.iigtn.com</code>」で検証用 CNAME が同一になるケースが多く、結局 1 個の CNAME を投入すれば両方検証完了します。
+</div>
+
+<h2>create_before_destroy の意味</h2>
+
+<p>証明書リソースに <code>lifecycle { create_before_destroy = true }</code> を付けています:</p>
+
+<pre><code>lifecycle {
+  create_before_destroy = true
+}
+</code></pre>
+
+<p>これは Terraform の挙動を <strong>「先に新しいのを作ってから古いのを消す」</strong> に変える指定。デフォルトは「先に古いのを消してから新しいのを作る」で、その瞬間サイトがダウンする。create_before_destroy なら瞬断ゼロで証明書を入れ替えられます。</p>
+
+<h2>apply の流れ</h2>
+
+<pre><code>cd terraform/envs/prod
+terraform plan
+terraform apply
+</code></pre>
+
+<p>Route53 で DNS 管理しているなら、apply 中に検証 CNAME が自動投入されて、5〜30 分待つと <code>aws_acm_certificate_validation.this: Creation complete after Xm</code> でステータスが <code>ISSUED</code> になります。</p>
+
+<p>本シリーズでは Squarespace で DNS 管理していたので、自動投入はできず手動になりました（次の記事で詳説）。</p>
+
+<h2>発行確認</h2>
+
+<pre><code>aws acm describe-certificate --region us-east-1 \
+  --certificate-arn &lt;ARN&gt; \
+  --query 'Certificate.{Status:Status,Domain:DomainName,NotAfter:NotAfter}' \
+  --output table
+</code></pre>
+
+<p>結果:</p>
+
+<pre><code>+----------+----------------------------+
+|  Status  |          ISSUED            |
+|  Domain  |       lab.iigtn.com        |
+|  NotAfter|   2027-05-09T08:59:59+09:00|
++----------+----------------------------+
+</code></pre>
+
+<p>有効期限は約 13 か月先。期限の前に ACM が自動更新します。</p>
+
+<h2>失敗時の対処</h2>
+
+<table>
+<tr><th>症状</th><th>原因</th><th>対処</th></tr>
+<tr><td>75 分でタイムアウト</td><td>検証 CNAME が DNS に投入されていない or 反映待ち</td><td><code>dig &lt;CNAME&gt; @8.8.8.8</code> で外部から見えるか確認 → 反映後に <code>terraform apply</code> 再実行</td></tr>
+<tr><td>CloudFront に証明書が選択肢として出ない</td><td>us-east-1 以外で発行している</td><td>provider alias を確認、us-east-1 で再発行</td></tr>
+<tr><td>同じドメインで重複エラー</td><td>古い証明書が残っている</td><td>ACM コンソールで古い証明書を削除してから apply</td></tr>
+</table>
+
+<h2>次の記事</h2>
+
+<p>本シリーズで一番苦労した部分が、ここから先の <strong>「Squarespace で DNS 管理されているドメインに、AWS の証明書を取得する」</strong> 部分です。Squarespace の DNS UI が NS レコードの追加を拒否する制約に当たり、当初の「Route53 hosted zone + NS 委譲」案を捨てて、CNAME のみで運用する設計に pivot した経緯を書きます。</p>
+
+</div>
+
+<section class="post-glossary">
+<h2>📚 用語集</h2>
+<dl>
+<dt>ACM (AWS Certificate Manager)</dt>
+<dd>AWS が提供する TLS 証明書の発行・管理・自動更新サービス。パブリック証明書は無料。</dd>
+
+<dt>TLS / SSL 証明書</dt>
+<dd>HTTPS 通信に使う公開鍵証明書。サーバが「自分が本物の lab.iigtn.com である」ことを証明する電子証明書。</dd>
+
+<dt>パブリック証明書 (Public Certificate)</dt>
+<dd>誰でも検証できる公開証明書。Web サイト用は通常これ。プライベート証明書（社内 PKI 用）と区別される。</dd>
+
+<dt>DNS validation</dt>
+<dd>ACM が「あなたがそのドメインの持ち主か」を、DNS レコード（CNAME）の存在で確認する検証方式。Email validation より自動化しやすい。</dd>
+
+<dt>SAN (Subject Alternative Names)</dt>
+<dd>1 つの証明書がカバーする追加ドメイン名のリスト。<code>lab.iigtn.com</code> + <code>*.lab.iigtn.com</code> など。</dd>
+
+<dt>ワイルドカード証明書</dt>
+<dd><code>*.example.com</code> のように、任意のサブドメインをカバーする証明書。<code>foo.example.com</code> も <code>bar.example.com</code> も同じ証明書で配信できる。</dd>
+
+<dt>aws_acm_certificate</dt>
+<dd>Terraform の AWS provider で「ACM 証明書発行リクエスト」を表すリソース。これだけでは PENDING のまま。</dd>
+
+<dt>aws_acm_certificate_validation</dt>
+<dd>「ACM 検証完了まで apply をブロックする」専用の Terraform リソース。実際の AWS リソースは作らないが、依存関係の同期に使う。</dd>
+
+<dt>domain_validation_options</dt>
+<dd><code>aws_acm_certificate</code> の output 属性。「DNS に追加すべき検証 CNAME」のリスト。</dd>
+
+<dt>provider alias</dt>
+<dd>Terraform で「同じ provider を別の設定で使う」仕組み。本シリーズでは us-east-1 用に <code>aws.us_east_1</code> alias を定義。</dd>
+
+<dt>create_before_destroy</dt>
+<dd>Terraform の lifecycle 設定。「新しいリソースを作ってから古いのを消す」順序にする。瞬断ゼロでリソース入替が可能。</dd>
+
+<dt>ISSUED / PENDING_VALIDATION</dt>
+<dd>ACM 証明書のステータス。検証中は PENDING_VALIDATION、検証完了で ISSUED。</dd>
+
+<dt>NotAfter / 有効期限</dt>
+<dd>証明書が無効になる日時。ACM は期限前に自動更新するので実質意識不要。</dd>
+
+<dt>dig</dt>
+<dd>DNS 問い合わせコマンド。<code>dig CNAME _xxx.lab.iigtn.com @8.8.8.8</code> で「Google の DNS から見て CNAME が引けるか」を確認できる。</dd>
+
+<dt>Let's Encrypt</dt>
+<dd>無料の TLS 証明書発行 CA（認証局）。AWS の外で運用する場合の選択肢。証明書の有効期間が 90 日と短く、cron で自動更新が必要。ACM は AWS 内で完結するので楽。</dd>
+
+<dt>CloudFront のグローバル性</dt>
+<dd>CloudFront は「単一リージョンに属さない」サービスとして設計されているが、メタデータと証明書は us-east-1 に集約される仕様。</dd>
+</dl>
+</section>
+
+<footer class="post-footer">
+<span>← 前 <a href="/blog/07-terraform-modules.html">⑦ Terraform モジュール設計の考え方</a></span>
+<span>次 → <a href="/blog/09-squarespace-dns.html">⑨ Squarespace の NS 委譲問題とアーキテクチャ pivot</a></span>
+</footer>
+
+</article>
+
+</body>
+</html>

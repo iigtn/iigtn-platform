@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  IIGTN logo G — "Icon + wordmark composite"
+  Concept : an AWS-service-icon-style square mark on the left
+            (containing the bracket-i monogram, distilled essence of
+            logo C) paired with the full "iigtn" wordmark on the right.
+            Use the composite in headers/OGP; extract the square alone
+            for favicons and SNS avatars where 16-32px legibility wins.
+  Palette : 2 tone — square fill = brand blue, monogram = white.
+            Wordmark uses currentColor so it inherits text colour.
+  Grid    : viewBox 270 x 64. Square mark = 64 x 64 at x=0.
+            Wordmark cells start at x=88 (24px gap from square).
+            Wordmark ink ends at x=246; 24px right padding.
+-->
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 270 64"
+     width="270" height="64"
+     role="img" aria-label="iigtn"
+     fill="currentColor"
+     color="#2a6acc">
+
+  <!-- ============ ICON BLOCK (extractable as 64x64 favicon) ============ -->
+  <!-- AWS-style rounded square in brand blue -->
+  <rect x="0" y="0" width="64" height="64" rx="8" ry="8" fill="#2a6acc"/>
+
+  <!-- inner mark in white: [i] -->
+  <g fill="#ffffff">
+    <!-- left bracket [ -->
+    <path d="M 14,12 h 10 v 4 h -6 v 32 h 6 v 4 h -10 Z"/>
+    <!-- right bracket ] -->
+    <path d="M 50,12 h -10 v 4 h 6 v 32 h -6 v 4 h 10 Z"/>
+    <!-- i : dot + stem -->
+    <rect x="29" y="20" width="6" height="6"/>
+    <rect x="29" y="30" width="6" height="18"/>
+  </g>
+
+  <!-- ============ WORDMARK (currentColor) ============ -->
+  <!-- glyph metrics match logo D; cells offset by +88 -->
+
+  <!-- i (1) : cell origin x=88 -->
+  <rect x="98" y="14" width="4" height="4"/>
+  <rect x="98" y="24" width="4" height="28"/>
+
+  <!-- i (2) : cell origin x=120 -->
+  <rect x="130" y="14" width="4" height="4"/>
+  <rect x="130" y="24" width="4" height="28"/>
+
+  <!-- g : cell origin x=152. bowl center (168, 38) -->
+  <path fill-rule="evenodd" d="
+    M 178,38
+    a 10,10 0 1 1 -20,0
+    a 10,10 0 1 1  20,0
+    Z
+    M 174,38
+    a 6,6 0 1 0 -12,0
+    a 6,6 0 1 0  12,0
+    Z"/>
+  <rect x="174" y="28" width="4" height="28"/>
+  <rect x="160" y="52" width="18" height="4"/>
+
+  <!-- t : cell origin x=184 -->
+  <rect x="198" y="18" width="4" height="34"/>
+  <rect x="192" y="24" width="16" height="4"/>
+  <rect x="202" y="48" width="8" height="4"/>
+
+  <!-- n : cell origin x=216 -->
+  <rect x="226" y="24" width="4" height="28"/>
+  <rect x="226" y="24" width="20" height="4"/>
+  <rect x="242" y="28" width="4" height="24"/>
+</svg>

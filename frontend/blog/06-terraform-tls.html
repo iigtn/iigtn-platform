@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⑥ Windows での Terraform Provider TLS 干渉と filesystem mirror 回避策 | iigtn 構築日誌</title>
+<meta name="description" content="Windows 環境で terraform init 時に発生する「tls: bad record MAC」エラーの原因究明と、TLS 1.2 強制 + resume + filesystem mirror で回避した記録。">
+<link rel="stylesheet" href="/blog/style.css">
+</head>
+<body>
+
+<nav class="top">
+  <div class="nav-inner">
+    <a href="/">トップ</a>
+    <a href="/blog/">Blog 目次</a>
+    <a href="/learn.html">解説書</a>
+  </div>
+</nav>
+
+<article class="post">
+<header class="post-header">
+  <p class="post-meta">2026-04-25 · 構築日誌 #06</p>
+  <h1>Windows での Terraform Provider TLS 干渉と filesystem mirror 回避策</h1>
+</header>
+
+<div class="post-body">
+
+<p>前記事で bootstrap が終わり、いよいよ Terraform を回そうとした矢先、<code>terraform init</code> が <strong>「tls: bad record MAC」</strong> という謎のエラーで落ちる現象に遭遇しました。本記事では、その原因究明と回避策を時系列で書きます。</p>
+
+<h2>遭遇した症状</h2>
+
+<p><code>terraform/envs/prod</code> ディレクトリで <code>terraform init</code> を実行:</p>
+
+<pre><code>$ terraform init
+
+Initializing the backend...
+Successfully configured the backend "s3"!
+
+Initializing modules...
+Initializing provider plugins...
+- Finding hashicorp/aws versions matching "~> 5.0"...
+- Installing hashicorp/aws v5.100.0...
+╷
+│ Error: Failed to install provider
+│
+│ Error while installing hashicorp/aws v5.100.0: releases.hashicorp.com:
+│ local error: tls: bad record MAC
+╵
+</code></pre>
+
+<p>backend (S3) との通信は成功しているのに、provider 本体（AWS SDK の zip）のダウンロードで TLS エラー。「local error」というのが気になりました。</p>
+
+<h2>切り分け①: 同じ URL を curl で叩いてみる</h2>
+
+<pre><code>curl -sL -o /tmp/aws.zip \
+  https://releases.hashicorp.com/terraform-provider-aws/5.100.0/terraform-provider-aws_5.100.0_windows_amd64.zip \
+  -w "HTTP: %{http_code} / Size: %{size_download}\n"
+
+# HTTP: 200 / Size: 10122586
+</code></pre>
+
+<p>curl だと一見ダウンロードできています。ただし、<strong>サイズが 10 MB</strong>。本物は <code>HEAD</code> で確認すると <strong>156 MB</strong>。明らかに途中で切れている。</p>
+
+<pre><code>curl -sIL "https://releases.hashicorp.com/.../aws_5.100.0_windows_amd64.zip" | grep -i content-length
+# Content-Length: 156704800   ← 約 149 MiB が本物
+</code></pre>
+
+<p>つまり <strong>ダウンロード途中で TLS 接続が切れている</strong>。Terraform 内部の Go TLS ライブラリは厳密に検証するので「bad record MAC」と判定して落とす。curl は緩いので途中まででも保存してしまう（だから一見「成功」に見える）。</p>
+
+<h2>切り分け②: SHA を比較</h2>
+
+<pre><code>curl -sL https://registry.terraform.io/v1/providers/hashicorp/aws/5.100.0/download/windows/amd64 \
+  | grep -o '"shasum":"[^"]*'
+# shasum: 9f8b909d3ec50ade83c8062290378b1ec553edef6a447c56dadc01a99f4eaa93
+
+sha256sum /tmp/aws.zip
+# d9b152779b29960fa08754e4a1f1335dab815b48b4d6d75f53aa6ebf6bb54b1b
+</code></pre>
+
+<p>SHA が完全に違います。<strong>ダウンロードされたファイルは公式の zip ではない</strong>（または途中で切れた不完全なもの）。</p>
+
+<h2>切り分け③: PowerShell の Invoke-WebRequest で再現</h2>
+
+<pre><code>Invoke-WebRequest -Uri $URL -OutFile $Out -UseBasicParsing
+# The decryption operation failed, see inner exception.
+# Got 39816105 bytes (約 38 MiB)
+</code></pre>
+
+<p>PowerShell でも同じエラー。サイズは違う（10MB → 38MB）が <strong>毎回違う場所で切れる</strong>。これで「ネットワーク経路の問題」と確信。</p>
+
+<h2>原因仮説: 中継機器の TLS 干渉</h2>
+
+<p>調査の結果、原因は以下のいずれかと考えました:</p>
+
+<ul>
+  <li><strong>セキュリティソフト</strong>（Windows Defender / アンチウイルス）の HTTPS スキャン</li>
+  <li><strong>ISP / ルータ</strong> の DPI（Deep Packet Inspection）</li>
+  <li><strong>家庭内ネットワーク</strong> の TLS タイムアウト設定</li>
+</ul>
+
+<p>共通するのは、<strong>大型バイナリ（100MB 超）の TLS セッションが途中で切られる</strong> という挙動。小さい HTTPS リクエストは通るが、大きいダウンロードは中断される。</p>
+
+<h2>切り分け④: TLS 1.2 強制で再試行</h2>
+
+<p>TLS 1.3 のバグや中継機器の TLS 1.3 干渉を疑って、curl で TLS 1.2 強制 + retry を入れて再試行:</p>
+
+<pre><code>curl --tlsv1.2 --tls-max 1.2 --http1.1 --ipv4 \
+     --retry 5 --retry-delay 3 --connect-timeout 30 \
+     -L -o aws_tls12.zip "$URL"
+</code></pre>
+
+<p>結果: <strong>129 MB まで進んで失敗</strong>（前回より遥かに長く持った）。約 82% まで来てから切れた。</p>
+
+<h2>突破口: resume ダウンロード</h2>
+
+<p>「途中まで取れている → 残りだけ取り直せばいい」と気付いて <code>-C -</code>（resume）オプションで再試行:</p>
+
+<pre><code>curl --tlsv1.2 --tls-max 1.2 --http1.1 -C - -L -o aws_tls12.zip "$URL"
+
+# 残り 25 MB をダウンロード
+# 25.52M  100% で完走 ✅
+sha256sum aws_tls12.zip
+# 9f8b909d3ec50ade83c8062290378b1ec553edef6a447c56dadc01a99f4eaa93 ← SHA 一致
+</code></pre>
+
+<p>これで完全な provider zip が手に入りました。</p>
+
+<h2>Terraform に provider を渡す: filesystem mirror</h2>
+
+<p>取得した zip を Terraform に「これ使って」と教える方法は <strong>filesystem mirror</strong> です。手順は 2 つ:</p>
+
+<h3>1. zip を所定の場所に配置</h3>
+
+<pre><code>$MirrorRoot = 'C:\Users\&lt;ユーザー&gt;\.terraform.d\providers'
+$ProviderDir = "$MirrorRoot\registry.terraform.io\hashicorp\aws"
+
+# ディレクトリ作成
+New-Item -ItemType Directory -Force -Path $ProviderDir | Out-Null
+
+# zip を移動 (Terraform が期待するファイル名)
+Move-Item -Path 'aws_tls12.zip' `
+  -Destination "$ProviderDir\terraform-provider-aws_5.100.0_windows_amd64.zip"
+</code></pre>
+
+<h3>2. Terraform の CLI 設定 (~/AppData/Roaming/terraform.rc)</h3>
+
+<pre><code>provider_installation {
+  filesystem_mirror {
+    path    = "C:/Users/&lt;ユーザー&gt;/.terraform.d/providers"
+    include = ["registry.terraform.io/hashicorp/aws"]
+  }
+  direct {
+    exclude = ["registry.terraform.io/hashicorp/aws"]
+  }
+}
+</code></pre>
+
+<p>これで「AWS provider はローカルのミラーから読み、それ以外は通常通りオンラインから」という挙動になります。</p>
+
+<h2>terraform.rc の BOM 落とし穴</h2>
+
+<p>このファイル、PowerShell 5.1 の <code>Set-Content -Encoding utf8</code> で書くと <strong>BOM 付き UTF-8</strong> になり、Terraform は <code>illegal char</code> でパースエラーを出します:</p>
+
+<pre><code>Error parsing C:\Users\...\terraform.rc: At 1:1: illegal char
+</code></pre>
+
+<p>BOM 無し UTF-8 で書き直し:</p>
+
+<pre><code># PowerShell で BOM 無し UTF-8 を書く
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText($rcPath, $rcContent, $utf8NoBom)
+
+# 確認 (先頭バイトが 0xEF 0xBB 0xBF だったら BOM 付き)
+$bytes = [System.IO.File]::ReadAllBytes($rcPath)
+$bytes[0..2] | ForEach-Object { '{0:X2}' -f $_ }
+</code></pre>
+
+<h2>terraform init 再実行</h2>
+
+<p>BOM 修正後に再度 init:</p>
+
+<pre><code>$ terraform init -reconfigure
+
+Initializing provider plugins...
+- Installed hashicorp/aws v5.100.0 (unauthenticated)
+Terraform has successfully been initialized!
+</code></pre>
+
+<p><code>(unauthenticated)</code> は「公式署名検証はスキップしたが、ファイル自体の SHA256 は一致している」状態。サイズも SHA も先に確認済なので問題なし。</p>
+
+<h2>archive provider も同じ問題に</h2>
+
+<p>後で <code>backend_api</code> モジュールに <code>archive_file</code> data source を追加した時、同じ TLS エラーが <code>hashicorp/archive</code> でも発生しました。同じ手順で zip を取得してミラーに配置することで解決。</p>
+
+<p>結局、ミラーに配置した provider は 2 個:</p>
+
+<ul>
+  <li><code>terraform-provider-aws_5.100.0_windows_amd64.zip</code> (約 156 MB)</li>
+  <li><code>terraform-provider-archive_2.7.1_windows_amd64.zip</code> (約 6 MB)</li>
+</ul>
+
+<p>archive は 6 MB と小さいですが、家庭内ネットワークの相性で同じ症状になることがあるようです。</p>
+
+<h2>学び</h2>
+
+<p>このハマりで得た教訓:</p>
+
+<ol>
+  <li><strong>「local error: tls: bad record MAC」は中継機器の TLS 干渉のサイン</strong></li>
+  <li><strong>大型バイナリのダウンロード失敗は size + SHA で切り分ける</strong></li>
+  <li><strong>resume (<code>-C -</code>) は強い味方</strong>。途中まで取れてれば残りを取り直せる</li>
+  <li><strong>Terraform は filesystem mirror で「ローカルから provider を読む」運用が可能</strong>。CI ではこれを使って毎回ダウンロードしないという最適化もできる</li>
+  <li><strong>PowerShell 5.1 の <code>-Encoding utf8</code> は BOM 付き</strong>。設定ファイルでハマりがち</li>
+</ol>
+
+<h2>恒久対策</h2>
+
+<p>本来は中継機器の HTTPS 干渉を解消するのがベストですが、家庭内ネットワークだと特定が難しい。filesystem mirror で運用回避しています。</p>
+
+<p>VPN を使うと、ローカルの干渉が無いネットワーク経路を通せるので解消することもあります。本シリーズでは VPN 無しで filesystem mirror に倒しました。</p>
+
+<h2>次の記事</h2>
+
+<p>provider が読めるようになったら、いよいよ Terraform でリソースを書いていきます。次の記事では <strong>モジュール設計の考え方</strong>（modules / envs / providers alias）について書きます。「どこを共通化して、どこを環境ごとに分けるか」の判断基準が見えてきます。</p>
+
+</div>
+
+<section class="post-glossary">
+<h2>📚 用語集</h2>
+<dl>
+<dt>provider (Terraform プロバイダ)</dt>
+<dd>Terraform で AWS や GCP など各クラウドを操作するための拡張プラグイン。<code>hashicorp/aws</code> など、数百 MB 級の zip でダウンロードされる。</dd>
+
+<dt>terraform init</dt>
+<dd>Terraform の初期化コマンド。provider のダウンロード・backend 接続・モジュール解決を行う。</dd>
+
+<dt>TLS (Transport Layer Security)</dt>
+<dd>HTTPS の中で使われる暗号化通信プロトコル。1.2 と 1.3 が現役。MAC（Message Authentication Code）で改ざん検知している。</dd>
+
+<dt>bad record MAC</dt>
+<dd>TLS の改ざん検知 (MAC) が失敗したときのエラー。途中で内容が書き換わったり、データが切れたときに発生。</dd>
+
+<dt>SHA256 / SHA-2</dt>
+<dd>ハッシュ関数の一種。256 ビットの固定長ダイジェストを生成。ファイルが改ざんされていないかの検証に使う。</dd>
+
+<dt>HEAD リクエスト</dt>
+<dd>HTTP メソッドの 1 つ。本文は受信せず、ヘッダ（Content-Length など）だけ取得する。ファイルサイズの事前確認に便利。</dd>
+
+<dt>curl</dt>
+<dd>コマンドラインの HTTP / HTTPS クライアント。Linux / macOS 標準、Windows 10 以降にも同梱。</dd>
+
+<dt>--tlsv1.2 / --tls-max 1.2</dt>
+<dd>curl のオプションで、TLS バージョンを 1.2 のみに制限する。1.3 のバグや中継機器の TLS 1.3 干渉を回避する切り分けに使う。</dd>
+
+<dt>--retry, --retry-delay, --retry-max-time</dt>
+<dd>curl のリトライ系オプション。失敗したリクエストを自動再試行する。一時的なネットワーク不安定の対処。</dd>
+
+<dt>-C - (resume)</dt>
+<dd>curl の resume オプション。途中まで保存されたファイルがあれば、続きから取得する。Range リクエストを利用。</dd>
+
+<dt>filesystem mirror</dt>
+<dd>Terraform の CLI 設定で「provider をローカルディレクトリから読む」よう指定する仕組み。<code>~/AppData/Roaming/terraform.rc</code>（Windows）/ <code>~/.terraformrc</code>（macOS/Linux）に書く。</dd>
+
+<dt>terraform.rc</dt>
+<dd>Terraform 全体の CLI 設定ファイル。<code>provider_installation</code> ブロックで filesystem mirror を定義。</dd>
+
+<dt>BOM (Byte Order Mark)</dt>
+<dd>UTF-8 ファイルの先頭に付く 3 バイト（<code>EF BB BF</code>）。HCL / YAML / JSON のパーサが嫌うので、設定ファイルでは外す。</dd>
+
+<dt>HCL (HashiCorp Configuration Language)</dt>
+<dd>Terraform 等で使われる設定言語。<code>.tf</code> や <code>.terraformrc</code> がこれで書かれる。</dd>
+
+<dt>DPI (Deep Packet Inspection)</dt>
+<dd>ネットワーク機器がパケット内容を検査する技術。セキュリティ目的だが、TLS 1.3 等で誤動作することがある。</dd>
+
+<dt>HTTPS スキャン (HTTPS inspection)</dt>
+<dd>セキュリティソフトや企業ファイアウォールが、HTTPS 通信を一旦復号して中身をチェックする機能。Terraform 等の厳密な TLS 検証と相性が悪いことがある。</dd>
+</dl>
+</section>
+
+<footer class="post-footer">
+<span>← 前 <a href="/blog/05-terraform-bootstrap.html">⑤ Terraform Bootstrap — 鶏卵問題の解決</a></span>
+<span>次 → <a href="/blog/07-terraform-modules.html">⑦ Terraform モジュール設計の考え方</a></span>
+</footer>
+
+</article>
+
+</body>
+</html>

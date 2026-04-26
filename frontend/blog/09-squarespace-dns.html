@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⑨ Squarespace の NS 委譲問題と CNAME 委譲へのアーキテクチャ pivot | iigtn 構築日誌</title>
+<meta name="description" content="Squarespace で管理されているドメインに対して AWS Route53 への NS 委譲を試みて拒否された記録。Route53 hosted zone を捨てて、Squarespace の CNAME だけで ACM 検証 + CloudFront 連携を実現するまで。">
+<link rel="stylesheet" href="/blog/style.css">
+</head>
+<body>
+
+<nav class="top">
+  <div class="nav-inner">
+    <a href="/">トップ</a>
+    <a href="/blog/">Blog 目次</a>
+    <a href="/learn.html">解説書</a>
+  </div>
+</nav>
+
+<article class="post">
+<header class="post-header">
+  <p class="post-meta">2026-04-26 · 構築日誌 #09</p>
+  <h1>Squarespace の NS 委譲問題と CNAME 委譲へのアーキテクチャ pivot</h1>
+</header>
+
+<div class="post-body">
+
+<p>本シリーズで <strong>一番苦労した</strong> のがこの DNS 周りです。<code>iigtn.com</code> は Google Workspace と Squarespace で運用されている既存ドメインで、その配下に <code>lab.iigtn.com</code> として AWS のサブドメインを切る作業。当初の「NS 委譲案」が Squarespace の制約で頓挫し、設計を pivot して CNAME のみで完結させた記録です。</p>
+
+<h2>初期の DNS 状態（着手前）</h2>
+
+<p>iigtn.com は既に運用中のドメインで、構築開始時点でこんな状態でした:</p>
+
+<table>
+<tr><th>レコード</th><th>値</th><th>意味</th></tr>
+<tr><td>NS</td><td><code>ns-cloud-bN.googledomains.com</code></td><td>DNS は Google Cloud DNS / Squarespace 経由で管理</td></tr>
+<tr><td>A</td><td>198.49.23.144 系</td><td>Squarespace のサイトホスティング IP</td></tr>
+<tr><td>MX</td><td><code>smtp.google.com</code></td><td>Google Workspace のメール</td></tr>
+</table>
+
+<p>つまり <strong>iigtn.com は既存サイト + メールが本番運用中</strong>。ここを壊さずに、<code>lab.iigtn.com</code> だけ AWS に切り出す必要がありました。</p>
+
+<h2>当初の設計（NS 委譲案）</h2>
+
+<p>当初の設計書では、AWS で <strong>Route53 hosted zone を作って NS を 4 個登録</strong> し、Squarespace 側で「<code>lab</code> サブドメインの権威 DNS を Route53 に委譲」する案でした:</p>
+
+<pre><code># 親側 (Squarespace) の DNS
+lab.iigtn.com    NS    ns-1503.awsdns-59.org.
+lab.iigtn.com    NS    ns-154.awsdns-19.com.
+lab.iigtn.com    NS    ns-1719.awsdns-22.co.uk.
+lab.iigtn.com    NS    ns-617.awsdns-13.net.
+</code></pre>
+
+<p>これにより、<code>lab.iigtn.com</code> 配下の全レコード（A / CNAME / TXT 等）を Terraform で完全管理できる「AWS 完結型」になるはずでした。</p>
+
+<h2>Terraform で Hosted Zone を作って NS を取得</h2>
+
+<p>まず Route53 hosted zone を作って NS を取得しました:</p>
+
+<pre><code>resource "aws_route53_zone" "this" {
+  name = var.domain_name        # lab.iigtn.com
+  tags = var.tags
+}
+
+output "name_servers" {
+  value = aws_route53_zone.this.name_servers
+}
+</code></pre>
+
+<p>apply すると、Route53 が 4 個の NS サーバを払い出してくれます:</p>
+
+<pre><code>name_servers = [
+  "ns-1503.awsdns-59.org",
+  "ns-154.awsdns-19.com",
+  "ns-1719.awsdns-22.co.uk",
+  "ns-617.awsdns-13.net",
+]
+</code></pre>
+
+<h2>Squarespace で NS 登録を試みる</h2>
+
+<p>Squarespace の DNS 管理画面（<code>account.squarespace.com/domains/managed/iigtn.com/dns/dns-settings</code>）で、Custom Records に NS を追加しようとしました:</p>
+
+<table>
+<tr><th>Host</th><th>Type</th><th>Data</th></tr>
+<tr><td>lab</td><td>NS</td><td>ns-1503.awsdns-59.org.</td></tr>
+</table>
+
+<p>「Save」を押すと…</p>
+
+<div class="callout warn">
+このレコードを保存できませんでした。しばらくしてから再度お試しください。
+この問題が解決しない場合は、カスタマー サポートにお問い合わせください。
+</div>
+
+<p>何回試しても同じエラー。Type を CNAME や A にすると保存できるが、<strong>NS だけが拒否される</strong>。</p>
+
+<h2>原因の特定</h2>
+
+<p>調べた結果、Squarespace は <strong>Workspace バンドルドメインに対して、サブドメインの NS 委譲を許可していない</strong> ようでした。これは Squarespace 側の意図的な制限で、ユーザー側で何をしても回避不能。</p>
+
+<p>選択肢を整理:</p>
+
+<table>
+<tr><th>案</th><th>内容</th><th>判定</th></tr>
+<tr><td>A</td><td>Squarespace を解約して別レジストラに移管</td><td>×（既存サイト・メールに影響大）</td></tr>
+<tr><td>B</td><td>Squarespace のサポートに相談</td><td>△（時間がかかる、結果不明）</td></tr>
+<tr><td>C</td><td>NS 委譲を諦めて、Squarespace で CNAME だけ管理する設計に変更</td><td>◎（現実的）</td></tr>
+</table>
+
+<p>Cloudflare に DNS を移管する案もありましたが、メールも巻き込むので影響範囲が大きい。<strong>C 案で pivot する</strong> ことに決めました。</p>
+
+<h2>新しい設計（CNAME 委譲案）</h2>
+
+<p>変更内容:</p>
+
+<ol>
+  <li>Route53 hosted zone は <strong>作らない</strong>（destroy）</li>
+  <li>ACM 証明書はリクエストするが、検証 CNAME を Squarespace 側に手動投入</li>
+  <li>CloudFront Distribution が払い出す <code>*.cloudfront.net</code> 名を、Squarespace で <code>lab</code> の CNAME として登録</li>
+</ol>
+
+<p>つまり <strong>「DNS は Squarespace のまま、AWS リソースは ARN で受け渡す」</strong> 構成。Route53 を介在させません。</p>
+
+<h2>network_dns モジュールの簡素化</h2>
+
+<p>当初は「hosted zone + 検証 CNAME 自動投入 + 検証待ち」の 3 リソースを持つモジュールでしたが、CNAME 委譲案では「ACM 証明書 + 検証完了待ち」の 2 リソースだけに簡素化:</p>
+
+<pre><code># modules/network_dns/main.tf （pivot 後）
+resource "aws_acm_certificate" "this" {
+  provider = aws.us_east_1
+
+  domain_name               = var.domain_name
+  subject_alternative_names = ["*.${var.domain_name}"]
+  validation_method         = "DNS"
+
+  lifecycle { create_before_destroy = true }
+}
+
+resource "aws_acm_certificate_validation" "this" {
+  provider = aws.us_east_1
+
+  certificate_arn = aws_acm_certificate.this.arn
+
+  validation_record_fqdns = [
+    for dvo in aws_acm_certificate.this.domain_validation_options :
+    dvo.resource_record_name
+  ]
+
+  timeouts { create = "75m" }
+}
+</code></pre>
+
+<p>検証 CNAME は output として外に出して、Squarespace に手動投入する設計:</p>
+
+<pre><code>output "validation_records" {
+  value = {
+    for dvo in aws_acm_certificate.this.domain_validation_options :
+    dvo.domain_name =&gt; {
+      name  = dvo.resource_record_name
+      type  = dvo.resource_record_type
+      value = dvo.resource_record_value
+    }
+  }
+}
+</code></pre>
+
+<h2>Squarespace に検証 CNAME を投入</h2>
+
+<p>apply 後、output に表示された CNAME を Squarespace の Custom Records に登録:</p>
+
+<table>
+<tr><th>Host</th><th>Type</th><th>Data</th><th>TTL</th></tr>
+<tr><td><code>_2611...lab</code></td><td>CNAME</td><td><code>_00b9...acm-validations.aws.</code></td><td>5 min</td></tr>
+</table>
+
+<p>NS と違って <strong>CNAME は Squarespace で問題なく保存できる</strong>。これで ACM 検証が走り、5 分程度で証明書が <code>ISSUED</code> になりました。</p>
+
+<h2>CloudFront 連携用 CNAME も同じ要領</h2>
+
+<p>後で CloudFront Distribution が <code>dXXXXXXXXX.cloudfront.net</code> を払い出すので、これを <code>lab</code> の CNAME として登録:</p>
+
+<table>
+<tr><th>Host</th><th>Type</th><th>Data</th><th>TTL</th></tr>
+<tr><td><code>lab</code></td><td>CNAME</td><td><code>dXXXXXXXXX.cloudfront.net.</code></td><td>5 min</td></tr>
+</table>
+
+<p>これで <code>https://lab.iigtn.com/</code> が CloudFront に解決されるようになります。</p>
+
+<h2>Pivot で得たもの・失ったもの</h2>
+
+<table>
+<tr><th>項目</th><th>NS 委譲案</th><th>CNAME 委譲案 (採用)</th></tr>
+<tr><td>DNS 完全 IaC 化</td><td>○</td><td>×（Squarespace で手動）</td></tr>
+<tr><td>Route53 月額</td><td>$0.50</td><td>$0（不要）</td></tr>
+<tr><td>既存メール影響</td><td>大（NS 切替リスク）</td><td>無</td></tr>
+<tr><td>サブドメインの追加</td><td>Terraform で完結</td><td>Squarespace で 1 個ずつ手動</td></tr>
+<tr><td>採用評価訴求</td><td>「全部 AWS で揃えた」</td><td>「外部 DNS と連携できる」（実は実務的）</td></tr>
+</table>
+
+<p>意外なメリットとして、<strong>「外部 DNS プロバイダと AWS を連携させた経験」</strong> は採用評価では実は強い。実案件では「DNS は移管できないお客様」が普通なので、CNAME 連携の経験は価値があります。</p>
+
+<h2>Cloud Shell で全プロジェクト探索</h2>
+
+<p>余談ですが、本件の途中で「Cloud DNS にゾーンが見当たらない」という別の混乱もありました。NS が <code>ns-cloud-bN.googledomains.com</code> だったので Google Cloud DNS だと推定したものの、自分の GCP プロジェクトには iigtn.com ゾーンが無い。</p>
+
+<p>結局、<strong>Squarespace が裏側で Google のインフラを使っているだけ</strong> で、ユーザーが操作するのは Squarespace の UI、というのが正解でした。NS の表面的な値で判断せず、レジストラから辿るのが鉄則。</p>
+
+<h2>学び</h2>
+
+<ol>
+  <li><strong>既存ドメインに AWS を後付けする時、レジストラの DNS UI 制約は事前確認</strong></li>
+  <li><strong>「全部 AWS で揃える」は美しいが、現実は外部 DNS と共存することが多い</strong></li>
+  <li><strong>NS 委譲は強力だが、リスクも大きい（メール壊し事故の温床）。CNAME のみで済むなら CNAME がベター</strong></li>
+  <li><strong>Pivot を躊躇しない</strong>。設計通りに行かない時に粘って 3 日溶かすより、別ルートに切替える勇気</li>
+</ol>
+
+<h2>次の記事</h2>
+
+<p>証明書発行と DNS 連携の問題が解決したら、いよいよ静的サイトの本体を作っていきます。次の記事では <strong>S3 + CloudFront + OAC</strong> を組み合わせて、「非公開バケットを CDN 経由で世界に配信する」構成について書きます。OAC vs OAI、Bucket Policy の SourceArn 条件、SecurityHeadersPolicy の自動付与など、おさえておきたいポイントが多いです。</p>
+
+</div>
+
+<section class="post-glossary">
+<h2>📚 用語集</h2>
+<dl>
+<dt>NS レコード (Name Server Record)</dt>
+<dd>「このドメインの権威 DNS サーバはこれ」と宣言するレコード。サブドメインに NS を登録すると、そのサブドメインの DNS 管理を別サーバに委譲できる（NS 委譲）。</dd>
+
+<dt>CNAME レコード (Canonical Name Record)</dt>
+<dd>「このドメイン名は、別のドメイン名の別名」を表すレコード。<code>lab.iigtn.com → dXXXXX.cloudfront.net</code> のように、別の名前に解決させる。</dd>
+
+<dt>権威 DNS サーバ (Authoritative DNS Server)</dt>
+<dd>あるドメインの公式な DNS 情報を持つサーバ。ブラウザが DNS 問い合わせするとき、最終的にこれに行き着く。</dd>
+
+<dt>NS 委譲 (DNS Delegation)</dt>
+<dd>あるサブドメインの権威を別の DNS サーバに委ねる仕組み。<code>lab.iigtn.com</code> の NS を Route53 に向ければ、<code>lab.iigtn.com</code> 配下のレコードは Route53 で管理できる。</dd>
+
+<dt>レジストラ (Registrar)</dt>
+<dd>ドメイン名を販売・管理する事業者。Squarespace / Google Domains / お名前.com など。レジストラは通常 DNS 管理機能も提供する。</dd>
+
+<dt>Squarespace</dt>
+<dd>サイトビルダー + ドメインレジストラを提供する米国企業。本シリーズの iigtn.com もここで管理されている。</dd>
+
+<dt>Google Workspace</dt>
+<dd>Google が提供する企業向けメール・カレンダー・ストレージサービス。独自ドメインのメール（例: <code>contact@iigtn.com</code>）が使える。</dd>
+
+<dt>hosted zone (Route53)</dt>
+<dd>Route53 の DNS ゾーン管理単位。1 ドメインにつき 1 hosted zone を作り、その中にレコードを登録する。</dd>
+
+<dt>Route53</dt>
+<dd>AWS の DNS サービス。Hosted Zone を作って権威 DNS として運用できる。</dd>
+
+<dt>ACM 検証 CNAME</dt>
+<dd>ACM が「このドメインの所有者が DNS にアクセスできることを確認」するために要求する CNAME レコード。<code>_xxx.lab.iigtn.com → _yyy.acm-validations.aws.</code> 形式。</dd>
+
+<dt>CloudFront Distribution の cloudfront.net 名</dt>
+<dd>Distribution が払い出す <code>dXXXXXXXXX.cloudfront.net</code> 形式のドメイン。CNAME でカスタムドメインから紐付ける。</dd>
+
+<dt>pivot (設計の方向転換)</dt>
+<dd>当初設計が現実の制約で実現困難になった時、別ルートに切り替えること。スタートアップ用語からの転用。</dd>
+
+<dt>レコードセット (Record Set)</dt>
+<dd>同じ Host + Type の組み合わせを持つ複数のレコードをまとめた単位。NS なら 4 個の値が 1 つのレコードセット。</dd>
+
+<dt>TTL (Time to Live)</dt>
+<dd>DNS レコードがキャッシュされる秒数。短くすると変更が早く反映、長くすると DNS サーバへの負荷が下がる。</dd>
+
+<dt>dig コマンド</dt>
+<dd>DNS 問い合わせコマンド。<code>dig CNAME lab.iigtn.com @8.8.8.8</code> で「Google DNS から見て lab.iigtn.com の CNAME が引けるか」を確認できる。</dd>
+</dl>
+</section>
+
+<footer class="post-footer">
+<span>← 前 <a href="/blog/08-acm-cert.html">⑧ ACM 証明書の発行と DNS 検証フロー</a></span>
+<span>次 → <a href="/blog/10-cloudfront-s3-oac.html">⑩ CloudFront + S3 + OAC でセキュアな静的サイト配信</a></span>
+</footer>
+
+</article>
+
+</body>
+</html>

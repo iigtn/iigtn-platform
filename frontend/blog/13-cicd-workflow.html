@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⑬ 静的キーレス CI/CD ワークフロー実装 — git push から本番反映まで | iigtn 構築日誌</title>
+<meta name="description" content="GitHub Actions の frontend-deploy.yml を 1 行ずつ解説。on トリガー設計、permissions、concurrency、aws s3 sync、CloudFront invalidation、デプロイ確認まで。">
+<link rel="stylesheet" href="/blog/style.css">
+</head>
+<body>
+
+<nav class="top">
+  <div class="nav-inner">
+    <a href="/">トップ</a>
+    <a href="/blog/">Blog 目次</a>
+    <a href="/learn.html">解説書</a>
+  </div>
+</nav>
+
+<article class="post">
+<header class="post-header">
+  <p class="post-meta">2026-04-26 · 構築日誌 #13</p>
+  <h1>静的キーレス CI/CD ワークフロー実装 — git push から本番反映まで</h1>
+</header>
+
+<div class="post-body">
+
+<p>前記事で OIDC + IAM Role の準備ができたので、いよいよ <strong>「git push したら自動デプロイ」</strong> のワークフローを書きます。本記事では <code>.github/workflows/frontend-deploy.yml</code> を 1 行ずつ解説していきます。</p>
+
+<h2>ワークフロー全文</h2>
+
+<pre><code>name: frontend-deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-deploy.yml'
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: frontend-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  AWS_REGION: ap-northeast-1
+  AWS_ROLE_TO_ASSUME: arn:aws:iam::XXXXXXXXXXXX:role/iigtn-github-actions-deploy
+  S3_BUCKET: iigtn-lab-web-prod-XXXXXXXXXXXX
+  CF_DISTRIBUTION_ID: EXXXXXXXXXXXXX
+  SITE_DIR: frontend
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
+          role-session-name: gha-frontend-deploy-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Verify caller identity
+        run: aws sts get-caller-identity
+
+      - name: Deploy to S3
+        run: |
+          aws s3 sync ./${{ env.SITE_DIR }}/ s3://${{ env.S3_BUCKET }}/ \
+            --delete \
+            --exclude ".git/*" \
+            --exclude "*.md" \
+            --exclude ".gitignore" \
+            --exclude ".gitkeep"
+
+      - name: Invalidate CloudFront
+        run: |
+          INV_ID=$(aws cloudfront create-invalidation \
+            --distribution-id ${{ env.CF_DISTRIBUTION_ID }} \
+            --paths "/*" \
+            --query 'Invalidation.Id' --output text)
+          aws cloudfront wait invalidation-completed \
+            --distribution-id ${{ env.CF_DISTRIBUTION_ID }} \
+            --id "$INV_ID"
+
+      - name: Verify deployment
+        run: curl -sI https://lab.iigtn.com/ | head -10
+</code></pre>
+
+<h2>各セクション解説</h2>
+
+<h3>1. <code>on:</code> — トリガー条件</h3>
+
+<pre><code>on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-deploy.yml'
+  workflow_dispatch: {}
+</code></pre>
+
+<ul>
+  <li><strong>main への push のみ</strong>: feature ブランチからは走らない</li>
+  <li><strong>paths フィルタ</strong>: <code>frontend/</code> 配下が変わった時 + ワークフロー自身が変わった時のみ実行（terraform/ や docs/ の変更では走らない）</li>
+  <li><strong>workflow_dispatch</strong>: 手動実行ボタンを GitHub UI に追加</li>
+</ul>
+
+<h3>2. <code>permissions:</code> — Job が要求する権限</h3>
+
+<pre><code>permissions:
+  id-token: write   # OIDC token 発行に必須
+  contents: read    # actions/checkout でコードを clone するのに必要
+</code></pre>
+
+<p>デフォルトでは GitHub Actions の <code>GITHUB_TOKEN</code> はリポジトリへの広い権限を持ちますが、<strong>明示的に絞る</strong> ことでセキュリティを強化。issues / pull-requests への書き込みは要らないので最小権限。</p>
+
+<h3>3. <code>concurrency:</code> — 同時実行制御</h3>
+
+<pre><code>concurrency:
+  group: frontend-deploy-${{ github.ref }}
+  cancel-in-progress: true
+</code></pre>
+
+<p>同じ main ブランチで連続 push した時、古い実行をキャンセルして最新だけ走らせる。デプロイレースが起きません。</p>
+
+<h3>4. <code>env:</code> — グローバル環境変数</h3>
+
+<pre><code>env:
+  AWS_REGION: ap-northeast-1
+  AWS_ROLE_TO_ASSUME: arn:aws:iam::XXXXXXXXXXXX:role/...
+  S3_BUCKET: iigtn-lab-web-prod-XXXXXXXXXXXX
+  CF_DISTRIBUTION_ID: EXXXXXXXXXXXXX
+  SITE_DIR: frontend
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+</code></pre>
+
+<p>ハードコードされた ARN や ID はここに集約。変更する時はこの 1 ブロックだけ触ればいい設計。</p>
+
+<p>最後の <code>FORCE_JAVASCRIPT_ACTIONS_TO_NODE24</code> は、Node.js 20 の deprecation 対応。actions/checkout@v4 や aws-actions/configure-aws-credentials@v4 を強制的に Node.js 24 で動かす。</p>
+
+<h3>5. Step: Checkout</h3>
+
+<pre><code>- name: Checkout
+  uses: actions/checkout@v4
+</code></pre>
+
+<p>リポジトリのソースを Runner の作業ディレクトリに clone。</p>
+
+<h3>6. Step: OIDC で AWS 認証</h3>
+
+<pre><code>- name: Configure AWS credentials (OIDC)
+  uses: aws-actions/configure-aws-credentials@v4
+  with:
+    role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
+    role-session-name: gha-frontend-deploy-${{ github.run_id }}
+    aws-region: ${{ env.AWS_REGION }}
+</code></pre>
+
+<p>裏側の挙動:</p>
+
+<ol>
+  <li>GitHub に「OIDC token 発行して」を要求 → JWT 受信</li>
+  <li>JWT を STS の AssumeRoleWithWebIdentity に渡す</li>
+  <li>1 時間有効の AccessKey/SecretKey/SessionToken を環境変数として注入</li>
+</ol>
+
+<p><code>role-session-name</code> に <code>github.run_id</code> を入れることで、CloudTrail で「どのワークフロー実行か」が追跡可能になります。</p>
+
+<h3>7. Step: 確認</h3>
+
+<pre><code>- name: Verify caller identity
+  run: aws sts get-caller-identity
+</code></pre>
+
+<p>「自分が誰として動いているか」を表示。デバッグ用途。本番では削っても良いが、初回は入れておくと安心。</p>
+
+<h3>8. Step: S3 sync</h3>
+
+<pre><code>- name: Deploy to S3
+  run: |
+    aws s3 sync ./${{ env.SITE_DIR }}/ s3://${{ env.S3_BUCKET }}/ \
+      --delete \
+      --exclude ".git/*" \
+      --exclude "*.md" \
+      --exclude ".gitignore" \
+      --exclude ".gitkeep"
+</code></pre>
+
+<p><code>aws s3 sync</code> はディレクトリ間の差分同期。重要オプション:</p>
+
+<ul>
+  <li><code>--delete</code>: ローカルに無いファイルを S3 から削除（完全ミラー）</li>
+  <li><code>--exclude</code>: 同期対象から除外するパターン</li>
+</ul>
+
+<p><code>--delete</code> は強力。<strong>frontend/ 配下が空のままで実行すると S3 が全削除されます</strong>。空のリポジトリ初回 push 等で事故が起きやすいので注意。</p>
+
+<h3>9. Step: CloudFront 無効化</h3>
+
+<pre><code>- name: Invalidate CloudFront
+  run: |
+    INV_ID=$(aws cloudfront create-invalidation \
+      --distribution-id ${{ env.CF_DISTRIBUTION_ID }} \
+      --paths "/*" \
+      --query 'Invalidation.Id' --output text)
+    aws cloudfront wait invalidation-completed \
+      --distribution-id ${{ env.CF_DISTRIBUTION_ID }} \
+      --id "$INV_ID"
+</code></pre>
+
+<p><code>/*</code> 全体無効化を 1 path カウントで実行。月 1,000 paths 無料枠内に余裕。</p>
+
+<p><code>aws cloudfront wait</code> で完了まで待ち、後続 step で確実に新版が見られるようにする。</p>
+
+<h3>10. Step: デプロイ確認</h3>
+
+<pre><code>- name: Verify deployment
+  run: curl -sI https://lab.iigtn.com/ | head -10
+</code></pre>
+
+<p>本番 URL に HTTPS GET して、レスポンスヘッダを表示。HTTP 200 が返れば成功。失敗ヘッダなら GitHub Actions の job が赤くなります。</p>
+
+<h2>初回 push の動き</h2>
+
+<p>git push 後、GitHub Actions のページで実行を見ると、各 step が順に green で完了します。本シリーズの初回実行は <strong>54 秒</strong> で完了。</p>
+
+<pre><code>✓ Set up job
+✓ Checkout
+✓ Configure AWS credentials (OIDC)
+✓ Verify caller identity
+✓ Deploy to S3
+✓ Invalidate CloudFront
+✓ Verify deployment
+✓ Complete job
+</code></pre>
+
+<h2>失敗時の典型例</h2>
+
+<table>
+<tr><th>症状</th><th>原因</th><th>対処</th></tr>
+<tr><td>OIDC step で AssumeRole 失敗</td><td>Trust Policy の sub 不一致</td><td><code>repo:owner/repo:ref:refs/heads/main</code> 表記が正しいか確認</td></tr>
+<tr><td>S3 sync で AccessDenied</td><td>Permissions Policy の resource ARN ミス</td><td>バケット ARN と <code>/*</code> 付加が正しいか確認</td></tr>
+<tr><td>CloudFront invalidation 失敗</td><td>Distribution ID ミス or 権限不足</td><td>env の ID と Permissions Policy 確認</td></tr>
+<tr><td>Verify step で 5xx</td><td>Origin (S3) で問題発生 / OAC 設定ミス</td><td>S3 の中身を <code>aws s3 ls</code> で確認</td></tr>
+</table>
+
+<h2>本シリーズで使うワークフロー数</h2>
+
+<p>現状は <code>frontend-deploy.yml</code> の 1 個だけ。今後追加予定:</p>
+
+<ul>
+  <li><code>terraform-plan.yml</code> — PR 時に terraform plan を comment</li>
+  <li><code>terraform-apply.yml</code> — main merge 時に terraform apply（手動承認付き）</li>
+  <li><code>backend-deploy.yml</code> — Lambda コード更新</li>
+</ul>
+
+<p>原則は「<strong>1 ワークフロー = 1 責務</strong>」。フロント / バック / Terraform を別ワークフローにすることで、片方の失敗が他に波及しない。</p>
+
+<h2>次の記事</h2>
+
+<p>静的サイトのデプロイ自動化が完了しました。次の記事から、いよいよ <strong>動的バックエンド</strong>（API Gateway + Lambda + DynamoDB）の構築に入ります。問い合わせフォームを作って、ブラウザから POST されたデータを Lambda で処理し、DynamoDB に保存する、という流れです。</p>
+
+</div>
+
+<section class="post-glossary">
+<h2>📚 用語集</h2>
+<dl>
+<dt>GitHub Actions</dt>
+<dd>GitHub 上で動く CI/CD サービス。ワークフローを YAML で書き、push や手動トリガーで実行する。</dd>
+
+<dt>workflow (ワークフロー)</dt>
+<dd><code>.github/workflows/*.yml</code> ファイル 1 つ = 1 ワークフロー。複数の Job を順次・並行で実行できる。</dd>
+
+<dt>job</dt>
+<dd>ワークフロー内の独立した実行単位。Runner 1 台で動く。</dd>
+
+<dt>step</dt>
+<dd>Job 内の 1 ステップ。コマンド or アクション。</dd>
+
+<dt>Action</dt>
+<dd>再利用可能な処理ユニット。<code>actions/checkout@v4</code> 等、コミュニティや公式が提供している。</dd>
+
+<dt>Runner</dt>
+<dd>ワークフローを実行するサーバ。GitHub-hosted Runner（無料枠あり）/ self-hosted Runner（自分のサーバ）。</dd>
+
+<dt>on (ワークフロートリガー)</dt>
+<dd>ワークフローが起動する条件。<code>push</code> / <code>pull_request</code> / <code>schedule</code> / <code>workflow_dispatch</code>（手動）等。</dd>
+
+<dt>paths filter</dt>
+<dd><code>on.push.paths</code> で指定する起動パスフィルタ。指定したパスのファイルが変更された時だけワークフローを起動。</dd>
+
+<dt>workflow_dispatch</dt>
+<dd>手動実行トリガー。GitHub UI に「Run workflow」ボタンが追加される。</dd>
+
+<dt>permissions (ワークフロー)</dt>
+<dd>Job が要求する <code>GITHUB_TOKEN</code> の権限。最小権限で書くのが推奨。</dd>
+
+<dt>concurrency</dt>
+<dd>同時実行制御の設定。同じ group の実行を 1 つだけにする等の制御。</dd>
+
+<dt>env (グローバル環境変数)</dt>
+<dd>ワークフロー全体で使える環境変数。<code>${{ env.NAME }}</code> で参照。</dd>
+
+<dt>aws s3 sync</dt>
+<dd>AWS CLI の S3 ディレクトリ同期コマンド。<code>--delete</code> でローカル不在ファイルを S3 から削除（完全ミラー）。</dd>
+
+<dt>aws cloudfront create-invalidation</dt>
+<dd>CloudFront のキャッシュを無効化する CLI コマンド。<code>--paths "/*"</code> で全パス無効化。</dd>
+
+<dt>aws cloudfront wait invalidation-completed</dt>
+<dd>無効化完了まで待機する CLI コマンド。CI/CD で「無効化が終わってから次の step」を保証するのに使う。</dd>
+
+<dt>github.run_id</dt>
+<dd>GitHub Actions が実行ごとに払い出す一意 ID。CloudTrail との突き合わせに使う。</dd>
+
+<dt>role-session-name</dt>
+<dd>AssumeRole 時の session 名。CloudTrail でこの名前で session が記録される。</dd>
+
+<dt>FORCE_JAVASCRIPT_ACTIONS_TO_NODE24</dt>
+<dd>Node.js 20 で動く Action を Node.js 24 で強制実行する環境変数。Node.js 20 の deprecation 対応。</dd>
+
+<dt>--exclude (aws s3 sync)</dt>
+<dd>同期対象から除外するパターン指定。複数指定可。<code>.git</code> や <code>.md</code> ファイルを S3 に置きたくない時に使う。</dd>
+</dl>
+</section>
+
+<footer class="post-footer">
+<span>← 前 <a href="/blog/12-github-oidc.html">⑫ GitHub Actions OIDC の仕組み</a></span>
+<span>次 → <a href="/blog/14-api-gateway-lambda.html">⑭ API Gateway HTTP API と Lambda Proxy 統合</a></span>
+</footer>
+
+</article>
+
+</body>
+</html>

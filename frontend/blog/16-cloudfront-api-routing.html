@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⑯ CloudFront /api/* で 1 ドメイン化 — dynamic block と Origin Request Policy | iigtn 構築日誌</title>
+<meta name="description" content="CloudFront に追加 origin と ordered_cache_behavior を dynamic block で条件付き定義し、/api/* を API Gateway へルーティングする実装。CORS の Host 上書き問題と AllViewerExceptHostHeader による回避。">
+<link rel="stylesheet" href="/blog/style.css">
+</head>
+<body>
+
+<nav class="top">
+  <div class="nav-inner">
+    <a href="/">トップ</a>
+    <a href="/blog/">Blog 目次</a>
+    <a href="/learn.html">解説書</a>
+  </div>
+</nav>
+
+<article class="post">
+<header class="post-header">
+  <p class="post-meta">2026-04-26 · 構築日誌 #16</p>
+  <h1>CloudFront /api/* で 1 ドメイン化 — dynamic block と Origin Request Policy</h1>
+</header>
+
+<div class="post-body">
+
+<p>API Gateway は <code>https://xxx.execute-api.region.amazonaws.com</code> という ugly な URL を払い出します。本記事ではこれを <code>https://lab.iigtn.com/api/contact</code> という同一ドメインに統合する設定を解説します。フロント呼び出しの CORS も自動で解決される副次効果があります。</p>
+
+<h2>なぜ 1 ドメインに統合するか</h2>
+
+<table>
+<tr><th>観点</th><th>別ドメイン (api.lab.iigtn.com)</th><th>同一ドメイン (lab.iigtn.com/api/*)</th></tr>
+<tr><td>URL の見た目</td><td>整理されている</td><td>シンプル</td></tr>
+<tr><td>CORS</td><td>必要</td><td>不要（同一オリジン）</td></tr>
+<tr><td>cookie 共有</td><td>困難</td><td>容易</td></tr>
+<tr><td>追加 DNS / 証明書</td><td>必要</td><td>不要</td></tr>
+<tr><td>運用</td><td>2 系統</td><td>1 系統</td></tr>
+</table>
+
+<p>本シリーズは個人サイト規模なので 1 ドメイン統合の方がシンプル。CORS preflight も同一オリジンなので発生しません。</p>
+
+<h2>CloudFront に「2 つ目の origin」を追加</h2>
+
+<p>CloudFront Distribution は複数の origin を持てます。本シリーズでは:</p>
+
+<ol>
+  <li><strong>origin 1</strong>: S3 バケット（既存・default behavior）</li>
+  <li><strong>origin 2</strong>: API Gateway（新規・<code>/api/*</code> behavior）</li>
+</ol>
+
+<p>これを Terraform の <strong>dynamic block</strong> で条件付きで定義します（<code>frontend_cdn</code> モジュールに後付けする形で実装）。</p>
+
+<h2>frontend_cdn モジュールに API origin 引数を追加</h2>
+
+<pre><code># modules/frontend_cdn/variables.tf に追加
+variable "api_origin_domain_name" {
+  description = "/api/* を委譲する API Gateway のホスト名 (例: xxx.execute-api.ap-northeast-1.amazonaws.com)。空文字なら API behavior を作らない"
+  type        = string
+  default     = ""
+}
+
+variable "api_path_pattern" {
+  description = "API behavior にマッチさせるパスパターン"
+  type        = string
+  default     = "/api/*"
+}
+</code></pre>
+
+<p>デフォルト値を空にしておくことで、API を持たない静的サイトでもこのモジュールを使い回せます。</p>
+
+<h2>dynamic block で条件付き origin 追加</h2>
+
+<pre><code>resource "aws_cloudfront_distribution" "this" {
+  # ... 既存の S3 origin はそのまま
+
+  # API GW origin: api_origin_domain_name が空でない時だけ追加
+  dynamic "origin" {
+    for_each = var.api_origin_domain_name == "" ? [] : [1]
+    content {
+      domain_name = var.api_origin_domain_name
+      origin_id   = "apigw-origin"
+
+      custom_origin_config {
+        http_port              = 80
+        https_port             = 443
+        origin_protocol_policy = "https-only"   # API GW は HTTPS のみ
+        origin_ssl_protocols   = ["TLSv1.2"]
+      }
+    }
+  }
+}
+</code></pre>
+
+<p><code>dynamic</code> は Terraform の便利構文。<code>for_each</code> に空配列を渡せばブロック生成 0、要素 1 個渡せば 1 個生成。条件付きでブロックを足す王道。</p>
+
+<h2>/api/* behavior を dynamic block で追加</h2>
+
+<pre><code>dynamic "ordered_cache_behavior" {
+  for_each = var.api_origin_domain_name == "" ? [] : [1]
+  content {
+    path_pattern             = var.api_path_pattern              # /api/*
+    target_origin_id         = "apigw-origin"
+    viewer_protocol_policy   = "redirect-to-https"
+    allowed_methods          = ["DELETE","GET","HEAD","OPTIONS","PATCH","POST","PUT"]
+    cached_methods           = ["GET","HEAD"]
+    compress                 = true
+
+    # API レスポンスはキャッシュしない
+    cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"  # CachingDisabled
+
+    # Host 以外のヘッダ・クエリ・cookie をオリジンに転送
+    origin_request_policy_id = "b689b0a8-53d0-40ab-baf2-68738e2966ac"  # AllViewerExceptHostHeader
+  }
+}
+</code></pre>
+
+<h2>AllViewerExceptHostHeader が必要な理由</h2>
+
+<p>これがハマりポイント。普通に <code>AllViewer</code> を使うと、リクエストの Host ヘッダが <code>lab.iigtn.com</code> のまま API Gateway に届きます。すると API GW は「自分宛じゃないリクエスト」と判断してエラー。</p>
+
+<p>正解は <strong>「Host ヘッダだけは転送せず、API GW 側で <code>xxx.execute-api...</code> を Host とする」</strong>。これを実現するのが <code>AllViewerExceptHostHeader</code> マネージドポリシー。</p>
+
+<div class="callout warn">
+CloudFront → API Gateway の連携で <code>{"message":"Forbidden"}</code> が返る場合、ほぼ確実に Host ヘッダ問題です。<code>AllViewerExceptHostHeader</code> を使うか、<code>Host</code> ヘッダを除外するカスタムポリシーを書く。
+</div>
+
+<h2>envs/prod/main.tf でモジュール呼出</h2>
+
+<pre><code>module "frontend_cdn" {
+  source = "../../modules/frontend_cdn"
+
+  domain_name     = var.domain_name
+  certificate_arn = module.network_dns.certificate_arn
+  bucket_name     = local.web_bucket_name
+
+  # /api/* を API Gateway に向ける
+  api_origin_domain_name = module.backend_api.api_endpoint_host
+
+  providers = {
+    aws           = aws
+    aws.us_east_1 = aws.us_east_1
+  }
+}
+</code></pre>
+
+<p><code>module.backend_api.api_endpoint_host</code> は API Gateway モジュールが output しているホスト名（<code>xxx.execute-api...</code>）。Terraform が apply 順を自動解決してくれる。</p>
+
+<h2>backend_api モジュール側の output</h2>
+
+<pre><code># modules/backend_api/outputs.tf
+output "api_endpoint" {
+  value = aws_apigatewayv2_api.this.api_endpoint
+  # https://xxx.execute-api.ap-northeast-1.amazonaws.com
+}
+
+output "api_endpoint_host" {
+  value = replace(aws_apigatewayv2_api.this.api_endpoint, "https://", "")
+  # xxx.execute-api.ap-northeast-1.amazonaws.com  (CloudFront origin に直で使える)
+}
+</code></pre>
+
+<p>CloudFront の origin は <strong>ホスト名のみ</strong>（<code>https://</code> 不要）。<code>replace()</code> で先頭の <code>https://</code> を削るのが一手間。</p>
+
+<h2>apply の順序</h2>
+
+<p>Terraform は依存関係を自動解決するので、特に意識せず <code>terraform apply</code> で OK:</p>
+
+<ol>
+  <li>backend_api モジュールが先に apply される（API GW 等が作られて api_endpoint_host が確定）</li>
+  <li>その値を frontend_cdn モジュールが受け取って Distribution を更新</li>
+  <li>CloudFront Distribution の更新は 5〜15 分かかる</li>
+</ol>
+
+<h2>動作確認</h2>
+
+<pre><code># 直接 API GW を叩く
+curl -X POST "https://xxx.execute-api.ap-northeast-1.amazonaws.com/api/contact" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Test","email":"a@b.com","message":"From direct"}'
+# {"ok":true}
+
+# CloudFront 経由 (本番経路)
+curl -X POST "https://lab.iigtn.com/api/contact" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Test","email":"a@b.com","message":"From CDN"}'
+# {"ok":true}
+</code></pre>
+
+<p>両方 200 が返れば成功。ブラウザの DevTools で確認すると、レスポンスヘッダに <code>Via: cloudfront.net (CloudFront)</code> と <code>X-Amz-Cf-Pop: NRT12-P4</code>（東京 Edge）が見えます。</p>
+
+<h2>フロント側の fetch コード</h2>
+
+<p>同一ドメインなので相対パスで叩けます:</p>
+
+<pre><code>// frontend/index.html の script タグ内
+const res = await fetch('/api/contact', {
+  method:  'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body:    JSON.stringify({ name, email, message }),
+});
+</code></pre>
+
+<p>ハードコードされた API URL が無いので、テスト・デプロイ環境に依存しないクリーンなコード。</p>
+
+<h2>Behavior の優先順位</h2>
+
+<p>CloudFront は behavior を「より具体的なものから順に」マッチさせます:</p>
+
+<ol>
+  <li><code>/api/*</code> ← まずこれをチェック → API GW へ</li>
+  <li><code>default_cache_behavior</code> ← マッチしなければここ → S3 へ</li>
+</ol>
+
+<p>つまり <code>/api/contact</code> は API GW、<code>/index.html</code> や <code>/static/main.js</code> は S3。明示的に書かなくても自動でこの順序になる。</p>
+
+<h2>次の記事</h2>
+
+<p>API + フロント が同一ドメインで動くようになったら、次は <strong>運用フェーズの観測</strong> に入ります。次の記事では <strong>CloudWatch Alarms + SNS</strong> で「壊れたら気付ける」仕組みを作ります。</p>
+
+</div>
+
+<section class="post-glossary">
+<h2>📚 用語集</h2>
+<dl>
+<dt>dynamic block (Terraform)</dt>
+<dd>Terraform の構文で、ネストされたブロック（<code>origin {}</code> 等）を <code>for_each</code> で動的に生成する。条件付きブロック追加にも使える（空配列 vs 1 要素配列で 0 or 1 ブロック生成）。</dd>
+
+<dt>ordered_cache_behavior</dt>
+<dd>CloudFront の追加 behavior。default_cache_behavior 以外のパスパターン用。<code>path_pattern</code> でパスを指定する。</dd>
+
+<dt>path_pattern</dt>
+<dd>CloudFront behavior でマッチさせる URL パスのパターン。wildcard（<code>*</code> / <code>?</code>）が使える。</dd>
+
+<dt>custom_origin_config</dt>
+<dd>S3 以外の origin（API Gateway、外部サーバ等）の追加設定。HTTP/HTTPS ポート、TLS バージョン等を指定。</dd>
+
+<dt>origin_protocol_policy</dt>
+<dd>CloudFront → origin への通信プロトコル指定。<code>https-only</code> / <code>http-only</code> / <code>match-viewer</code>。API GW は HTTPS のみなので <code>https-only</code>。</dd>
+
+<dt>AllViewerExceptHostHeader</dt>
+<dd>AWS マネージドの Origin Request Policy。Host 以外のすべてをオリジンに転送。API Gateway を origin にする時の定番。</dd>
+
+<dt>Host ヘッダ</dt>
+<dd>HTTP リクエストの Host を示すヘッダ。複数のドメインが同じサーバを使う時の振り分けに使われる。CloudFront → API GW では Host を上書き必須。</dd>
+
+<dt>CachingDisabled</dt>
+<dd>AWS マネージドの Cache Policy。「キャッシュしない」設定。動的 API 用。</dd>
+
+<dt>allowed_methods</dt>
+<dd>CloudFront behavior で受け付ける HTTP メソッドの集合。POST を許可する場合は <code>["DELETE","GET","HEAD","OPTIONS","PATCH","POST","PUT"]</code> 一択。</dd>
+
+<dt>cached_methods</dt>
+<dd>CloudFront でキャッシュ対象とするメソッド。通常は <code>["GET","HEAD"]</code> のみ（POST 等の結果はキャッシュしない）。</dd>
+
+<dt>同一オリジン (Same-Origin)</dt>
+<dd>scheme + host + port が一致するリソース。同一オリジンなら CORS preflight 不要・cookie 共有可能。</dd>
+
+<dt>CORS preflight</dt>
+<dd>クロスオリジン POST 等の前にブラウザが自動で送る OPTIONS リクエスト。同一オリジン化すれば不要に。</dd>
+
+<dt>Behavior の優先順位</dt>
+<dd>CloudFront はより具体的な path_pattern を優先する。<code>/api/*</code> が <code>/*</code> （default）より先にマッチする。</dd>
+
+<dt>fetch (相対パス)</dt>
+<dd>同一ドメイン内なら <code>fetch('/api/contact')</code> のように <code>https://...</code> を省略できる。環境ごとの URL 切替が不要になる利点。</dd>
+</dl>
+</section>
+
+<footer class="post-footer">
+<span>← 前 <a href="/blog/15-dynamodb.html">⑮ DynamoDB テーブル設計</a></span>
+<span>次 → <a href="/blog/17-cloudwatch-sns.html">⑰ CloudWatch Alarms + SNS でアラート構築</a></span>
+</footer>
+
+</article>
+
+</body>
+</html>

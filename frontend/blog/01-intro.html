@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>① 序章 — フリーランスのインフラエンジニアが AWS でポートフォリオを作る理由 | iigtn 構築日誌</title>
+<meta name="description" content="フリーランス・インフラエンジニアが AWS サーバレス + Terraform + GitHub Actions OIDC でポートフォリオサイトを構築するシリーズの序章。設計思想 4 本柱と「壊れない構成より壊れたら気付ける構成」という方針について。">
+<link rel="stylesheet" href="/blog/style.css">
+</head>
+<body>
+
+<nav class="top">
+  <div class="nav-inner">
+    <a href="/">トップ</a>
+    <a href="/blog/">Blog 目次</a>
+    <a href="/learn.html">解説書</a>
+  </div>
+</nav>
+
+<article class="post">
+<header class="post-header">
+  <p class="post-meta">2026-04-25 · 構築日誌 #01</p>
+  <h1>序章 — フリーランスのインフラエンジニアが AWS でポートフォリオを作る理由</h1>
+</header>
+
+<div class="post-body">
+
+<p>このシリーズは、自分（フリーランスのインフラエンジニア）が <strong>AWS サーバレス + Terraform + GitHub Actions OIDC</strong> でポートフォリオサイト <code>lab.iigtn.com</code> を 0 から構築した記録です。</p>
+
+<p>ただの「やってみた」ではなく、各ステップでの <strong>設計判断・ハマりどころ・学び</strong> を残し、後から自分や他人が追えるようにしました。本記事はその <strong>序章</strong>。なぜ作ったのか、どういう方針で進めたのかを書きます。</p>
+
+<h2>このシリーズで作るもの</h2>
+
+<p>最終的にできたのは、こんなサイトです。</p>
+
+<ul>
+  <li>URL: <a href="https://lab.iigtn.com/">https://lab.iigtn.com/</a></li>
+  <li>ホスティング: AWS S3 (非公開バケット) + CloudFront (CDN) + ACM (TLS 証明書)</li>
+  <li>API: API Gateway HTTP API + Lambda (Node.js 20) + DynamoDB</li>
+  <li>メール送信: SES（問い合わせ通知）</li>
+  <li>監視: CloudWatch Alarms + SNS + AWS Budgets</li>
+  <li>IaC: Terraform 100%</li>
+  <li>CI/CD: GitHub Actions OIDC（静的アクセスキーゼロ）</li>
+</ul>
+
+<p>個人サイトとしては「やや過剰」なくらいですが、これは <strong>採用評価のためのサンプル構成</strong> として意図的に組んだものです。月額 200〜400 円程度で 5 年放置できる構成になっています。</p>
+
+<h2>なぜポートフォリオサイトを作るのか</h2>
+
+<p>フリーランスのインフラエンジニアとしての信用は、スキルセットの羅列より <strong>「運用が止まっていない事実」</strong> で証明されます。それを示すには 4 つの素材が必要だと考えました:</p>
+
+<ol>
+  <li><strong>動いているサイト本体</strong>（外形監視で 200 を返している事実）</li>
+  <li><strong>Terraform State と CloudWatch ログ</strong>（実際に運用している証拠）</li>
+  <li><strong>設計判断の記録</strong>（なぜこの構成にしたか／何を捨てたか）</li>
+  <li><strong>失敗ログ</strong>（壊れた時にどう対処したか）</li>
+</ol>
+
+<p>本サイトはこの 4 つを 1 セットで持つように設計しました。コードは GitHub に置き（現在は private、追って public 化検討）、構築解説書は <a href="/learn.html">/learn.html</a> として公開しています。</p>
+
+<h2>設計思想 4 本柱</h2>
+
+<p>構築前に 4 つの方針を立てました。これがすべての判断の基準になっています。</p>
+
+<table>
+<tr><th>柱</th><th>意味</th></tr>
+<tr><td><strong>構造の透明性</strong></td><td>全構成を Terraform で表現し、「なぜこの構成か」を口頭で説明できる状態に保つ</td></tr>
+<tr><td><strong>運用の継続性</strong></td><td>月額数百円〜数千円で 5 年運用しても破綻しないコスト構造</td></tr>
+<tr><td><strong>拡張の自由度</strong></td><td>後から認証・決済・SaaS 化を足しても破綻しない疎結合設計</td></tr>
+<tr><td><strong>評価軸への適合</strong></td><td>IaC / CI/CD / セキュリティ / 可観測性 の 4 点を採用担当が読み取れる</td></tr>
+</table>
+
+<h2>キーワードは「壊れない構成」より「壊れたら気付ける構成」</h2>
+
+<p>個人運用のインフラで一番怖いのは <strong>「壊れているのに気付かない」</strong> 状態です。だから、可能な限り壊れない構成を目指すよりも、<strong>壊れた瞬間に通知が飛んでくる構成</strong> を優先しました。</p>
+
+<p>具体的には:</p>
+
+<ul>
+  <li>CloudWatch Synthetics or Alarms で外形監視</li>
+  <li>SNS topic + メール購読で即時通知</li>
+  <li>Lambda エラー率 / API 5xx / CloudFront 4xx 率 すべてに閾値アラーム</li>
+  <li>AWS Budgets で月額予算超過アラート（攻撃や設定ミスの早期検知）</li>
+</ul>
+
+<p>これらを最初から仕込み、サイト立ち上げと同時に「壊れたら気付ける」状態を確保しました。</p>
+
+<h2>このシリーズの構成（全 21 記事）</h2>
+
+<p>1 つの記事に詰め込みすぎず、構築の各フェーズを 1 記事ずつに分解しました。各記事は 3,500〜4,500 文字、最後に <strong>用語集</strong> を付けています。</p>
+
+<ul>
+  <li>序章 (本記事)</li>
+  <li>ChatGPT との 6 ラウンド設計レビュー</li>
+  <li>AWS マルチアカウント運用と IAM 設定</li>
+  <li>開発環境セットアップ</li>
+  <li>Terraform Bootstrap（鶏卵問題の解決）</li>
+  <li>Windows での provider TLS 干渉と回避</li>
+  <li>… 以下続く（全 21 記事）</li>
+</ul>
+
+<p>最終回は <strong>付録「構築で使ったコマンド早見表」</strong>。PowerShell / Git / AWS CLI / Terraform の頻出コマンドをまとめます。</p>
+
+<h2>想定読者</h2>
+
+<p>このシリーズは、こんな人を想定しています:</p>
+
+<ul>
+  <li>AWS は触ったことがあるが、本格的なサーバレス + IaC 構築は未経験のエンジニア</li>
+  <li>Terraform を「コピペで動かしている」段階から、設計判断ができるようになりたい人</li>
+  <li>個人ポートフォリオを作りたいフリーランス・インフラエンジニア</li>
+  <li>採用担当として「実運用できる人」を見極める材料を探している人</li>
+</ul>
+
+<p>逆に、AWS や Terraform の基本コマンドは知っている前提で書きます。「<code>terraform init</code> って何？」というレベルの説明は省きますが、各記事の最後に <strong>用語集</strong> を付けるので、知らない単語が出てきたらそこで補完してください。</p>
+
+<h2>この先のシリーズで扱うハマりどころ（先出し）</h2>
+
+<p>個人で AWS を触ると、必ずハマる「あるある」をいくつか先出ししておきます。本シリーズでは、これらを発生時系列で解説します。</p>
+
+<ol>
+  <li>Windows + Git Bash で <code>terraform init</code> 時に <strong>TLS bad record MAC</strong> が出てプロバイダがダウンロードできない</li>
+  <li>Squarespace で管理されているドメインで NS 委譲ができない</li>
+  <li>CloudFront アラーム (us-east-1) を作ろうとすると別 region の SNS が使えない</li>
+  <li>SES が sandbox から出ないと送信元 / 送信先 の両方を verify する必要がある</li>
+  <li>IAM Role の description は ASCII / Latin-1 のみ（日本語不可）</li>
+</ol>
+
+<p>これらは「知らないと半日溶ける」系の罠です。記事の中で、何が起きたのか・どう解決したのかを正直に書きます。</p>
+
+<h2>次の記事</h2>
+
+<p>次の記事では、構築前に <strong>ChatGPT と 6 ラウンドの設計レビュー</strong> をして設計書を v1 → v5 に磨き込んだ過程を書きます。「凝った構成より運用が回る構成」という考え方が、レビューでどう変わっていったかが見えるはずです。</p>
+
+</div>
+
+<section class="post-glossary">
+<h2>📚 用語集</h2>
+<dl>
+<dt>AWS (Amazon Web Services)</dt>
+<dd>Amazon が提供するクラウドコンピューティングサービス群。本シリーズではほぼすべてのインフラを AWS で構築する。</dd>
+
+<dt>サーバレス (Serverless)</dt>
+<dd>「サーバを自分で管理しない」アーキテクチャの総称。OS パッチ・容量管理・台数調整を AWS 側に任せる。Lambda / API Gateway / S3 / DynamoDB などが代表例。</dd>
+
+<dt>S3 (Simple Storage Service)</dt>
+<dd>AWS のオブジェクトストレージ。HTML / CSS / 画像などのファイルを格納する。本サイトでは静的サイトファイルの保管に使用。</dd>
+
+<dt>CloudFront</dt>
+<dd>AWS の CDN（Content Delivery Network）。世界中の Edge ロケーションにファイルをキャッシュし、訪問者に最寄りの拠点から配信する。HTTPS 終端も担当。</dd>
+
+<dt>ACM (AWS Certificate Manager)</dt>
+<dd>AWS の TLS 証明書管理サービス。パブリック証明書は無料。CloudFront にアタッチする証明書は仕様上 us-east-1 リージョンで発行する必要がある。</dd>
+
+<dt>API Gateway</dt>
+<dd>HTTP リクエストを受け付けて Lambda などのバックエンドに振り分けるマネージド API サービス。HTTP API と REST API の 2 種類があり、本シリーズでは安価な HTTP API を使用。</dd>
+
+<dt>Lambda</dt>
+<dd>AWS のサーバレス関数実行サービス。アクセスがない時は完全無料、リクエスト発生時のみ実行され課金される。</dd>
+
+<dt>DynamoDB</dt>
+<dd>AWS のフルマネージド NoSQL データベース（KVS）。スキーマレスで自動スケール。On-demand モードならアクセス薄い時はほぼ 0 円。</dd>
+
+<dt>SES (Simple Email Service)</dt>
+<dd>AWS のメール送信サービス。新規アカウントは sandbox 状態（検証済アドレスにしか送信できない）から始まる。</dd>
+
+<dt>CloudWatch</dt>
+<dd>AWS の監視・ログ・メトリクス・アラームを統合する観測サービス。</dd>
+
+<dt>SNS (Simple Notification Service)</dt>
+<dd>AWS のメッセージ通知ハブ。メール / SMS / Lambda などにイベントを配信できる。CloudWatch Alarm の通知先によく使う。</dd>
+
+<dt>AWS Budgets</dt>
+<dd>月額予算を設定して超過時にメール通知する AWS 標準機能。攻撃や設定ミスによるコスト爆発の早期検知に必須。</dd>
+
+<dt>IaC (Infrastructure as Code)</dt>
+<dd>インフラ構成をコードで記述・管理する手法。本シリーズでは Terraform を使用。</dd>
+
+<dt>Terraform</dt>
+<dd>HashiCorp が開発する IaC ツール。AWS だけでなく GCP / Azure などマルチクラウドに対応。</dd>
+
+<dt>OIDC (OpenID Connect)</dt>
+<dd>認証連携の業界標準プロトコル。GitHub Actions と AWS の間で短期トークン（JWT）をやり取りし、静的アクセスキーなしで AWS リソースにアクセスできる。</dd>
+
+<dt>JWT (JSON Web Token)</dt>
+<dd>OIDC で発行される署名付きトークン。「誰が・どこから・どんな目的で」というクレーム（claim）を含む。</dd>
+
+<dt>CDN (Content Delivery Network)</dt>
+<dd>世界中の拠点（Edge）にコンテンツをキャッシュし、訪問者に最寄りから配信する仕組み。CloudFront はその代表例。</dd>
+
+<dt>外形監視</dt>
+<dd>サイトの URL を定期的に外側から叩いて応答を確認する監視方式。AWS では CloudWatch Synthetics で実装できる。</dd>
+
+<dt>採用評価</dt>
+<dd>本シリーズでの中心的な目的。フリーランスとしての案件獲得・採用面接で「この人は実際に AWS を運用できる」と判断されるための材料を残すこと。</dd>
+</dl>
+</section>
+
+<footer class="post-footer">
+<span></span>
+<span>次 → <a href="/blog/02-design-review.html">② ChatGPT と 6 ラウンドの設計レビュー</a></span>
+</footer>
+
+</article>
+
+</body>
+</html>

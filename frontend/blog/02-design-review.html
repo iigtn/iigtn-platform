@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>② ChatGPT と 6 ラウンドの設計レビュー — 設計書を v1 から v5 まで磨いた話 | iigtn 構築日誌</title>
+<meta name="description" content="AWS サーバレスポートフォリオの設計書を、ChatGPT と 6 ラウンドの相互レビューで段階的に磨き込んだ記録。テンプレ感の排除・実運用データの追加・現場感の注入・採用評価視点の取り込みまで。">
+<link rel="stylesheet" href="/blog/style.css">
+</head>
+<body>
+
+<nav class="top">
+  <div class="nav-inner">
+    <a href="/">トップ</a>
+    <a href="/blog/">Blog 目次</a>
+    <a href="/learn.html">解説書</a>
+  </div>
+</nav>
+
+<article class="post">
+<header class="post-header">
+  <p class="post-meta">2026-04-25 · 構築日誌 #02</p>
+  <h1>ChatGPT と 6 ラウンドの設計レビュー — 設計書を v1 から v5 まで磨いた話</h1>
+</header>
+
+<div class="post-body">
+
+<p>構築を始める前に、まず <strong>設計書を作ってからコードを書く</strong> 方針を取りました。AWS サーバレスは最初の構成判断が運用コストにそのまま跳ね返るので、雑に始めると後悔します。</p>
+
+<p>ただし設計書を 1 人で書くと自己満で終わりがちです。そこで <strong>ChatGPT (gpt-4o) を相互レビュアーに使い、6 ラウンドの設計レビュー</strong> を回しました。本記事はその記録です。</p>
+
+<h2>レビューに使ったツール</h2>
+
+<p>ChatGPT との往復は、自前の CLI ツール <code>consult_chatgpt.py</code> を使いました。会話履歴を JSON で保存できて、複数ラウンドの設計議論を引き継げます。</p>
+
+<pre><code># 単発相談
+chatgpt --prompt "AWS サーバレスポートフォリオの設計書をレビューして"
+
+# ファイル渡し + 履歴引き継ぎ
+chatgpt --file design-v1.md --conversation iigtn_design --save-to round1.md
+chatgpt --prompt "1 番目の指摘を具体化して" --conversation iigtn_design --save-to round2.md
+</code></pre>
+
+<p>これで「設計書 v1 を渡す → R1 レビュー → 反映 → v2 → R2 レビュー → …」のループが回ります。</p>
+
+<h2>R1 (v1 → v2) — 運用視点の追加</h2>
+
+<p>v1 は「9 つの章で AWS サービスごとの採用理由を書いた仕様書」でした。技術的には正確ですが、ChatGPT の最初の指摘はこうでした:</p>
+
+<div class="callout warn">
+「これは設計書というより仕様書。実運用を意識した <strong>Runbook / Postmortem / コスト試算</strong> が無い。採用評価では『運用できるか』が見られる」
+</div>
+
+<p>これを受けて v2 で追加したのは:</p>
+
+<ul>
+  <li><strong>運用証拠の確認方法章</strong>: CloudFront 配信確認 / CloudWatch ログ / DynamoDB / GitHub Actions ログ をどう確認するかの手順</li>
+  <li><strong>Runbook</strong>: よくあるトラブル 12 件の対応手順 + 障害発生時の調査順序</li>
+  <li><strong>コスト設計</strong>: 月額試算 + トラフィック増加時のコスト変動 + 最適化策</li>
+  <li><strong>採用しなかった選択肢</strong>: Amplify / Vercel / ECS / EC2 をなぜ採用しなかったか</li>
+  <li><strong>ビジネス応用</strong>: クライアント案件への展開構想</li>
+</ul>
+
+<h2>R2 (v2 → v3) — 個人ストーリーと現場感</h2>
+
+<p>v2 は分量が増えて読み応えが出ましたが、次のレビューで違う角度から指摘されました:</p>
+
+<div class="callout warn">
+「優秀なテンプレをなぞった人で止まっている。<strong>あなたの意思・ストーリー・実際のトラブル経験</strong> が見えない」
+</div>
+
+<p>そこで v3 では:</p>
+
+<ul>
+  <li><strong>Personal Motivation 章</strong>: なぜこの構成にしたかの個人的な背景（ただし「実体験を fabricate しない」方針で、雛形＋編集可能なプレースホルダーで対応）</li>
+  <li><strong>実障害事例集 (Incident Logs)</strong>: 意図的に再現する障害も含めて、Case 1〜N で記録するテンプレ</li>
+  <li><strong>サービス視点の品質目標</strong>: Core Web Vitals / CVR / SEO の数値目標</li>
+  <li><strong>Lessons & Open Questions</strong>: 失敗・反省・現在悩んでいることを書く章</li>
+</ul>
+
+<h2>R3 (v3 → v4) — 文書役割の分離と事実訂正</h2>
+
+<p>v3 は内容が分厚くなりすぎて、1 つのファイルで「技術ドキュメント / 営業資料 / 面接対策 / キャリア戦略」が混在する状態に。R3 で次の指摘:</p>
+
+<ul>
+  <li>README として読むとノイズ過多</li>
+  <li><code>CloudFront Invalidation は requests 単位</code> という記述が誤り（正しくは paths 単位）</li>
+  <li>Lambda / API Gateway を「0 円」と書いているが、CloudWatch Logs の取込課金で実際は月数十円〜</li>
+  <li>SES コストを固定額表記しているが、送信数で変動</li>
+  <li>WAF 動的 ON/OFF やマルチリージョンの構想が「盛りすぎ」感を醸す</li>
+</ul>
+
+<p>v4 では <strong>1 つの大きなファイルを 7 ファイルに分割</strong> しました:</p>
+
+<table>
+<tr><th>ファイル</th><th>役割</th></tr>
+<tr><td><code>README.md</code></td><td>技術概要・構成・採用理由</td></tr>
+<tr><td><code>motivation.md</code></td><td>動機・思想・ストーリー</td></tr>
+<tr><td><code>cost.md</code></td><td>コスト試算（事実訂正版）</td></tr>
+<tr><td><code>runbook.md</code></td><td>障害対応 + 実障害ログ</td></tr>
+<tr><td><code>lessons.md</code></td><td>失敗・反省・悩み</td></tr>
+<tr><td><code>business.md</code></td><td>クライアント展開構想</td></tr>
+<tr><td><code>interview.md</code></td><td>面接 Q&A</td></tr>
+</table>
+
+<h2>R4 (v4 → v5) — 実運用データと泥臭さ</h2>
+
+<p>v4 はファイル分離で読みやすくなりましたが、もう一段、レビューで突っ込まれました:</p>
+
+<ul>
+  <li>実運用データ（p95 / Hit 率 / Lambda Duration / アラート発火履歴）が無い</li>
+  <li>判断の「揺らぎ」が見えない（全部合理的に決めたように見える）</li>
+  <li>技術的な「敗北」が書かれていない（選んだけど苦戦したもの）</li>
+  <li>人間的運用ミス（アラート見逃し / 翌朝対応など）が無い</li>
+  <li>「OS / プラグイン脆弱性が原理的に存在しない」は断定が強すぎる（Lambda ランタイム・Node・npm 依存・OSS の脆弱性は当然存在する）</li>
+</ul>
+
+<p>v5 では:</p>
+
+<ul>
+  <li><strong>新規 metrics.md</strong>: 実運用メトリクスの計測項目と取得元、月次レポート Template</li>
+  <li><strong>motivation.md に「揺らぎ」章</strong>: EC2 から切替えた経緯 / Next.js は流行で選んだ / Terraform 3 回書き直し など</li>
+  <li><strong>lessons.md に C(人間的運用ミス) / D(技術的敗北) / E(妥協・後回し)</strong> セクション</li>
+  <li><strong>runbook.md に Case 7(アラート翌朝対応) / Case 8(Secret 誤公開)</strong> 追加</li>
+  <li><strong>interview.md</strong> の各回答に「⚠️ ただし正直に言うと…」を併記</li>
+  <li>「セキュリティ」断定の撤回（脆弱性は存在する旨を明記）</li>
+</ul>
+
+<h2>R5 (v5 で合意)</h2>
+
+<p>R5 のレビューで、ChatGPT は <strong>「合意」</strong> と判定しました:</p>
+
+<div class="callout good">
+「ドキュメント全体が非常に詳細で、フリーランス・インフラエンジニアのポートフォリオとして求められる要件を満たしている。採用や案件獲得に向けた様々な視点（技術、コスト、ビジネス、面接対策）がカバーされている。過去のフィードバックを適切に反映し、細部にわたる改善が行われている」
+</div>
+
+<p>5 ラウンドのレビューで、設計書は <strong>「優秀なテンプレ」から「この人だから作れた設計書」</strong> へと変わったと言えるレベルになりました。</p>
+
+<h2>R6 (実装後の確認)</h2>
+
+<p>実装が一段落した時点で、もう 1 ラウンド、ChatGPT に「これで本当に十分か」を確認しました。これも合意。設計フェーズはここで終了し、実装フェーズに入りました。</p>
+
+<h2>レビューで一番効いた指摘</h2>
+
+<p>6 ラウンドを通じて、一番効いたフィードバックは:</p>
+
+<div class="callout info">
+<strong>「正解だけを並べた設計書より、迷い続けている記録のほうが信頼性が出る」</strong>
+</div>
+
+<p>つまり、「全部の判断が合理的」よりも「ここで悩んだ／妥協した／失敗した」を残すほうが、設計書としての説得力が増す。これは技術ブログの書き方にも共通する気づきでした。</p>
+
+<h2>このレビューを 1 人でやろうとしていたら</h2>
+
+<p>もし ChatGPT を使わずに 1 人で書いていたら、おそらく v2 か v3 で止まっていたと思います。「もう完成」と思った瞬間に外部から客観的に突っ込まれることで、初めて気付ける欠落がある。これは <strong>技術ブログ・ポートフォリオを作るすべての人にお勧めできる方法</strong> です。</p>
+
+<h2>次の記事</h2>
+
+<p>設計書ができたところで、いよいよ実装に入ります。次の記事では <strong>AWS のマルチアカウント運用 (dev / prod)</strong> と、Terraform を回す前提となる IAM の初期設定について書きます。</p>
+
+</div>
+
+<section class="post-glossary">
+<h2>📚 用語集</h2>
+<dl>
+<dt>設計書 (Design Doc)</dt>
+<dd>システム構築前に「何を・どう作るか」を文書化したもの。AWS 構築の場合は採用サービス・配置・通信経路・コスト・運用までカバーする。</dd>
+
+<dt>Runbook</dt>
+<dd>障害時にどう対処するかを事前に文書化した手順書。「症状 → 原因の典型 → 対応」のテーブル形式が多い。</dd>
+
+<dt>Postmortem (ポストモーテム)</dt>
+<dd>障害が起きた後に、「何が起きたか / なぜ起きたか / どう対応したか / 再発防止」を記録する文書。実運用してる会社の証拠。</dd>
+
+<dt>Core Web Vitals</dt>
+<dd>Google が定義したサイトのユーザー体験メトリクス。LCP（読込）/ INP（操作応答）/ CLS（レイアウト安定）の 3 指標。</dd>
+
+<dt>p95 / p99</dt>
+<dd>パーセンタイル統計。p95 = 全リクエストの 95% 以下のレイテンシ、p99 = 99% 以下。「最悪値ではなく、ほぼ全員の体感値」を示す。</dd>
+
+<dt>WAF (Web Application Firewall)</dt>
+<dd>Web アプリへの攻撃（SQLi / XSS / Bot 等）を遮断するファイアウォール。AWS WAF は CloudFront にアタッチして使う。</dd>
+
+<dt>Amplify</dt>
+<dd>AWS の Web アプリ向けマネージドホスティング。内部で CloudFront + S3 + Lambda を使うが、抽象化が強くインフラ層がブラックボックス化する。本シリーズでは「不採用」の選択肢として位置付け。</dd>
+
+<dt>Vercel</dt>
+<dd>Next.js を最適に動かす PaaS。本シリーズでは「AWS 設計力を可視化する目的と矛盾」のため不採用。</dd>
+
+<dt>ECS / Fargate</dt>
+<dd>AWS のコンテナ実行サービス。常駐型ワークロード向けで、フォーム程度の用途には過剰のため本シリーズでは不採用。</dd>
+
+<dt>テンプレ感</dt>
+<dd>「教科書的に書かれていて個人の意思や経験が見えない」状態。設計書では避けたい印象。</dd>
+
+<dt>OSS の脆弱性</dt>
+<dd>Open Source Software に発見される脆弱性。Lambda ランタイム・Node.js・npm パッケージ・利用 OSS は定期的にセキュリティパッチ管理が必要。</dd>
+
+<dt>SCA / SAST</dt>
+<dd>SCA = Software Composition Analysis（依存ライブラリの脆弱性スキャン）。SAST = Static Application Security Testing（コード静的解析）。</dd>
+</dl>
+</section>
+
+<footer class="post-footer">
+<span>← 前 <a href="/blog/01-intro.html">① 序章</a></span>
+<span>次 → <a href="/blog/03-aws-accounts.html">③ AWS マルチアカウント運用と IAM 設定</a></span>
+</footer>
+
+</article>
+
+</body>
+</html>

@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⑮ DynamoDB テーブル設計と PII 配慮 — On-demand と PITR | iigtn 構築日誌</title>
+<meta name="description" content="DynamoDB の PK 選定（PII を主キーにしない原則）、On-demand / Provisioned の使い分け、Point-in-Time Recovery の有効化、サーバ側暗号化など、テーブル設計の実戦的な判断記録。">
+<link rel="stylesheet" href="/blog/style.css">
+</head>
+<body>
+
+<nav class="top">
+  <div class="nav-inner">
+    <a href="/">トップ</a>
+    <a href="/blog/">Blog 目次</a>
+    <a href="/learn.html">解説書</a>
+  </div>
+</nav>
+
+<article class="post">
+<header class="post-header">
+  <p class="post-meta">2026-04-26 · 構築日誌 #15</p>
+  <h1>DynamoDB テーブル設計と PII 配慮 — On-demand と PITR</h1>
+</header>
+
+<div class="post-body">
+
+<p>本シリーズの問い合わせフォームは、入力データを <strong>DynamoDB</strong> に保存します。RDS じゃなく DynamoDB を選んだ理由・PK 選定の考え方・PITR や暗号化の設定について書きます。</p>
+
+<h2>なぜ RDS ではなく DynamoDB か</h2>
+
+<p>個人ポートフォリオ規模で「データを保存する」と聞くと、最初に思い浮かぶのが RDS。でも本シリーズでは DynamoDB を採用しました:</p>
+
+<table>
+<tr><th>観点</th><th>RDS</th><th>DynamoDB (本シリーズ採用)</th></tr>
+<tr><td>料金（無風時）</td><td>最小 t4g.micro でも 月 $13〜</td><td>On-demand なら 0 円</td></tr>
+<tr><td>Lambda との相性</td><td>同時接続枯渇問題（RDS Proxy 必須）</td><td>HTTP API なので問題なし</td></tr>
+<tr><td>運用</td><td>マイナーバージョン適用必要</td><td>完全マネージド</td></tr>
+<tr><td>スキーマ</td><td>固定スキーマ</td><td>スキーマレス</td></tr>
+<tr><td>クエリ</td><td>SQL（柔軟）</td><td>PK/SK ベース（制約あり）</td></tr>
+<tr><td>個人サイト規模</td><td>過剰</td><td>最適</td></tr>
+</table>
+
+<p>本シリーズのデータは <strong>「問い合わせを 1 件保存・あとで一覧で見る」</strong> 程度なので、DynamoDB の制約はまったく問題になりません。</p>
+
+<h2>テーブル設計</h2>
+
+<p>contacts テーブルの設計:</p>
+
+<table>
+<tr><th>属性</th><th>型</th><th>用途</th></tr>
+<tr><td><code>id</code> (PK)</td><td>String</td><td>UUID v4 で一意</td></tr>
+<tr><td><code>name</code></td><td>String</td><td>名前</td></tr>
+<tr><td><code>email</code></td><td>String</td><td>メールアドレス</td></tr>
+<tr><td><code>message</code></td><td>String</td><td>本文</td></tr>
+<tr><td><code>created_at</code></td><td>String (ISO 8601)</td><td>作成時刻</td></tr>
+<tr><td><code>source_ip</code></td><td>String</td><td>送信元 IP（スパム対策の参考）</td></tr>
+<tr><td><code>user_agent</code></td><td>String</td><td>UA 文字列</td></tr>
+</table>
+
+<h2>Terraform 定義</h2>
+
+<pre><code>resource "aws_dynamodb_table" "contacts" {
+  name         = "${var.name_prefix}-contacts"
+  billing_mode = "PAY_PER_REQUEST"            # On-demand
+  hash_key     = "id"                          # PK
+
+  attribute {
+    name = "id"
+    type = "S"                                  # String
+  }
+
+  point_in_time_recovery {
+    enabled = true                              # PITR 有効
+  }
+
+  server_side_encryption {
+    enabled = true                              # SSE 有効（デフォルト鍵）
+  }
+
+  tags = var.tags
+}
+</code></pre>
+
+<p>PK と PITR・暗号化だけ書けば動きます。短い。</p>
+
+<h2>PK に email を入れない理由（PII 配慮）</h2>
+
+<p>初期設計では「PK = email」も検討しました。「同じメアドからの 2 回目はどう扱う？」と考える時にメアドベースが楽だから。でも次の理由で <strong>UUID PK + email は通常属性</strong> にしました:</p>
+
+<ul>
+  <li>email は <strong>個人特定情報 (PII)</strong>。PK にすると CloudWatch メトリクスや CloudTrail に値が出る可能性</li>
+  <li>本人の「メアド変更」要求に対応しづらい（PK は変更不可）</li>
+  <li>同じメアドから複数回問い合わせるのは正常（1 回目 / 2 回目で別レコードにしたい）</li>
+  <li>UUID なら衝突しない、URL 等にも安全に出せる</li>
+</ul>
+
+<div class="callout warn">
+個人特定情報（メール / 氏名 / 電話 / 住所等）を PK にするのは <strong>原則 NG</strong>。PK は不変・公開可能な値を使う。
+</div>
+
+<h2>billing_mode の選び方</h2>
+
+<table>
+<tr><th>モード</th><th>料金</th><th>適合ケース</th></tr>
+<tr><td><code>PAY_PER_REQUEST</code> (On-demand)</td><td>読み書き 1 回ごとに課金</td><td>アクセス薄い・予測困難</td></tr>
+<tr><td><code>PROVISIONED</code></td><td>キャパシティ予約 + 超過分従量</td><td>定常的に高負荷・読み書き量予測可能</td></tr>
+</table>
+
+<p>本シリーズの「月数件の問い合わせ」想定なら On-demand 一択。月額 0〜数円。Provisioned だと最低でも月 $1〜2 が確実に発生する。</p>
+
+<h2>Point-in-Time Recovery (PITR)</h2>
+
+<p>PITR を有効化すると、過去 35 日間の任意の時点までテーブルを復旧できます:</p>
+
+<ul>
+  <li>誤って <code>delete-item</code> した時の救済</li>
+  <li>アプリのバグで全レコード上書きしてしまった時</li>
+  <li>本番運用で「数時間前の状態に戻したい」要件</li>
+</ul>
+
+<p>料金: 保存サイズに応じて月額 $0.20/GB 程度。本シリーズ規模では実質無料。</p>
+
+<h2>暗号化（SSE）</h2>
+
+<pre><code>server_side_encryption {
+  enabled = true
+}
+</code></pre>
+
+<p>これだけで AWS 管理キーで自動暗号化されます。料金 0 円。コンプライアンス（PCI-DSS / SOC2 等）でカスタマー管理キー (CMK) が必要なら、<code>kms_key_arn</code> を追加で指定。</p>
+
+<h2>Lambda からの書込</h2>
+
+<p>Lambda 側のコード（抜粋）:</p>
+
+<pre><code>import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
+import { randomUUID } from "node:crypto";
+
+const ddbClient = new DynamoDBClient({});       // ハンドラ外で初期化（再利用最適化）
+const ddb = DynamoDBDocumentClient.from(ddbClient);
+
+const TABLE_NAME = process.env.DDB_TABLE;
+
+export const handler = async (event) =&gt; {
+  const payload = JSON.parse(event.body);
+
+  const item = {
+    id:         randomUUID(),                    // UUID v4
+    name:       payload.name.trim(),
+    email:      payload.email.trim().toLowerCase(),
+    message:    payload.message.trim(),
+    created_at: new Date().toISOString(),
+    source_ip:  event.requestContext?.http?.sourceIp,
+    user_agent: event.headers?.["user-agent"],
+  };
+
+  await ddb.send(new PutCommand({ TableName: TABLE_NAME, Item: item }));
+
+  return { statusCode: 200, body: JSON.stringify({ ok: true }) };
+};
+</code></pre>
+
+<p>ポイント:</p>
+
+<ul>
+  <li><strong>クライアントはハンドラ外で初期化</strong>。Lambda コンテナが再利用される時に同じインスタンスを使い回せる（cold start 短縮）</li>
+  <li><strong>UUID v4 で id 生成</strong>。Node.js 標準の <code>crypto.randomUUID()</code></li>
+  <li><strong>email は trim + lowercase</strong>。「Foo@Example.com」と「foo@example.com」を同一視</li>
+  <li><strong>環境変数からテーブル名取得</strong>。Terraform の <code>environment.variables</code> で渡される</li>
+</ul>
+
+<h2>動作確認とデータ閲覧</h2>
+
+<pre><code># 件数確認
+aws dynamodb scan --table-name iigtn-lab-prod-contacts --select COUNT
+
+# 直近 5 件取得
+aws dynamodb scan --table-name iigtn-lab-prod-contacts --max-items 5
+
+# 1 件取得（id 指定）
+aws dynamodb get-item --table-name iigtn-lab-prod-contacts \
+  --key '{"id":{"S":"&lt;UUID&gt;"}}'
+</code></pre>
+
+<p>件数が増えてきたら（数千件超）<code>scan</code> ではなく <code>query</code> + GSI（Global Secondary Index）で時系列取得するのが定石。本シリーズではまだ追加していない。</p>
+
+<h2>後で GSI を追加する想定</h2>
+
+<p>「最新の問い合わせ 10 件を表示したい」要件が出たら、GSI を追加します:</p>
+
+<pre><code># GSI: created_at で時系列ソート
+attribute {
+  name = "pk_dummy"
+  type = "S"
+}
+attribute {
+  name = "created_at"
+  type = "S"
+}
+
+global_secondary_index {
+  name            = "created_at-index"
+  hash_key        = "pk_dummy"
+  range_key       = "created_at"
+  projection_type = "ALL"
+}
+</code></pre>
+
+<p><code>pk_dummy</code> に「contact」固定値を入れることで、全件を 1 つのパーティションに集約 → <code>created_at</code> でソート可能、という DynamoDB 定番テクニック。</p>
+
+<h2>次の記事</h2>
+
+<p>API Gateway + Lambda + DynamoDB が動いたら、次は <strong>「<code>https://lab.iigtn.com/api/contact</code> という同一ドメインで API を公開する」</strong> 構成を作ります。CloudFront に <code>/api/*</code> 用 behavior を追加して API GW にルーティングする方法を解説します。</p>
+
+</div>
+
+<section class="post-glossary">
+<h2>📚 用語集</h2>
+<dl>
+<dt>DynamoDB</dt>
+<dd>AWS のフルマネージド NoSQL データベース（KVS）。スキーマレス・自動スケール・サーバレス。</dd>
+
+<dt>RDS (Relational Database Service)</dt>
+<dd>AWS の RDB マネージドサービス。MySQL / PostgreSQL / Oracle 等。インスタンスベースで常時課金。</dd>
+
+<dt>RDS Proxy</dt>
+<dd>Lambda と RDS の同時接続枯渇を解消する中継プロキシ。Lambda + RDS の本番では事実上必須。</dd>
+
+<dt>PK (Partition Key)</dt>
+<dd>DynamoDB の主キー。全アイテムを一意に識別する。Hash Key とも呼ぶ。</dd>
+
+<dt>SK (Sort Key)</dt>
+<dd>DynamoDB の補助キー。同じ PK の中で並び順を決める。Range Key とも呼ぶ。</dd>
+
+<dt>GSI (Global Secondary Index)</dt>
+<dd>DynamoDB の追加インデックス。PK / SK と違うキーで検索できる。</dd>
+
+<dt>scan</dt>
+<dd>DynamoDB テーブルの全件取得 API。コスト高いので件数増えたら避ける。</dd>
+
+<dt>query</dt>
+<dd>DynamoDB の PK 指定取得 API。scan より遥かに高速・安価。</dd>
+
+<dt>PutItem</dt>
+<dd>DynamoDB にアイテム 1 件を書き込む API。</dd>
+
+<dt>billing_mode</dt>
+<dd>DynamoDB の課金モード設定。<code>PAY_PER_REQUEST</code>（On-demand）/ <code>PROVISIONED</code>。</dd>
+
+<dt>On-demand (PAY_PER_REQUEST)</dt>
+<dd>読み書き 1 回ごとに課金される DynamoDB 課金モード。アクセス薄いなら最安。</dd>
+
+<dt>Provisioned</dt>
+<dd>キャパシティ予約型の DynamoDB 課金モード。定常負荷が予測できるなら安くなる。</dd>
+
+<dt>PITR (Point-in-Time Recovery)</dt>
+<dd>DynamoDB の連続バックアップ機能。過去 35 日間の任意時点に復旧可能。</dd>
+
+<dt>SSE (Server-Side Encryption)</dt>
+<dd>DynamoDB / S3 の保存時自動暗号化。AWS 管理キー（無料）/ KMS マネージド / カスタマー管理 (CMK) から選べる。</dd>
+
+<dt>PII (Personally Identifiable Information)</dt>
+<dd>個人特定情報。氏名・メール・電話・住所・マイナンバー等。GDPR / 個人情報保護法でも管理が義務付けられる。</dd>
+
+<dt>UUID v4</dt>
+<dd>ランダムベースの 128 ビット一意識別子。<code>xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx</code> 形式。衝突確率は実質 0。</dd>
+
+<dt>DocumentClient (AWS SDK)</dt>
+<dd>DynamoDB のラッパークライアント。型変換（<code>{"S": "foo"}</code> ↔ <code>"foo"</code>）を自動でやってくれる。</dd>
+
+<dt>ハンドラ外初期化</dt>
+<dd>Lambda の handler function の外で AWS SDK クライアントを初期化するパターン。Lambda コンテナ再利用時に高速化される。</dd>
+
+<dt>ISO 8601</dt>
+<dd>日時の国際標準形式。<code>2026-04-26T13:00:00.000Z</code> のように表現。DynamoDB に時刻を String で入れる時の定番。</dd>
+</dl>
+</section>
+
+<footer class="post-footer">
+<span>← 前 <a href="/blog/14-api-gateway-lambda.html">⑭ API Gateway HTTP API と Lambda Proxy 統合</a></span>
+<span>次 → <a href="/blog/16-cloudfront-api-routing.html">⑯ CloudFront /api/* で 1 ドメイン化</a></span>
+</footer>
+
+</article>
+
+</body>
+</html>

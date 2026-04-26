@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>㉑ 付録: 構築で使ったコマンド早見表 — PowerShell / Git / AWS CLI / Terraform | iigtn 構築日誌</title>
+<meta name="description" content="本シリーズで使用した PowerShell / Git Bash / AWS CLI / Terraform / curl / npm / gh CLI の基本コマンドをカテゴリ別にまとめた早見表。手元のリファレンスとして使えます。">
+<link rel="stylesheet" href="/blog/style.css">
+</head>
+<body>
+
+<nav class="top">
+  <div class="nav-inner">
+    <a href="/">トップ</a>
+    <a href="/blog/">Blog 目次</a>
+    <a href="/learn.html">解説書</a>
+  </div>
+</nav>
+
+<article class="post">
+<header class="post-header">
+  <p class="post-meta">2026-04-26 · 構築日誌 #21（最終回・付録）</p>
+  <h1>付録: 構築で使ったコマンド早見表</h1>
+</header>
+
+<div class="post-body">
+
+<p>本シリーズで使用したコマンドを、ツール別にまとめた早見表です。手元のリファレンスとして使ってください。</p>
+
+<h2>1. Git / GitHub</h2>
+
+<h3>初期設定</h3>
+<pre><code>git config --global user.name "&lt;your-name&gt;"
+git config --global user.email "&lt;your-email@example.com&gt;"
+git config --global init.defaultBranch main
+git config --global core.autocrlf true     # Windows なら true、Mac/Linux は input
+</code></pre>
+
+<h3>新規リポジトリ作成</h3>
+<pre><code>git init -b main                   # main ブランチで初期化
+git status                          # 状態確認
+git status -s                       # short 表記
+git add .                           # 全変更を staging
+git add &lt;file&gt;                      # 特定ファイルだけ staging
+git commit -m "メッセージ"
+git log --oneline -10               # 直近 10 件
+git log --graph --oneline --all     # ブランチグラフで表示
+</code></pre>
+
+<h3>リモート操作</h3>
+<pre><code>git remote -v                       # リモート確認
+git remote add origin &lt;URL&gt;
+git push -u origin main             # 初回 push（upstream 設定）
+git push                            # 通常 push
+git pull
+git fetch                           # 取得のみ（merge しない）
+</code></pre>
+
+<h3>ブランチ操作</h3>
+<pre><code>git branch                          # ブランチ一覧
+git checkout -b feature/x           # 新規ブランチ作成 + 切替
+git switch main                     # 既存ブランチへ切替（新しい構文）
+git merge feature/x
+git rebase main
+</code></pre>
+
+<h3>diff / blame</h3>
+<pre><code>git diff                            # 未 commit の変更
+git diff --staged                   # staging 済の変更
+git diff main..feature/x            # ブランチ間の diff
+git blame &lt;file&gt;                    # 行ごとの commit 履歴
+</code></pre>
+
+<h3>取り消し</h3>
+<pre><code>git restore &lt;file&gt;                  # 未 staging の変更を取消
+git restore --staged &lt;file&gt;         # staging を取消
+git reset --soft HEAD^              # 直前 commit 取消（変更は残す）
+git reset --hard HEAD^              # 直前 commit + 変更も取消（危険）
+</code></pre>
+
+<h3>gh CLI</h3>
+<pre><code>gh auth login                       # 認証
+gh auth status                      # 状態確認
+gh repo create &lt;name&gt; --private --source=. --remote=origin --push
+gh repo view &lt;owner&gt;/&lt;repo&gt;
+gh repo list
+gh run list --limit 5
+gh run view &lt;run-id&gt; --log
+gh run watch &lt;run-id&gt; --interval 5 --exit-status
+gh pr create --title "..." --body "..."
+gh pr list
+</code></pre>
+
+<h2>2. AWS CLI</h2>
+
+<h3>プロファイル管理</h3>
+<pre><code>aws configure --profile aws-prod
+aws configure list-profiles
+export AWS_PROFILE=aws-prod         # bash
+$env:AWS_PROFILE = "aws-prod"        # PowerShell
+aws sts get-caller-identity         # ★ プロファイル切替後に必ず叩く
+</code></pre>
+
+<h3>S3</h3>
+<pre><code>aws s3 ls                                       # バケット一覧
+aws s3 ls s3://&lt;bucket&gt;/                        # バケット内 1 階層
+aws s3 ls s3://&lt;bucket&gt; --recursive             # 全ファイル
+aws s3 cp file.txt s3://&lt;bucket&gt;/path/         # 単発アップロード
+aws s3 sync ./dir/ s3://&lt;bucket&gt;/ --delete      # ディレクトリ完全同期
+aws s3 rm s3://&lt;bucket&gt;/path/file               # 削除
+aws s3 rm s3://&lt;bucket&gt; --recursive             # バケット中身全削除
+aws s3api head-object --bucket &lt;bucket&gt; --key file.txt
+aws s3api get-bucket-versioning --bucket &lt;bucket&gt;
+aws s3api put-bucket-versioning --bucket &lt;bucket&gt; --versioning-configuration Status=Enabled
+</code></pre>
+
+<h3>DynamoDB</h3>
+<pre><code>aws dynamodb list-tables --region ap-northeast-1
+aws dynamodb describe-table --table-name &lt;table&gt;
+aws dynamodb scan --table-name &lt;table&gt; --max-items 10
+aws dynamodb scan --table-name &lt;table&gt; --select COUNT
+aws dynamodb get-item --table-name &lt;table&gt; --key '{"id":{"S":"&lt;UUID&gt;"}}'
+aws dynamodb put-item --table-name &lt;table&gt; --item '{"id":{"S":"a"},"name":{"S":"x"}}'
+aws dynamodb delete-table --table-name &lt;table&gt; --region ap-northeast-1
+</code></pre>
+
+<h3>Lambda</h3>
+<pre><code>aws lambda list-functions --region ap-northeast-1
+aws lambda get-function-configuration --function-name &lt;name&gt;
+aws lambda invoke --function-name &lt;name&gt; --payload '{"x":1}' out.json
+aws lambda update-function-code --function-name &lt;name&gt; --zip-file fileb://function.zip
+</code></pre>
+
+<h3>CloudWatch Logs</h3>
+<pre><code># Git Bash の場合: MSYS_NO_PATHCONV=1 を立てる
+export MSYS_NO_PATHCONV=1
+
+aws logs describe-log-groups --query 'logGroups[].logGroupName'
+aws logs tail /aws/lambda/&lt;name&gt; --since 30m --follow
+aws logs filter-log-events --log-group-name /aws/lambda/&lt;name&gt; --filter-pattern 'ERROR'
+</code></pre>
+
+<h3>CloudFront</h3>
+<pre><code>aws cloudfront list-distributions
+aws cloudfront get-distribution --id &lt;DISTRIBUTION_ID&gt;
+aws cloudfront create-invalidation --distribution-id &lt;ID&gt; --paths "/*"
+aws cloudfront create-invalidation --distribution-id &lt;ID&gt; --paths "/index.html" "/learn.html"
+aws cloudfront wait invalidation-completed --distribution-id &lt;ID&gt; --id &lt;INVALIDATION_ID&gt;
+</code></pre>
+
+<h3>ACM</h3>
+<pre><code>aws acm list-certificates --region us-east-1
+aws acm describe-certificate --region us-east-1 --certificate-arn &lt;ARN&gt;
+</code></pre>
+
+<h3>IAM</h3>
+<pre><code>aws iam list-users
+aws iam list-roles
+aws iam get-role --role-name &lt;name&gt;
+aws iam list-attached-role-policies --role-name &lt;name&gt;
+aws iam list-access-keys --user-name &lt;username&gt;
+aws iam create-access-key --user-name &lt;username&gt;
+aws iam delete-access-key --user-name &lt;username&gt; --access-key-id &lt;ID&gt;
+</code></pre>
+
+<h3>SES</h3>
+<pre><code>aws sesv2 list-email-identities --region ap-northeast-1
+aws sesv2 create-email-identity --email-identity &lt;email&gt; --region ap-northeast-1
+aws sesv2 get-email-identity --email-identity &lt;email&gt; --region ap-northeast-1
+aws sesv2 get-account --region ap-northeast-1 --query 'SendQuota'
+</code></pre>
+
+<h3>CloudWatch Alarms</h3>
+<pre><code>aws cloudwatch describe-alarms --region ap-northeast-1
+aws cloudwatch describe-alarms --region us-east-1   # CloudFront 用
+aws cloudwatch set-alarm-state --alarm-name &lt;name&gt; --state-value ALARM --state-reason "test"
+aws cloudwatch put-metric-alarm ...
+aws cloudwatch delete-alarms --alarm-names &lt;name&gt;
+</code></pre>
+
+<h2>3. Terraform</h2>
+
+<h3>基本コマンド</h3>
+<pre><code>terraform version
+terraform init                      # provider ダウンロード + backend 接続
+terraform init -reconfigure         # backend 設定変更時
+terraform init -upgrade             # provider バージョン更新
+
+terraform fmt                       # フォーマット
+terraform fmt -recursive            # サブディレクトリも
+
+terraform validate                  # 構文チェック
+
+terraform plan                      # 差分確認（実行はしない）
+terraform plan -input=false -no-color
+terraform plan -out=tfplan          # plan を保存
+
+terraform apply                     # 実行
+terraform apply -auto-approve       # 確認スキップ
+terraform apply tfplan              # 保存した plan を実行
+terraform apply -target=module.x    # 特定リソースのみ
+
+terraform destroy                   # 全削除（注意）
+terraform destroy -target=module.x  # 特定リソースのみ削除
+</code></pre>
+
+<h3>state 操作</h3>
+<pre><code>terraform state list                # 管理下のリソース一覧
+terraform state show &lt;address&gt;      # 詳細表示
+terraform state rm &lt;address&gt;        # state から除外（リソースは残る）
+terraform state mv &lt;src&gt; &lt;dst&gt;      # state 内でリソース移動
+terraform import &lt;address&gt; &lt;ID&gt;     # 既存リソースを管理下に
+</code></pre>
+
+<h3>Lock 管理</h3>
+<pre><code>terraform force-unlock &lt;LOCK_ID&gt;    # ロック強制解除
+</code></pre>
+
+<h3>Output</h3>
+<pre><code>terraform output                    # 全 output
+terraform output &lt;name&gt;             # 特定 output
+terraform output -json              # JSON 形式
+terraform output -raw &lt;name&gt;        # 値だけ（クォート無し）
+</code></pre>
+
+<h3>Workspace</h3>
+<pre><code>terraform workspace list
+terraform workspace new dev
+terraform workspace select prod
+</code></pre>
+
+<h2>4. PowerShell</h2>
+
+<h3>基本</h3>
+<pre><code>Get-Location                        # cd 確認 (pwd)
+Set-Location &lt;path&gt;                 # cd
+Get-ChildItem                       # ls
+New-Item -ItemType Directory -Path &lt;path&gt;
+Remove-Item &lt;path&gt; -Recurse -Force
+Copy-Item &lt;src&gt; &lt;dst&gt;
+Move-Item &lt;src&gt; &lt;dst&gt;
+</code></pre>
+
+<h3>環境変数</h3>
+<pre><code>$env:AWS_PROFILE = "aws-prod"       # 設定
+$env:AWS_PROFILE                    # 取得
+[Environment]::SetEnvironmentVariable("X","Y","User")  # 永続化（User scope）
+</code></pre>
+
+<h3>ファイル読み書き（BOM 注意）</h3>
+<pre><code># BOM 無し UTF-8 で書く（重要）
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText($path, $content, $utf8NoBom)
+
+# BOM 確認
+$bytes = [System.IO.File]::ReadAllBytes($path)
+$bytes[0..2] | ForEach-Object { '{0:X2}' -f $_ }   # EF BB BF なら BOM 付き
+
+# 読込
+$content = [System.IO.File]::ReadAllText($path, [System.Text.Encoding]::UTF8)
+</code></pre>
+
+<h3>JSON 操作</h3>
+<pre><code>$obj | ConvertTo-Json -Compress -Depth 10
+$json | ConvertFrom-Json
+</code></pre>
+
+<h3>winget</h3>
+<pre><code>winget search &lt;name&gt;
+winget install --id &lt;package-id&gt; --accept-source-agreements --accept-package-agreements
+winget list
+winget upgrade
+winget uninstall --id &lt;package-id&gt;
+</code></pre>
+
+<h2>5. Git Bash (MINGW64)</h2>
+
+<h3>パス変換回避</h3>
+<pre><code>export MSYS_NO_PATHCONV=1
+# またはパスを // で始める
+aws logs tail //aws/lambda/my-function
+</code></pre>
+
+<h3>環境変数</h3>
+<pre><code>export AWS_PROFILE=aws-prod
+echo $AWS_PROFILE
+unset AWS_PROFILE
+env | grep AWS
+</code></pre>
+
+<h3>Windows PATH 追加</h3>
+<pre><code>export PATH="$PATH:/c/Program Files/GitHub CLI"
+</code></pre>
+
+<h2>6. curl</h2>
+
+<h3>基本</h3>
+<pre><code>curl https://example.com                   # GET
+curl -I https://example.com                # HEAD（ヘッダだけ）
+curl -sI https://example.com               # silent + HEAD
+curl -L https://example.com                # リダイレクト追跡
+curl -o file.html https://example.com      # ファイル保存
+curl -O https://example.com/file.html      # 元のファイル名で保存
+</code></pre>
+
+<h3>POST</h3>
+<pre><code>curl -X POST https://example.com/api/x \
+  -H "Content-Type: application/json" \
+  -d '{"name":"test"}'
+
+# フォームデータ
+curl -X POST https://example.com/form \
+  -d "name=test&amp;email=a@b.com"
+</code></pre>
+
+<h3>診断</h3>
+<pre><code>curl -sI -w "Status: %{http_code} / Size: %{size_download} / Time: %{time_total}s\n" \
+  https://example.com -o /dev/null
+
+curl -v https://example.com                # 詳細ログ
+curl --tlsv1.2 --tls-max 1.2 ...           # TLS 1.2 強制
+curl -C - -o file.zip https://...          # resume ダウンロード
+curl --retry 5 --retry-delay 3 ...         # 自動リトライ
+</code></pre>
+
+<h2>7. JSON 操作 (jq / 代替)</h2>
+
+<h3>jq（インストール済の場合）</h3>
+<pre><code>cat data.json | jq '.'                     # pretty print
+echo '{"a":1}' | jq '.a'                   # 値抽出
+cat data.json | jq '.items[] | .name'      # 配列展開
+cat data.json | jq -r '.x'                 # raw（クォート無し）
+</code></pre>
+
+<h3>jq が無い時（grep + sed）</h3>
+<pre><code>echo '{"name":"foo"}' | grep -o '"name":"[^"]*' | sed 's/"name":"//'
+</code></pre>
+
+<h3>PowerShell で JSON</h3>
+<pre><code># JSON → オブジェクト
+$obj = Get-Content data.json -Raw | ConvertFrom-Json
+$obj.name
+
+# オブジェクト → JSON
+@{ name = "foo"; age = 30 } | ConvertTo-Json
+</code></pre>
+
+<h2>8. Node.js / npm</h2>
+
+<h3>基本</h3>
+<pre><code>node --version
+npm --version
+node script.js                              # 実行
+npm init -y                                 # package.json 作成
+npm install                                 # 依存インストール
+npm install &lt;package&gt;                       # 追加
+npm install -D &lt;package&gt;                    # 開発依存
+npm uninstall &lt;package&gt;
+npm run &lt;script&gt;                            # package.json の scripts 実行
+</code></pre>
+
+<h3>Lambda zip 作成</h3>
+<pre><code>cd backend/functions/contact
+zip -r ../../../function.zip index.mjs node_modules/
+# Terraform の archive_file data source を使うのが楽
+</code></pre>
+
+<h2>9. ファイル・diff・grep</h2>
+
+<pre><code># 検索
+grep -r "pattern" .                          # 再帰
+grep -ri "pattern" . --include="*.tf"        # ファイル種別指定
+grep -v "pattern" file                       # 除外
+grep -c "pattern" file                       # マッチ数
+
+# ファイル操作
+find . -type f -name "*.tf"                  # ファイル検索
+find . -type d -name "node_modules" -prune   # 除外
+wc -l file                                    # 行数
+
+# diff
+diff file1 file2
+diff -r dir1 dir2
+
+# tail / head
+head -20 file
+tail -20 file
+tail -f log.txt                               # リアルタイム監視
+</code></pre>
+
+<h2>10. ネットワーク診断</h2>
+
+<pre><code># DNS
+nslookup example.com
+nslookup -type=CNAME lab.iigtn.com 8.8.8.8
+nslookup -type=MX iigtn.com
+nslookup -type=NS iigtn.com
+
+# 疎通
+ping -c 4 example.com           # bash
+ping example.com                 # PowerShell（無限）
+ping -n 4 example.com            # PowerShell の回数指定
+
+# ルート
+tracert example.com              # PowerShell
+traceroute example.com           # bash
+</code></pre>
+
+<h2>11. その他のお役立ち</h2>
+
+<h3>SHA256 ハッシュ</h3>
+<pre><code>sha256sum file                              # bash
+Get-FileHash -Algorithm SHA256 -Path file   # PowerShell
+</code></pre>
+
+<h3>UUID 生成</h3>
+<pre><code># bash (uuidgen)
+uuidgen
+
+# PowerShell
+[guid]::NewGuid().ToString()
+
+# Node.js
+node -e "console.log(require('crypto').randomUUID())"
+</code></pre>
+
+<h3>日時</h3>
+<pre><code>date -u +"%Y-%m-%dT%H:%M:%SZ"               # bash ISO 8601 UTC
+Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ"      # PowerShell
+</code></pre>
+
+<h3>base64</h3>
+<pre><code># bash
+echo "text" | base64
+echo "dGV4dAo=" | base64 -d
+
+# PowerShell
+[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("text"))
+[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String("dGV4dA=="))
+</code></pre>
+
+<h2>シリーズ完結</h2>
+
+<p>これで全 21 記事の構築日誌シリーズは完結です。AWS サーバレス + Terraform + GitHub Actions OIDC でポートフォリオサイトを 0 から構築するすべての過程と、ハマりどころ・学びを記録しました。</p>
+
+<p>本シリーズが、これから AWS サーバレスを始める方の参考になれば嬉しいです。気付いた点・指摘・案件のご相談は <a href="/#contact">問い合わせフォーム</a> からどうぞ。</p>
+
+<p><strong>📚 全記事一覧</strong>: <a href="/blog/">Blog 目次</a></p>
+
+</div>
+
+<section class="post-glossary">
+<h2>📚 用語集</h2>
+<dl>
+<dt>cheatsheet (チートシート)</dt>
+<dd>頻出コマンド・構文を 1 ページにまとめたリファレンス。手元に置いて参照する用。</dd>
+
+<dt>man / --help</dt>
+<dd>コマンドのオンラインドキュメント。<code>command --help</code> や <code>man command</code> で読める。</dd>
+
+<dt>パイプ (|)</dt>
+<dd>コマンドの出力を次のコマンドの入力に渡す。<code>cat file | grep pattern</code> 等。</dd>
+
+<dt>リダイレクト (&gt;, &gt;&gt;, &lt;)</dt>
+<dd>標準出力をファイルに書く（<code>&gt;</code> 上書き / <code>&gt;&gt;</code> 追記）、ファイルを標準入力に流す（<code>&lt;</code>）。</dd>
+
+<dt>シェル変数 (PowerShell の $env: / bash の $)</dt>
+<dd>シェル内で値を保持する変数。環境変数は子プロセスにも引き継がれる。</dd>
+
+<dt>jq</dt>
+<dd>JSON 操作コマンドラインツール。クエリ言語で複雑な抽出・変換ができる。Linux/Mac は標準パッケージで入る、Windows は winget で。</dd>
+
+<dt>idempotent (冪等)</dt>
+<dd>「何度実行しても同じ結果」となる性質。Terraform / setup スクリプト / update 系コマンドに重要。</dd>
+
+<dt>silent / quiet モード (curl -s 等)</dt>
+<dd>進捗表示を抑制するオプション。スクリプト内でコマンドを使う時に出力をクリーンにする。</dd>
+
+<dt>resume ダウンロード (-C -)</dt>
+<dd>curl で「途中まで取れたファイルの続きから取得」する機能。HTTP Range リクエストを使う。</dd>
+
+<dt>BOM 無し UTF-8</dt>
+<dd>UTF-8 ファイルの先頭に BOM（<code>EF BB BF</code>）を付けない形式。HCL / YAML / JSON のパーサが嫌うので、設定ファイルでは BOM 無しで書く。</dd>
+
+<dt>MSYS_NO_PATHCONV</dt>
+<dd>Git Bash で「Unix パスを Windows パスに自動変換する」機能を無効化する環境変数。AWS CLI 等で <code>/aws/...</code> 形式のリソース名を渡すときに必要。</dd>
+
+<dt>winget</dt>
+<dd>Windows 標準のパッケージマネージャ。<code>winget install</code> でツールをインストール。</dd>
+
+<dt>HTTP Range リクエスト</dt>
+<dd>HTTP のヘッダで「ファイルのこの範囲だけください」と指定する機能。レジューム ダウンロードや動画ストリーミングで使われる。</dd>
+
+<dt>SHA256 ハッシュ</dt>
+<dd>256 ビットのハッシュ値。ファイルの改ざん検知・パスワード保管・JWT 署名等で使われる。</dd>
+
+<dt>UUID v4</dt>
+<dd>ランダムベースの 128 ビット一意識別子。衝突確率は実質 0。データベースの主キーや一意 ID として使う。</dd>
+
+<dt>ISO 8601</dt>
+<dd>日時の国際標準形式。<code>2026-04-26T13:00:00Z</code> のような表現。プログラム間の日時授受の標準。</dd>
+
+<dt>base64</dt>
+<dd>バイナリデータをテキスト文字列で表現する変換方式。HTTP / メール / JSON 等のテキスト前提のプロトコルで使う。</dd>
+</dl>
+</section>
+
+<footer class="post-footer">
+<span>← 前 <a href="/blog/20-portfolio-ses.html">⑳ ポートフォリオ標準構成への再設計 + SES 通知</a></span>
+<span><a href="/blog/">Blog 目次へ戻る</a></span>
+</footer>
+
+</article>
+
+</body>
+</html>

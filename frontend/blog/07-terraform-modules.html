@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⑦ Terraform モジュール設計の考え方 — modules / envs / providers alias | iigtn 構築日誌</title>
+<meta name="description" content="Terraform を実運用する時のモジュール設計について。「いくつに分けるか」「どこを共通化するか」「provider alias の使い方」を、本シリーズで採用した 5 モジュール構成を例に解説。">
+<link rel="stylesheet" href="/blog/style.css">
+</head>
+<body>
+
+<nav class="top">
+  <div class="nav-inner">
+    <a href="/">トップ</a>
+    <a href="/blog/">Blog 目次</a>
+    <a href="/learn.html">解説書</a>
+  </div>
+</nav>
+
+<article class="post">
+<header class="post-header">
+  <p class="post-meta">2026-04-26 · 構築日誌 #07</p>
+  <h1>Terraform モジュール設計の考え方 — modules / envs / providers alias</h1>
+</header>
+
+<div class="post-body">
+
+<p>Terraform を本格的に使い始めると、最初に頭を悩ませるのが <strong>「どう構造化するか」</strong> です。1 つの巨大な <code>main.tf</code> に全部書くと管理不能になり、細かく分割しすぎても apply が遅くなる。本記事では、本シリーズで採用した <strong>「modules / envs」二層構造</strong> と、複数リージョンを扱う際の <strong>provider alias</strong> について書きます。</p>
+
+<h2>本シリーズのディレクトリ構成</h2>
+
+<pre><code>terraform/
+├── bootstrap/                # 手動で 1 回だけ実行する初期化
+│   ├── README.md
+│   ├── setup.sh
+│   └── setup.ps1
+│
+├── modules/                  # 再利用可能なレゴブロック
+│   ├── network_dns/          # ACM 証明書 + DNS 検証
+│   ├── frontend_cdn/         # S3 + CloudFront + OAC
+│   ├── backend_api/          # API Gateway + Lambda + DynamoDB
+│   ├── ci_oidc/              # GitHub OIDC + IAM Role
+│   └── observability/        # CloudWatch Alarms + SNS + Budgets
+│
+└── envs/
+    └── prod/                 # 本番環境の組み立て
+        ├── backend.tf        # state を S3 に置く設定
+        ├── providers.tf      # AWS provider 定義（default + us_east_1）
+        ├── versions.tf       # Terraform / provider バージョン
+        ├── variables.tf      # 入力変数の定義
+        ├── terraform.tfvars  # 入力変数の実値
+        ├── main.tf           # モジュール呼び出し
+        └── outputs.tf        # apply 後に表示する値
+</code></pre>
+
+<p>原則は <strong>modules = レゴブロック、envs = 組み立て側</strong>。同じ modules を dev / prod で別々の値で呼び出せる構造にしています。</p>
+
+<h2>モジュールを「いくつに分けるか」の判断基準</h2>
+
+<p>本シリーズでは、最終的に 5 モジュールに収束しました。実は <strong>3 回書き直して</strong> ここに落ち着いています:</p>
+
+<ol>
+  <li><strong>1 回目</strong>: 全部 envs/prod/main.tf に直書き（200 行超で管理不能）</li>
+  <li><strong>2 回目</strong>: 細かく 10 モジュールに分割（apply 時の依存解決が遅すぎ）</li>
+  <li><strong>3 回目</strong>: 5 モジュールに統合（現在の形）</li>
+</ol>
+
+<p>この経験から得たモジュール分割の判断基準:</p>
+
+<table>
+<tr><th>基準</th><th>意味</th></tr>
+<tr><td><strong>ライフサイクル</strong></td><td>同じタイミングで作成・破棄するリソース群を 1 モジュールに</td></tr>
+<tr><td><strong>変更頻度</strong></td><td>頻繁に触る部分と、ほぼ触らない部分は分ける</td></tr>
+<tr><td><strong>責務の単位</strong></td><td>「何を実現するためのモジュールか」を一言で言える単位</td></tr>
+<tr><td><strong>再利用の単位</strong></td><td>他のプロジェクトでも使い回せる単位</td></tr>
+</table>
+
+<h2>本シリーズの 5 モジュール</h2>
+
+<table>
+<tr><th>モジュール</th><th>責務</th><th>主な変更タイミング</th></tr>
+<tr><td><code>network_dns</code></td><td>ACM 証明書 + DNS 検証</td><td>初回構築のみ</td></tr>
+<tr><td><code>frontend_cdn</code></td><td>S3 + CloudFront + OAC</td><td>新パターン追加時</td></tr>
+<tr><td><code>backend_api</code></td><td>API GW + Lambda + DynamoDB</td><td>API 機能追加時に頻繁</td></tr>
+<tr><td><code>ci_oidc</code></td><td>GitHub OIDC + IAM Role</td><td>初回構築のみ</td></tr>
+<tr><td><code>observability</code></td><td>CloudWatch Alarms + SNS + Budgets</td><td>監視強化時</td></tr>
+</table>
+
+<p>全部 <code>envs/prod/main.tf</code> から呼び出されます。</p>
+
+<h2>モジュールの基本構造</h2>
+
+<p>1 つのモジュール（例: network_dns）の中身は基本 5 ファイル:</p>
+
+<pre><code>terraform/modules/network_dns/
+├── versions.tf       # Terraform / provider 要件
+├── variables.tf      # 入力（domain_name など）
+├── main.tf           # リソース本体
+├── outputs.tf        # 出力（certificate_arn など）
+└── README.md         # 使い方ドキュメント
+</code></pre>
+
+<p>これは Terraform Registry の慣例に従った形。同じ構造を 5 モジュール全部で使うことで、誰が見ても「ここに何が書いてあるか」が分かるようにしています。</p>
+
+<h2>モジュール呼び出しの実例</h2>
+
+<p>envs/prod/main.tf でモジュールをこう呼び出します:</p>
+
+<pre><code>module "network_dns" {
+  source = "../../modules/network_dns"
+
+  domain_name = var.domain_name
+
+  providers = {
+    aws           = aws
+    aws.us_east_1 = aws.us_east_1
+  }
+}
+
+module "frontend_cdn" {
+  source = "../../modules/frontend_cdn"
+
+  domain_name     = var.domain_name
+  certificate_arn = module.network_dns.certificate_arn  # ← ここで他モジュールの output を参照
+  bucket_name     = local.web_bucket_name
+
+  providers = {
+    aws           = aws
+    aws.us_east_1 = aws.us_east_1
+  }
+}
+</code></pre>
+
+<p><code>module.network_dns.certificate_arn</code> のように、モジュール間で値を受け渡しできます。これが疎結合の要。</p>
+
+<h2>provider alias — 複数リージョンを同時に扱う</h2>
+
+<p>本シリーズで重要なのが <strong>provider alias</strong>。AWS でリソースを作るときは「どのリージョンか」が必要ですが、CloudFront 用の ACM 証明書だけは <strong>必ず us-east-1</strong> でないといけない仕様。</p>
+
+<p>そこで envs/prod/providers.tf でこう定義:</p>
+
+<pre><code># default provider: ap-northeast-1 (東京)
+provider "aws" {
+  region = var.region                # 通常 ap-northeast-1
+
+  default_tags {
+    tags = local.common_tags          # 全リソースに自動でタグ付与
+  }
+}
+
+# alias: us_east_1 (バージニア北部) — CloudFront / ACM 専用
+provider "aws" {
+  alias  = "us_east_1"
+  region = "us-east-1"
+
+  default_tags {
+    tags = local.common_tags
+  }
+}
+</code></pre>
+
+<p>これで <code>aws</code>（=東京）と <code>aws.us_east_1</code>（=バージニア）の 2 つの provider が並列で使えます。</p>
+
+<h2>モジュール側で alias を要求する書き方</h2>
+
+<p>モジュール内で「この alias を使いたい」を宣言するには <code>configuration_aliases</code>:</p>
+
+<pre><code># modules/network_dns/versions.tf
+terraform {
+  required_version = "&gt;= 1.5"
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~&gt; 5.0"
+      configuration_aliases = [aws.us_east_1]
+    }
+  }
+}
+</code></pre>
+
+<p>そしてモジュール内のリソースで <code>provider = aws.us_east_1</code> を指定:</p>
+
+<pre><code># modules/network_dns/main.tf
+resource "aws_acm_certificate" "this" {
+  provider = aws.us_east_1                # ← us-east-1 で証明書発行
+
+  domain_name = var.domain_name
+  ...
+}
+</code></pre>
+
+<h2>provider alias の注意点</h2>
+
+<p>本シリーズで、provider alias 関係でハマったポイントを 2 つ:</p>
+
+<h3>① モジュール呼び出し時の providers map で <code>aws = aws</code> を忘れない</h3>
+
+<pre><code>module "frontend_cdn" {
+  source = "../../modules/frontend_cdn"
+
+  providers = {
+    aws           = aws              # ← これを忘れるとデフォルト provider が消える
+    aws.us_east_1 = aws.us_east_1
+  }
+}
+</code></pre>
+
+<p>「<code>aws = aws</code> なんて自明だから書かなくても」と思いがちですが、<code>providers</code> map を使った瞬間、デフォルト provider の暗黙継承が止まります。</p>
+
+<h3>② alarm_actions の SNS topic は同一 region 必須</h3>
+
+<p>CloudFront のメトリクスは us-east-1 にしか存在しないため、CloudFront 用 CloudWatch Alarm は us-east-1 で作る必要があります。<strong>その alarm_actions に渡す SNS topic も us-east-1 にないとダメ</strong>。</p>
+
+<p>これに気付かず、東京の SNS topic を us-east-1 alarm から参照しようとして 30 分ハマりました。最終的に「us-east-1 用の SNS topic」を別途作って解決しました（記事 #18 で詳説）。</p>
+
+<h2>local 値で DRY</h2>
+
+<p>2 か所以上で使う計算値は <code>locals</code> ブロックに集約します:</p>
+
+<pre><code>data "aws_caller_identity" "current" {}    # AWS の現在のアカウント ID を取得
+
+locals {
+  web_bucket_name = "iigtn-lab-web-prod-${data.aws_caller_identity.current.account_id}"
+
+  common_tags = {
+    Project     = "iigtn"
+    Environment = "prod"
+    ManagedBy   = "Terraform"
+  }
+}
+</code></pre>
+
+<p>S3 バケット名はアカウント ID を suffix にしてグローバル一意にする慣例。<code>data.aws_caller_identity.current.account_id</code> で実行時に取得できます。</p>
+
+<h2>variables.tf と terraform.tfvars の使い分け</h2>
+
+<p>環境ごとに変わる値は <code>variables.tf</code> で定義し、実値は <code>terraform.tfvars</code> に書く:</p>
+
+<pre><code># terraform/envs/prod/variables.tf
+variable "domain_name" {
+  description = "メインドメイン"
+  type        = string
+}
+
+variable "ses_to" {
+  description = "SES 送信先"
+  type        = string
+  default     = ""
+}
+</code></pre>
+
+<pre><code># terraform/envs/prod/terraform.tfvars
+domain_name = "lab.iigtn.com"
+ses_to      = "&lt;your-email&gt;"
+</code></pre>
+
+<p>tfvars はリポジトリにコミットしますが、<strong>機密値が入る場合は .gitignore に追加</strong>。本シリーズでは domain と email アドレスのみで機密値ゼロなので、コミット対象。</p>
+
+<h2>envs/dev を後で増やすには</h2>
+
+<p>本シリーズは prod だけですが、dev を増やすときは <code>envs/dev/</code> を作って同じファイルを置くだけ:</p>
+
+<pre><code>envs/
+├── prod/
+│   ├── backend.tf       # key = "envs/prod/terraform.tfstate"
+│   ├── main.tf          # module を呼ぶ
+│   └── terraform.tfvars # domain_name = "lab.iigtn.com"
+└── dev/
+    ├── backend.tf       # key = "envs/dev/terraform.tfstate"
+    ├── main.tf          # module を呼ぶ（同じソース）
+    └── terraform.tfvars # domain_name = "dev.iigtn.com"
+</code></pre>
+
+<p>これで「同じモジュールで違う domain で違う環境」が作れます。テストや staging 用途で使えます。</p>
+
+<h2>次の記事</h2>
+
+<p>モジュール設計の考え方が整理できたところで、最初のモジュール <code>network_dns</code> を作ります。次の記事では <strong>ACM 証明書の発行と DNS 検証</strong> について書きます。CloudFront 用 ACM が us-east-1 限定という仕様は、最初のハマりどころです。</p>
+
+</div>
+
+<section class="post-glossary">
+<h2>📚 用語集</h2>
+<dl>
+<dt>module (Terraform モジュール)</dt>
+<dd>Terraform のリソース群を再利用可能にまとめた単位。ファイル群が入ったディレクトリ。</dd>
+
+<dt>envs (環境ディレクトリ)</dt>
+<dd>本シリーズの慣例で、prod / dev など環境ごとの組み立て先ディレクトリ。modules を呼び出して具象化する。</dd>
+
+<dt>source 引数</dt>
+<dd>module ブロックで「どこからモジュールを読むか」を指定。ローカルパス / Git URL / Terraform Registry が指定可能。</dd>
+
+<dt>provider</dt>
+<dd>Terraform で AWS / GCP など各クラウドを操作するためのプラグイン。AWS provider は CRUD する API の集合。</dd>
+
+<dt>provider alias</dt>
+<dd>同じ provider を複数の設定（リージョン違いなど）で使うときの識別子。<code>provider "aws" { alias = "us_east_1" ... }</code> と定義し、リソース側で <code>provider = aws.us_east_1</code> と参照。</dd>
+
+<dt>configuration_aliases</dt>
+<dd>モジュール側で「この alias を呼び出し側から渡してね」を宣言する仕組み。<code>versions.tf</code> の <code>required_providers</code> 内に書く。</dd>
+
+<dt>providers map (モジュール呼出時)</dt>
+<dd>モジュール呼び出し時に「どの provider をどう渡すか」を指定する。<code>providers = { aws = aws, aws.us_east_1 = aws.us_east_1 }</code> 形式。</dd>
+
+<dt>data source</dt>
+<dd>Terraform が「既存リソースを読むだけ（管理しない）」ための仕組み。<code>data "aws_caller_identity" "current" {}</code> で現在のアカウント情報が取れる。</dd>
+
+<dt>local 値 (locals ブロック)</dt>
+<dd>モジュール内の中間計算値。<code>locals { foo = "bar-${var.x}" }</code> と書いて <code>local.foo</code> で参照。</dd>
+
+<dt>variable</dt>
+<dd>モジュールの入力。<code>variable "x" { type = string }</code> で定義し、<code>var.x</code> で参照。</dd>
+
+<dt>output</dt>
+<dd>モジュールの出力。<code>output "x" { value = ... }</code> で定義し、呼出側から <code>module.foo.x</code> で参照。</dd>
+
+<dt>terraform.tfvars</dt>
+<dd>variable の実値を書くファイル。<code>terraform plan</code> 時に自動的に読まれる。</dd>
+
+<dt>default_tags</dt>
+<dd>AWS provider のオプション。指定したタグが、その provider で作る全リソースに自動付与される。タグ書き忘れを構造的に防ぐ。</dd>
+
+<dt>疎結合 (Loose Coupling)</dt>
+<dd>各モジュールが独立しており、単独で理解・変更できる状態。output / variable で値をやり取りすることで実現。</dd>
+
+<dt>DRY (Don't Repeat Yourself)</dt>
+<dd>同じ値・処理を複数箇所に書かない設計原則。Terraform では locals / module で実現する。</dd>
+
+<dt>ライフサイクル</dt>
+<dd>リソースが「作られて、変更されて、消される」までの一連の時系列。同じライフサイクルのリソースは 1 モジュールにまとめる。</dd>
+</dl>
+</section>
+
+<footer class="post-footer">
+<span>← 前 <a href="/blog/06-terraform-tls.html">⑥ Windows での Terraform Provider TLS 干渉</a></span>
+<span>次 → <a href="/blog/08-acm-cert.html">⑧ ACM 証明書の発行と DNS 検証フロー</a></span>
+</footer>
+
+</article>
+
+</body>
+</html>

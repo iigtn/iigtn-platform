@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⑪ CloudFront のキャッシュ・セキュリティヘッダ・SPA 設定 | iigtn 構築日誌</title>
+<meta name="description" content="CloudFront のマネージド Cache Policy / Response Headers Policy の使い分け、SPA 用カスタムエラーレスポンス、Geo Restriction 等の設定をまとめて解説。">
+<link rel="stylesheet" href="/blog/style.css">
+</head>
+<body>
+
+<nav class="top">
+  <div class="nav-inner">
+    <a href="/">トップ</a>
+    <a href="/blog/">Blog 目次</a>
+    <a href="/learn.html">解説書</a>
+  </div>
+</nav>
+
+<article class="post">
+<header class="post-header">
+  <p class="post-meta">2026-04-26 · 構築日誌 #11</p>
+  <h1>CloudFront のキャッシュ・セキュリティヘッダ・SPA 設定</h1>
+</header>
+
+<div class="post-body">
+
+<p>CloudFront の Distribution は設定項目が多く、初心者は何から手を付けて良いか迷います。本記事では、本シリーズで採用した <strong>マネージドポリシーの組み合わせ</strong> と、SPA 用の <strong>カスタムエラーレスポンス</strong>、その他のおすすめ設定をまとめます。</p>
+
+<h2>AWS マネージド Cache Policy</h2>
+
+<p>CloudFront には AWS が用意した Cache Policy が複数あり、自分で書かなくてもまずこれを使えば 7 割の用途で十分です:</p>
+
+<table>
+<tr><th>ポリシー名</th><th>ID</th><th>用途</th></tr>
+<tr><td><code>CachingOptimized</code></td><td>658327ea-f89d-4fab-a63d-7e88639e58f6</td><td>静的サイト（HTML/CSS/JS/画像）。最大 24h キャッシュ</td></tr>
+<tr><td><code>CachingDisabled</code></td><td>4135ea2d-6df8-44a3-9df3-4b5a84be39ad</td><td>API・動的レスポンス。キャッシュしない</td></tr>
+<tr><td><code>CachingOptimizedForUncompressedObjects</code></td><td>b2884449-e4de-46a7-ac36-70bc7f1ddd6d</td><td>圧縮済 (gzip 等) ファイル向け</td></tr>
+</table>
+
+<p>本シリーズでは <code>default_cache_behavior</code> に <code>CachingOptimized</code>、<code>/api/*</code> behavior に <code>CachingDisabled</code> を割り当てました。</p>
+
+<h2>マネージド Origin Request Policy</h2>
+
+<p>「オリジンに何を転送するか」のポリシー:</p>
+
+<table>
+<tr><th>ポリシー名</th><th>ID</th><th>用途</th></tr>
+<tr><td><code>AllViewer</code></td><td>216adef6-5c7f-47e4-b989-5492eafa07d3</td><td>全ヘッダ・クエリ・cookie を転送</td></tr>
+<tr><td><code>AllViewerExceptHostHeader</code></td><td>b689b0a8-53d0-40ab-baf2-68738e2966ac</td><td>Host 以外を転送（API GW など Host 上書きが要らない時）</td></tr>
+<tr><td><code>UserAgentRefererHeaders</code></td><td>acba4595-bd28-49b8-b9fe-13317c0390fa</td><td>UA + Referer のみ</td></tr>
+</table>
+
+<p>API Gateway を origin にする時は <code>AllViewerExceptHostHeader</code> を使います。Host を上書きされると API GW がリクエストを正しくルーティングできない問題を回避するため。</p>
+
+<h2>マネージド Response Headers Policy（セキュリティヘッダ）</h2>
+
+<p>AWS マネージドの <code>SecurityHeadersPolicy</code>（ID: <code>67f7725c-6f97-4210-82d7-5512b31e9d03</code>）を割り当てるだけで、以下の主要セキュリティヘッダが <strong>すべてのレスポンスに自動付与</strong> されます:</p>
+
+<ul>
+  <li><code>X-Frame-Options: DENY</code>（クリックジャッキング対策）</li>
+  <li><code>X-Content-Type-Options: nosniff</code>（MIME sniffing 対策）</li>
+  <li><code>Strict-Transport-Security</code>（HTTPS 強制 / HSTS）</li>
+  <li><code>Referrer-Policy: strict-origin-when-cross-origin</code></li>
+  <li><code>X-XSS-Protection: 0</code>（モダンブラウザでは廃止された機能を明示無効化）</li>
+</ul>
+
+<p>これを 1 行で全付与できるのは強い。手動で書くと環境ごとにブレるので、マネージド推奨。</p>
+
+<h2>本シリーズの default_cache_behavior</h2>
+
+<pre><code>default_cache_behavior {
+  target_origin_id           = "s3-${var.bucket_name}"
+  viewer_protocol_policy     = "redirect-to-https"  # HTTP → HTTPS リダイレクト
+  allowed_methods            = ["GET", "HEAD"]
+  cached_methods             = ["GET", "HEAD"]
+  compress                   = true                   # gzip/brotli 自動圧縮
+
+  cache_policy_id            = "658327ea-f89d-4fab-a63d-7e88639e58f6"  # CachingOptimized
+  response_headers_policy_id = "67f7725c-6f97-4210-82d7-5512b31e9d03"  # SecurityHeadersPolicy
+}
+</code></pre>
+
+<h2>SPA 用カスタムエラーレスポンス</h2>
+
+<p>SPA（Single Page Application）でクライアントサイドルーティングを使うと、<code>/about</code> 等は S3 に存在しない URL にアクセスする場合があり、403 や 404 が返ります。これを <strong>200 + index.html に書き換え</strong> ると、JavaScript ルーティングが動くようになります:</p>
+
+<pre><code>custom_error_response {
+  error_code         = 403
+  response_code      = 200
+  response_page_path = "/index.html"
+}
+
+custom_error_response {
+  error_code         = 404
+  response_code      = 200
+  response_page_path = "/index.html"
+}
+</code></pre>
+
+<p>Next.js の static export や Astro / Vue Router 等の SPA で必須の設定です。</p>
+
+<h2>HTTP/3 (QUIC) の有効化</h2>
+
+<pre><code>http_version = "http2and3"
+</code></pre>
+
+<p>HTTP/3 はモバイルや不安定回線で速度向上が見込める。CloudFront のデフォルトは <code>http2</code> ですが、最新 Chrome / Safari は HTTP/3 対応なので有効化すべき。コスト変動なし。</p>
+
+<h2>Geo Restriction</h2>
+
+<p>本シリーズでは個人サイトなので地理制限なし:</p>
+
+<pre><code>restrictions {
+  geo_restriction {
+    restriction_type = "none"
+  }
+}
+</code></pre>
+
+<p>クライアント案件で「日本国内のみ」要件があれば <code>whitelist</code> + <code>locations = ["JP"]</code> を指定。法令対応で必要になることがあります。</p>
+
+<h2>TLS 設定</h2>
+
+<pre><code>viewer_certificate {
+  acm_certificate_arn      = var.certificate_arn
+  ssl_support_method       = "sni-only"             # SNI で複数ドメイン同居
+  minimum_protocol_version = "TLSv1.2_2021"         # TLS 1.2+ 必須
+}
+</code></pre>
+
+<table>
+<tr><th>項目</th><th>値</th><th>意味</th></tr>
+<tr><td>ssl_support_method</td><td><code>sni-only</code></td><td>標準。月 0 円。<code>vip</code> にすると月 $600 だが、SNI 非対応の古いクライアント (IE6 等) も繋がる</td></tr>
+<tr><td>minimum_protocol_version</td><td><code>TLSv1.2_2021</code></td><td>TLS 1.2 以上を必須に。古いクライアント（PCI-DSS 準拠で SSLv3 / TLS 1.0 が NG）を切り捨て</td></tr>
+</table>
+
+<h2>Price Class の選び方</h2>
+
+<table>
+<tr><th>クラス</th><th>範囲</th><th>料金（無風時）</th><th>用途</th></tr>
+<tr><td><code>PriceClass_100</code></td><td>北米・欧州のみ</td><td>最安</td><td>北米欧州ターゲットなら</td></tr>
+<tr><td><code>PriceClass_200</code></td><td>上 + アジア・中東・アフリカ</td><td>中</td><td>日本ターゲットならこれ</td></tr>
+<tr><td><code>PriceClass_All</code></td><td>全世界</td><td>最高</td><td>南米・オセアニアもカバーしたい時</td></tr>
+</table>
+
+<p>本シリーズは日本訪問者がメインなので <code>PriceClass_200</code>。<code>All</code> との性能差は日本国内ではほぼない（同じ東京 Edge から配信される）のでコスト最適。</p>
+
+<h2>キャッシュ無効化（Invalidation）</h2>
+
+<p>新しい index.html を S3 にアップロードしても、CloudFront のキャッシュが残っていると古いまま。明示的に無効化が必要:</p>
+
+<pre><code># 特定パスのみ
+aws cloudfront create-invalidation \
+  --distribution-id EXXXXXXXXXXXXX \
+  --paths "/index.html"
+
+# 全部
+aws cloudfront create-invalidation \
+  --distribution-id EXXXXXXXXXXXXX \
+  --paths "/*"
+</code></pre>
+
+<p>料金は <strong>月 1,000 paths まで無料</strong>、超過分は path あたり約 $0.005。<code>/*</code> は wildcard で 1 path カウント。リリース毎に <code>/*</code> 1 個なら無料枠で余裕。</p>
+
+<h2>キャッシュ無効化のハマり</h2>
+
+<p>本シリーズの GitHub Actions ワークフローは当初 <code>--paths "/index.html" "/"</code> と書いていましたが、<strong>新しく追加した <code>learn.html</code> や <code>blog/</code> は無効化されない</strong> ため反映が遅れる事故がありました。<code>/*</code> に変えて解決。</p>
+
+<h2>動作確認の見方</h2>
+
+<pre><code>curl -sI https://lab.iigtn.com/
+
+# 主要ヘッダ
+Strict-Transport-Security: max-age=31536000     # ← SecurityHeadersPolicy
+X-Frame-Options: DENY                            # ← 同上
+X-Content-Type-Options: nosniff                  # ← 同上
+Referrer-Policy: strict-origin-when-cross-origin
+Server: AmazonS3
+Via: 1.1 ...cloudfront.net (CloudFront)
+X-Cache: Hit from cloudfront                     # ← 2 回目以降は Hit
+X-Amz-Cf-Pop: NRT12-P4
+</code></pre>
+
+<h2>次の記事</h2>
+
+<p>静的サイトが安定して配信できるようになったら、次は <strong>「ローカル PC からの手動アップロードを自動化する」</strong> ステップへ。<code>git push</code> したら GitHub Actions が自動デプロイする CI/CD を組みます。次の記事ではその要となる <strong>GitHub Actions OIDC</strong> の仕組みを解説します。</p>
+
+</div>
+
+<section class="post-glossary">
+<h2>📚 用語集</h2>
+<dl>
+<dt>Cache Policy (CloudFront)</dt>
+<dd>「何をキーにキャッシュ、TTL いくつ、圧縮するか」を定義するポリシー。AWS マネージドの定番ポリシーがある。</dd>
+
+<dt>CachingOptimized</dt>
+<dd>静的コンテンツ向け AWS マネージド Cache Policy。最大 24h キャッシュ・gzip/brotli 受け入れ・Accept-Encoding ベースの分離キャッシュ。</dd>
+
+<dt>CachingDisabled</dt>
+<dd>キャッシュしない AWS マネージド Cache Policy。動的 API レスポンス向け。</dd>
+
+<dt>Origin Request Policy</dt>
+<dd>「オリジンに何を転送するか」を定義するポリシー。ヘッダ / クエリストリング / cookie の転送可否を制御。</dd>
+
+<dt>AllViewerExceptHostHeader</dt>
+<dd>AWS マネージドの Origin Request Policy。Host 以外すべてオリジンへ転送。API Gateway 等は Host を上書きされると混乱するので、これを使う。</dd>
+
+<dt>Response Headers Policy</dt>
+<dd>「レスポンスにどのヘッダを付けるか」を定義するポリシー。セキュリティヘッダの自動付与に便利。</dd>
+
+<dt>SecurityHeadersPolicy</dt>
+<dd>AWS マネージドの Response Headers Policy。X-Frame-Options / X-Content-Type-Options / Strict-Transport-Security 等を自動付与。</dd>
+
+<dt>SPA (Single Page Application)</dt>
+<dd>JavaScript で画面遷移する Web アプリ。React / Vue / Astro などが該当。CloudFront 配信時は 403/404 → /index.html のフォールバックが必要。</dd>
+
+<dt>クライアントサイドルーティング</dt>
+<dd>ブラウザの JavaScript で URL と表示内容を切替える方式。<code>/about</code> へのアクセスでもサーバには <code>/index.html</code> を返してもらう必要がある。</dd>
+
+<dt>custom_error_response (CloudFront)</dt>
+<dd>オリジンが特定のエラーコードを返した時の挙動を上書きする設定。SPA フォールバックで <code>403/404 → 200 + /index.html</code> によく使う。</dd>
+
+<dt>HTTP/3 (QUIC)</dt>
+<dd>HTTP の最新版。UDP ベースで接続確立が速く、不安定回線でも切れにくい。Chrome / Safari 最新版が対応。</dd>
+
+<dt>SNI (Server Name Indication)</dt>
+<dd>1 つの IP アドレスで複数ドメインの TLS 証明書を出し分ける TLS 拡張。CloudFront <code>sni-only</code> はこれが前提。</dd>
+
+<dt>HSTS (HTTP Strict Transport Security)</dt>
+<dd>「このサイトは HTTPS のみ」をブラウザに記憶させるレスポンスヘッダ。中間者攻撃で HTTP に降格させられる事故を防ぐ。</dd>
+
+<dt>X-Frame-Options: DENY</dt>
+<dd>このページを iframe 内に表示することを禁止するヘッダ。クリックジャッキング攻撃の対策。</dd>
+
+<dt>Geo Restriction</dt>
+<dd>CloudFront の地理制限機能。国コード（ISO 3166-1 alpha-2）で whitelist / blacklist を指定。</dd>
+
+<dt>Invalidation</dt>
+<dd>CloudFront の Edge キャッシュを無効化する操作。新しいバージョンを即時反映させたい時に必要。月 1,000 paths まで無料。</dd>
+
+<dt>wildcard path (<code>/*</code>)</dt>
+<dd>Invalidation での全パス無効化。1 path カウントで全 path をクリアできるので、リリース毎に 1 回叩けば無料枠内に収まる。</dd>
+</dl>
+</section>
+
+<footer class="post-footer">
+<span>← 前 <a href="/blog/10-cloudfront-s3-oac.html">⑩ CloudFront + S3 + OAC</a></span>
+<span>次 → <a href="/blog/12-github-oidc.html">⑫ GitHub Actions OIDC の仕組み</a></span>
+</footer>
+
+</article>
+
+</body>
+</html>
