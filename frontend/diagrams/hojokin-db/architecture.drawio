@@ -129,7 +129,7 @@
           <mxGeometry x="40" y="630" width="1020" height="160" as="geometry" />
         </mxCell>
 
-        <mxCell id="tfdesc" value="infra/&#xa;　acm.tf / s3_cloudfront.tf / dynamodb.tf / lambda_crawler.tf / codebuild.tf / providers.tf / variables.tf&#xa;&#xa;・aws-prod アカウント (211374268447) に 25 リソースを apply&#xa;・state は S3 backend + DynamoDB Lock&#xa;・Squarespace で *.iigtn.com の検証 CNAME を手動投入" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fffaf0;strokeColor=#b85c00;fontSize=11;align=left;verticalAlign=top;spacing=10;" vertex="1" parent="1">
+        <mxCell id="tfdesc" value="infra/&#xa;　acm.tf / s3_cloudfront.tf / dynamodb.tf / lambda_crawler.tf / codebuild.tf / providers.tf / variables.tf&#xa;&#xa;・aws-prod アカウント (XXXXXXXXXXXX) に 25 リソースを apply&#xa;・state は S3 backend + DynamoDB Lock&#xa;・Squarespace で *.iigtn.com の検証 CNAME を手動投入" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fffaf0;strokeColor=#b85c00;fontSize=11;align=left;verticalAlign=top;spacing=10;" vertex="1" parent="1">
           <mxGeometry x="80" y="680" width="940" height="100" as="geometry" />
         </mxCell>
 
