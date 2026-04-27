@@ -27,7 +27,8 @@ locals {
 module "network_dns" {
   source = "../../modules/network_dns"
 
-  domain_name = var.domain_name
+  domain_name          = var.domain_name
+  additional_san_names = var.additional_san_names
 
   providers = {
     aws           = aws
@@ -44,9 +45,10 @@ module "network_dns" {
 module "frontend_cdn" {
   source = "../../modules/frontend_cdn"
 
-  domain_name     = var.domain_name
-  certificate_arn = module.network_dns.certificate_arn
-  bucket_name     = local.web_bucket_name
+  domain_name        = var.domain_name
+  additional_aliases = var.additional_aliases
+  certificate_arn    = module.network_dns.certificate_arn
+  bucket_name        = local.web_bucket_name
 
   # /api/* を API Gateway に向けるための origin 情報を渡す
   api_origin_domain_name = module.backend_api.api_endpoint_host

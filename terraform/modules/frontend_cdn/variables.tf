@@ -1,10 +1,19 @@
 variable "domain_name" {
   description = <<-EOT
-    CloudFront にアタッチするドメイン名。例: "lab.iigtn.com"
+    CloudFront にアタッチするメインドメイン名。例: "lab.iigtn.com"
     aliases (CNAME) として CloudFront Distribution に登録される。
     DNS は別途 (Squarespace 等) でこのドメインを Distribution の cloudfront.net 名に向ける。
   EOT
   type        = string
+}
+
+variable "additional_aliases" {
+  description = <<-EOT
+    CloudFront に追加で紐付けるドメイン名のリスト。例: ["iigtn.com"]
+    すべて証明書 (iigtn.com + *.iigtn.com 等) でカバーされている必要がある。
+  EOT
+  type        = list(string)
+  default     = []
 }
 
 variable "certificate_arn" {

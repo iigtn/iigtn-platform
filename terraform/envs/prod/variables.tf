@@ -9,6 +9,18 @@ variable "domain_name" {
   type        = string
 }
 
+variable "additional_san_names" {
+  description = "ACM 証明書の SAN に追加するドメイン名 (apex 用)。例: [\"iigtn.com\"]"
+  type        = list(string)
+  default     = []
+}
+
+variable "additional_aliases" {
+  description = "CloudFront に追加で紐付けるドメイン (apex 配信用)。例: [\"iigtn.com\"]"
+  type        = list(string)
+  default     = []
+}
+
 # ─── GitHub Actions OIDC 用 ──────────────────────────────────────────────────
 variable "github_owner" {
   description = "GitHub の個人/組織名。Trust Policy の sub claim 検証に使う"

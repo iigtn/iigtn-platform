@@ -110,7 +110,7 @@ resource "aws_cloudfront_distribution" "this" {
 
   # --- 訪問者がアクセスする URL のドメイン名 ---
   # ここに登録した名前で SSL 証明書も使う必要がある（後述）
-  aliases = [var.domain_name]
+  aliases = concat([var.domain_name], var.additional_aliases)
 
   # --- 配信できる Edge 範囲 ---
   # PriceClass_100: 北米・欧州のみ（最安）
