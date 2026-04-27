@@ -70,3 +70,6 @@ tmp/
 
 # 中間生成物 (drawio embed snippet)
 frontend/diagrams/embed/
+
+# ── Claude Code ────────────────────────────────
+.claude/settings.local.json
