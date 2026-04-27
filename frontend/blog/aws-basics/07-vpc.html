@@ -156,14 +156,6 @@ resource "aws_vpc_endpoint" "s3" {
   route_table_ids   = [aws_route_table.private.id]
 }</code></pre>
 
-    <h2>採用評価ポイント</h2>
-    <ul>
-      <li><strong>3 層 (Public / Private App / Private Data) 設計</strong>を即書ける。</li>
-      <li><strong>NAT Gateway のコスト</strong>を意識（月 $32 + データ転送課金）。VPC Endpoint で削減可能。</li>
-      <li><strong>「VPC 不要なケース」を区別できる</strong> — 過剰設計を避けられる。</li>
-      <li><strong>Flow Logs / VPC Endpoint / Transit Gateway</strong> 等の応用機能を場面に応じて提案できる。</li>
-    </ul>
-
     <h2>用語集</h2>
     <dl>
       <dt>VPC</dt><dd>Virtual Private Cloud。AWS 上の独立した仮想ネットワーク。</dd>

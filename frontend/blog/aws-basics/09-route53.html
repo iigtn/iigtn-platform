@@ -137,14 +137,6 @@ resource "aws_route53_record" "failover_primary" {
   }
 }</code></pre>
 
-    <h2>採用評価ポイント</h2>
-    <ul>
-      <li><strong>Alias vs CNAME</strong> の違いを説明できる（apex 対応・無料・AWS リソース最適化）。</li>
-      <li><strong>Health Check + Failover</strong> による自動切替を IaC で組める。</li>
-      <li><strong>Route 53 を使わない選択肢</strong>も持っている（Squarespace / Cloudflare 等）。コストと運用バランスを判断できる。</li>
-      <li><strong>Private Hosted Zone</strong> を VPC 内サービスディスカバリに使える。</li>
-    </ul>
-
     <h2>用語集</h2>
     <dl>
       <dt>Hosted Zone</dt><dd>ドメインの DNS レコード集合。Public (インターネット向け) / Private (VPC 内) がある。$0.5/月。</dd>

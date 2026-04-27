@@ -137,14 +137,6 @@ resource "aws_cloudwatch_log_group" "fn" {
   retention_in_days = 14   # コスト垂れ流し防止
 }</code></pre>
 
-    <h2>採用評価ポイント</h2>
-    <ul>
-      <li><strong>arm64 をデフォルト</strong>にできるか（コスト感覚 + Graviton 把握）。</li>
-      <li><strong>CloudWatch Log Group の retention 設定</strong>を Terraform で書ける（Lambda 標準は無期限で課金垂れ流し）。</li>
-      <li><strong>Cold Start を意識した設計</strong>（重要パスは Provisioned Concurrency か EC2 / Fargate）。</li>
-      <li><strong>Lambda が向かない処理</strong>を即答できる（万能信仰してない）。</li>
-    </ul>
-
     <h2>用語集</h2>
     <dl>
       <dt>Runtime</dt><dd>Lambda の言語実行環境。Node.js / Python / Java / Go 等。</dd>

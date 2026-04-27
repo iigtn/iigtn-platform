@@ -148,15 +148,6 @@ resource "aws_cloudfront_distribution" "site" {
   }
 }</code></pre>
 
-    <h2>採用評価ポイント</h2>
-    <ul>
-      <li><strong>CloudFront → us-east-1 必須</strong>を即答できる（鉄板の落とし穴）。</li>
-      <li><strong>provider alias</strong> を使い分けて IaC で書ける。</li>
-      <li><strong>aws_acm_certificate_validation</strong> リソースを使って検証完了を待つ書き方を知っている。</li>
-      <li><strong>ワイルドカード + 個別 SAN</strong> の組合わせで複数ドメインをカバーできる。</li>
-      <li><strong>DV / OV / EV の違い</strong>と ACM が DV 限定であることを把握。</li>
-    </ul>
-
     <h2>用語集</h2>
     <dl>
       <dt>ACM (AWS Certificate Manager)</dt><dd>AWS マネージドの TLS 証明書サービス。Public 証明書は無料 + 自動更新。</dd>

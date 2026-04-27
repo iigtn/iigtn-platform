@@ -148,15 +148,6 @@ resource "aws_iam_role_policy" "deploy" {
   policy = data.aws_iam_policy_document.deploy_perms.json
 }</code></pre>
 
-    <h2>採用評価ポイント</h2>
-    <ul>
-      <li><strong>OIDC で AccessKey ゼロ運用</strong>を当然のように設計できる。</li>
-      <li><strong>Trust Policy の sub claim 制限</strong>で「特定 repo / branch のみ」最小権限化できる。</li>
-      <li><strong>Managed vs Inline / Permissions Boundary</strong> の使い分けを明確に語れる。</li>
-      <li><strong>aws:SourceArn / SourceIp / MFA Condition</strong> の活用例を出せる。</li>
-      <li><strong>Access Analyzer / Service Last Accessed</strong> で過剰権限を検出する運用を持っている。</li>
-    </ul>
-
     <h2>用語集</h2>
     <dl>
       <dt>User vs Role</dt><dd>User = 長期 ID (AccessKey 持てる)。Role = 引き受けられる役割で短命。CI/CD は Role 推奨。</dd>

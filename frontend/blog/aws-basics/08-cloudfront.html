@@ -142,15 +142,6 @@ resource "aws_cloudfront_distribution" "site" {
   }
 }</code></pre>
 
-    <h2>採用評価ポイント</h2>
-    <ul>
-      <li><strong>OAC + Public Access Block 全 true</strong> でセキュアな静的配信ができる。</li>
-      <li><strong>マネージドポリシー (CachingOptimized / SecurityHeadersPolicy)</strong> をまず使う発想。自作は必要に応じて。</li>
-      <li><strong>ACM が us-east-1 必須</strong>を把握している（CloudFront 用証明書は東京 region 不可）。</li>
-      <li><strong>Price Class</strong> をビジネス要件で選択（日本配信なら 200 以上）。</li>
-      <li><strong>HTTP/3</strong> 有効化を意識（http_version = "http2and3"）。</li>
-    </ul>
-
     <h2>用語集</h2>
     <dl>
       <dt>Distribution</dt><dd>CDN 設定 1 セット。世界中の Edge に展開される。</dd>

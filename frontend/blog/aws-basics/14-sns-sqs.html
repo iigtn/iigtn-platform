@@ -159,15 +159,6 @@ resource "aws_lambda_event_source_mapping" "worker" {
   batch_size       = 10
 }</code></pre>
 
-    <h2>採用評価ポイント</h2>
-    <ul>
-      <li><strong>SNS + SQS Fanout</strong> パターンを即書ける。</li>
-      <li><strong>DLQ + maxReceiveCount</strong> をデフォルトで設定。失敗メッセージの可視化を意識。</li>
-      <li><strong>Visibility Timeout</strong> を Lambda の timeout より長く設定する原則を理解。</li>
-      <li><strong>Standard vs FIFO</strong> の選択軸（順序保証 vs スループット）を明示できる。</li>
-      <li><strong>SQS Queue Policy で SourceArn 制限</strong>を SNS 側にかけられる。</li>
-    </ul>
-
     <h2>用語集</h2>
     <dl>
       <dt>Topic / Subscription</dt><dd>SNS の 2 主要要素。Topic = 送信先カテゴリ、Subscription = 受信先設定。</dd>

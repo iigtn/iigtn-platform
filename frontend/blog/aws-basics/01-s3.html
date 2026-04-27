@@ -143,14 +143,6 @@ resource "aws_s3_bucket_lifecycle_configuration" "site" {
   }
 }</code></pre>
 
-    <h2>採用評価ポイント</h2>
-    <ul>
-      <li><strong>Public Access Block 4 つ全 true</strong> がデフォルトで書けると「最小権限 / 構造的安全性」を理解していると伝わる。</li>
-      <li><strong>Versioning + Lifecycle</strong> のセットで設定できる人は「事故復旧と コスト管理」の両立を意識している。</li>
-      <li><strong>OAC + CloudFront</strong> 構成は「直接公開ではなく CDN 経由」の現代的なベストプラクティスを把握している証拠。</li>
-      <li>採用面接で S3 の話が出たら、ストレージクラスと Lifecycle / Replication / Versioning の使い分けを説明できると深さが伝わる。</li>
-    </ul>
-
     <h2>用語集</h2>
     <dl>
       <dt>バケット (Bucket)</dt><dd>S3 のオブジェクト群を入れる単位。AWS 全体でグローバル一意な命名が必要。</dd>

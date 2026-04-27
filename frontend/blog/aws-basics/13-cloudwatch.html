@@ -130,15 +130,6 @@ resource "aws_cloudwatch_metric_alarm" "fn_duration" {
 # | sort @timestamp desc
 # | limit 100</code></pre>
 
-    <h2>採用評価ポイント</h2>
-    <ul>
-      <li><strong>retention_in_days を必ず設定</strong>（無期限放置はコスト垂れ流し）。</li>
-      <li><strong>Lambda 監視 3 点セット</strong>（Errors / Duration p95 / Throttles）を即書ける。</li>
-      <li><strong>Logs Insights クエリ集</strong>を持っている（5 分集計 / ERROR 抽出 / Memory 80% 超え）。</li>
-      <li><strong>Alarm の treat-missing-data</strong> をビジネス要件で選択（notBreaching / breaching / missing）。</li>
-      <li><strong>SNS への通知</strong>で実運用ループを完成させている。</li>
-    </ul>
-
     <h2>Logs Insights クエリ実用例</h2>
 <pre><code># Lambda 所要時間を 5 分集計
 filter @type = "REPORT"

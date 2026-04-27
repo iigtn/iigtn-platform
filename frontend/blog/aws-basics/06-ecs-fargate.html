@@ -162,14 +162,6 @@ resource "aws_ecs_service" "web" {
   }
 }</code></pre>
 
-    <h2>採用評価ポイント</h2>
-    <ul>
-      <li><strong>「迷ったら Fargate」</strong>と言える判断軸（EC2 起動タイプ採用は明確な理由が必要）。</li>
-      <li><strong>ECS vs EKS の使い分け</strong>を Control Plane 料金 / 学習コスト / 可搬性で語れるか。</li>
-      <li><strong>Spot Fargate</strong>を採用したコスト最適化を提案できる。</li>
-      <li><strong>awslogs ドライバ + retention 設定</strong>がデフォルトでできる（ログ垂れ流し防止）。</li>
-    </ul>
-
     <h2>用語集</h2>
     <dl>
       <dt>Cluster</dt><dd>ECS の Task をまとめる論理単位。アカウント内に複数作成可。</dd>

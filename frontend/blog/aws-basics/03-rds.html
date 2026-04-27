@@ -137,14 +137,6 @@ resource "aws_db_instance" "main" {
   skip_final_snapshot     = false
 }</code></pre>
 
-    <h2>採用評価ポイント</h2>
-    <ul>
-      <li><strong>Multi-AZ + Read Replica の使い分け</strong> ― 可用性と読み取りスケールは別物として理解できているか。</li>
-      <li><strong>RDS vs Aurora vs DynamoDB</strong> の判断軸を持っているか。万能なものは無いと言えるか。</li>
-      <li><strong>SG / Subnet Group / Parameter Group</strong> を IaC で書ける人は実運用経験あり。</li>
-      <li><strong>Secrets Manager 連携 + KMS 暗号化</strong> をデフォルトにできるとセキュリティ意識も伝わる。</li>
-    </ul>
-
     <h2>用語集</h2>
     <dl>
       <dt>Multi-AZ</dt><dd>同期レプリカを別 AZ に配置する高可用性構成。プライマリ障害時に自動フェイルオーバー。</dd>

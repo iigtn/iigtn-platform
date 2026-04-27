@@ -145,14 +145,6 @@ resource "aws_instance" "web" {
   tags = { Name = "web-01" }
 }</code></pre>
 
-    <h2>採用評価ポイント</h2>
-    <ul>
-      <li><strong>SSM Session Manager 利用前提</strong> で SG を 22 開放しない設計ができるか（一発で「セキュリティ意識ある」判定）。</li>
-      <li><strong>Spot vs On-Demand vs Reserved の使い分け</strong> をコスト計算込みで説明できるか。</li>
-      <li><strong>Graviton (ARM) を使う発想</strong>。同性能で 20% 安い、伸び代がある。</li>
-      <li><strong>EC2 一択になる前にサーバレス / コンテナを検討する</strong> 思考順序。EC2 ありきは古さの兆候。</li>
-    </ul>
-
     <h2>用語集</h2>
     <dl>
       <dt>EC2</dt><dd>Elastic Compute Cloud。AWS の仮想サーバサービス。</dd>

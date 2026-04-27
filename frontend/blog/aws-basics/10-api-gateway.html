@@ -155,14 +155,6 @@ resource "aws_lambda_permission" "apigw" {
   source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
 }</code></pre>
 
-    <h2>採用評価ポイント</h2>
-    <ul>
-      <li><strong>HTTP API デフォルト</strong>を選択できる（料金 1/3、3 倍速）。</li>
-      <li><strong>Lambda Proxy 統合 + payload v2</strong> をデフォルトで書ける。</li>
-      <li><strong>Access Log を JSON で構造化</strong>して CloudWatch Logs Insights でクエリしやすくする発想。</li>
-      <li><strong>Lambda Permission の SourceArn 指定</strong>で「特定 API のみ呼べる」最小権限。</li>
-    </ul>
-
     <h2>用語集</h2>
     <dl>
       <dt>HTTP API (v2) / REST API (v1)</dt><dd>API Gateway の 2 系統。新規は HTTP API、API Key/Usage Plan 必須なら REST API。</dd>
