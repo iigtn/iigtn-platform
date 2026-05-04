@@ -56,6 +56,8 @@
 </head>
 <body>
 
+<a href="#main" class="skip-link">本文へスキップ</a>
+
 <header class="site-header">
   <nav class="nav">
     <a href="/" class="logo" aria-label="iigtn">
@@ -71,10 +73,14 @@
   </nav>
 </header>
 
-<main>
+<main id="main">
 
   <!-- ─── Hero ─────────────────────────────────────── -->
   <section class="hero">
+    <span class="hero-status" aria-label="サイト稼働状況">
+      <span class="dot" aria-hidden="true"></span>
+      iigtn.com / lab.iigtn.com — Live
+    </span>
     <div class="hero-monogram">i</div>
     <h1>サーバレス × IaC で<br>動かし続ける <span class="accent">インフラ</span> を。</h1>
     <p class="tagline">
@@ -89,7 +95,7 @@
   </section>
 
   <!-- ─── ナビゲーション・サマリ ──────────────────── -->
-  <section class="page-section">
+  <section class="page-section reveal">
     <h2>サイトマップ</h2>
     <p class="lead">各ページには以下の内容を載せています。気になるところからどうぞ。</p>
 
@@ -147,7 +153,7 @@
   </section>
 
   <!-- ─── ハイライト（要約） ──────────────────────── -->
-  <section class="page-section">
+  <section class="page-section reveal">
     <h2>このサイトのハイライト</h2>
     <p class="lead">本サイト自体が「運用中の AWS サーバレス構成」のサンプルです</p>
 
@@ -189,5 +195,19 @@
   </div>
 </footer>
 
+<script>
+  // Scroll-reveal: fade-in sections as they enter the viewport.
+  // No-op when prefers-reduced-motion is set.
+  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && 'IntersectionObserver' in window) {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) { e.target.classList.add('is-visible'); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+    document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+  } else {
+    document.querySelectorAll('.reveal').forEach((el) => el.classList.add('is-visible'));
+  }
+</script>
 </body>
 </html>
