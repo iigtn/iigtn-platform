@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DocChain 構成解説 — SI 業界向け 設計書連鎖生成 AI (LP) | iigtn</title>
+  <meta name="description" content="getdocchain.com（SI 業界向け 設計書連鎖生成 AI の LP）がどう動いているかを解説するページ。Next.js (Static Export) + Lambda + API Gateway + DynamoDB + SES + CloudFront + Route 53 の構成を、配信・事前登録・本体側のコスト戦略の観点で解説します。">
+  <meta name="author" content="iigtn">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://www.iigtn.com/projects/docchain.html">
+  <meta property="og:title" content="DocChain 構成解説 — SI 業界向け 設計書連鎖生成 AI (LP)">
+  <meta property="og:description" content="LP は Next.js Static + AWS サーバレス、本体は OpenAI/Anthropic API + Prompt Caching で原価 89% 削減を狙う設計の解説。">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://www.iigtn.com/projects/docchain.html">
+  <meta property="og:site_name" content="iigtn">
+  <meta property="og:image" content="https://www.iigtn.com/assets/icon.svg">
+  <meta property="og:locale" content="ja_JP">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="DocChain 構成解説">
+  <meta name="twitter:description" content="設計書連鎖生成 AI SaaS の LP 構成と本体側のコスト戦略解説。">
+  <meta name="twitter:image" content="https://www.iigtn.com/assets/icon.svg">
+  <link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+  <link rel="apple-touch-icon" href="/assets/icon.svg">
+  <link rel="stylesheet" href="/site.css">
+
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7533093647574923" crossorigin="anonymous"></script>
+  <meta name="google-adsense-account" content="ca-pub-7533093647574923">
+
+  <style>
+    .h-section { padding: 1.6rem 1.8rem; background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--radius); margin: 1.4rem 0; }
+    .h-section h2 { font-size: 1.2rem; margin: 0 0 0.7rem; color: var(--c-accent-dark); }
+    .h-section p { margin: 0.5rem 0; }
+    .h-section ul, .h-section ol { padding-left: 1.4rem; margin: 0.5rem 0; }
+    .h-section li { margin: 0.25rem 0; }
+    .h-section table { width: 100%; border-collapse: collapse; margin: 0.8rem 0; font-size: 0.92rem; }
+    .h-section th, .h-section td { border: 1px solid var(--c-border); padding: 0.5rem 0.7rem; text-align: left; vertical-align: top; }
+    .h-section th { background: var(--c-surface-2); }
+    .h-meta { color: var(--c-muted); font-size: 0.88rem; }
+    .h-cta { display: flex; gap: 0.8rem; flex-wrap: wrap; margin: 1rem 0 1.6rem; }
+    .h-callout { padding: 0.7rem 1rem; border-left: 4px solid #ffd54f; background: #fff8e1; border-radius: 5px; margin: 0.8rem 0; font-size: 0.93rem; }
+    @media (prefers-color-scheme: dark) { .h-callout { background: #2a210d; color: var(--c-text-2); } }
+  </style>
+</head>
+<body>
+
+<a href="#main" class="skip-link">本文へスキップ</a>
+
+<header class="site-header">
+  <nav class="nav">
+    <a href="/" class="logo" aria-label="iigtn">
+      <img src="/assets/logo.svg" alt="iigtn" height="32">
+    </a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html" class="active">Works</a></li>
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main id="main">
+
+  <header class="page-header">
+    <p class="h-meta">プロジェクト解説 · LP 稼働中・事前登録受付中</p>
+    <h1>DocChain — SI 業界向け 設計書連鎖生成 AI（LP）</h1>
+    <p class="lead">
+      <code>getdocchain.com</code> は、上流工程 (要件定義書) から下流工程 (基本設計書 → 詳細設計書 → テスト仕様書) を
+      AI が自動生成する SaaS の Landing Page。事前登録を受け付ける LP を AWS サーバレスで構築し、ベータ提供
+      (2026/9 予定) に向けて開発中です。本体は OpenAI / Anthropic API のカスケード + Prompt Caching で
+      API 原価 89% 削減を狙う設計です。
+    </p>
+    <div class="h-cta">
+      <a class="btn btn-primary" href="https://getdocchain.com/" target="_blank" rel="noopener">LP を開く →</a>
+      <a class="btn btn-ghost" href="/works.html">← Works に戻る</a>
+    </div>
+  </header>
+
+  <section class="page-section">
+
+    <div class="h-section">
+      <h2>サマリ</h2>
+      <table>
+        <tr><th>プロジェクト</th><td>DocChain (SI 業界向け 設計書連鎖生成 AI / SaaS)</td></tr>
+        <tr><th>公開 URL (LP)</th><td><a href="https://getdocchain.com/" target="_blank" rel="noopener">https://getdocchain.com/</a></td></tr>
+        <tr><th>ステータス</th><td>LP 稼働中（事前登録受付中）/ 本体は Phase 0（競合検証 + プロトタイプ）</td></tr>
+        <tr><th>第 1 ターゲット</th><td>フリーランス SE / PM、中小 SIer 所属 PM</td></tr>
+        <tr><th>第 1 機能</th><td>詳細設計書 → テスト仕様書 自動生成</td></tr>
+        <tr><th>価格モデル</th><td>個人 ¥4,980/月 〜 法人 Business ¥80,000/月（ベータ期間は無料）</td></tr>
+        <tr><th>LP 構成</th><td>Next.js (Static Export) + Lambda + API GW + DynamoDB + SES + CloudFront + Route 53</td></tr>
+      </table>
+    </div>
+
+    <div class="h-section">
+      <h2>A. LP の配信フロー</h2>
+      <ol>
+        <li><strong>DNS</strong> ― Route 53 hosted zone (Z**********) で <code>getdocchain.com</code> + <code>www.getdocchain.com</code> を管理。</li>
+        <li><strong>ACM</strong> ― us-east-1 で証明書発行（<code>getdocchain.com</code> + <code>www.getdocchain.com</code>）、自動更新。</li>
+        <li><strong>CloudFront</strong> ― 静的 LP を TLS 終端 + キャッシュ配信。Distribution ID は伏字（<code>E**********</code>）。</li>
+        <li><strong>S3 (private)</strong> ― Next.js (Static Export) のビルド成果物を配置。Public Access Block + OAC で CloudFront 経由のみアクセス可。</li>
+      </ol>
+    </div>
+
+    <div class="h-section">
+      <h2>B. 事前登録 API のサーバレス構成</h2>
+      <p>
+        LP のフォームから事前登録メアドを保存する API は、CloudFront の同一ドメインで <code>/api/*</code> を
+        API Gateway へ Origin behavior で振り分ける構成です。
+      </p>
+      <ol>
+        <li><strong>POST /api/subscribe</strong> ― API Gateway HTTP API → Lambda (Node.js)</li>
+        <li>Lambda がメアドを正規化 + バリデーション → DynamoDB (<code>subscribers</code> テーブル) に <code>put_item</code> (<code>email</code> を PK に重複防止)</li>
+        <li>SES で「ご登録ありがとうございます」自動返信 + 管理者通知</li>
+        <li>レスポンスは <code>{"ok": true}</code> / バリデーションエラーは 400 を返す</li>
+      </ol>
+      <p>
+        <code>https://getdocchain.com/api/subscribe</code> から動作確認済み。テスト登録 → DynamoDB 保存 →
+        SES 自動返信 → DDB 削除のサイクルを実機検証しています。
+      </p>
+    </div>
+
+    <div class="h-section">
+      <h2>C. 本体側（β提供時）のコスト戦略</h2>
+      <p>
+        SaaS 本体は LP とは別構成（<code>app.getdocchain.com</code>）で、Vercel 上の Next.js 15 + Supabase + Stripe で
+        構築予定。LLM API 周りは下記 4 戦略を組み合わせて API 原価 89% 削減を狙います。
+      </p>
+      <ol>
+        <li><strong>モデルカスケード</strong>: GPT-4o-mini で草案 → 必要時のみ GPT-4o で仕上げ。設計書のような構造化データは
+            mini で 80% 通る想定。</li>
+        <li><strong>Anthropic Prompt Caching</strong>: 「設計書の章立てテンプレート」など固定プロンプトをキャッシュ。
+            入力コストを 90% 削減（Anthropic の SDK 標準機能）。</li>
+        <li><strong>BYOK プラン併設</strong>: 法人 Business で「自社の API キーを持ち込む」プランを用意し、原価ゼロ運用も可能に。</li>
+        <li><strong>OpenRouter 経由</strong>: ルーティングコスト 5〜15% 削減 + フェイルオーバー対応（OpenAI 障害時に Anthropic へ自動切替）。</li>
+      </ol>
+      <div class="h-callout">
+        <strong>注:</strong> 本体側はまだ Phase 0（競合検証 + プロトタイプ段階）。LP 公開と並行して PoC を回し、
+        ベータ提供 (2026/9 予定) 時に Vercel 配下に <code>app.getdocchain.com</code> を立てる予定です。
+      </div>
+    </div>
+
+    <div class="h-section">
+      <h2>D. データモデル（LP）</h2>
+      <p>
+        LP の DynamoDB テーブルは事前登録メアドのみを保存するシンプルな設計。本体提供時の認証・課金とは
+        テーブルを分離する方針です。
+      </p>
+      <table>
+        <tr><th>テーブル</th><th>PK</th><th>SK</th><th>用途</th></tr>
+        <tr><td><code>subscribers</code></td><td><code>email</code> (S)</td><td>―</td><td>事前登録メアド + 登録日時 + UTM 元</td></tr>
+      </table>
+      <p>
+        On-Demand 課金 + PITR 有効化。アクセス数が安定したらプロビジョン課金への切替を検討。
+      </p>
+    </div>
+
+    <div class="h-section">
+      <h2>採用判断のポイント</h2>
+      <table>
+        <tr><th>項目</th><th>採用</th><th>理由</th></tr>
+        <tr><td>LP フロント</td><td>Next.js (Static Export)</td><td>SEO + OGP 動的生成、ビルド成果物は S3 で十分</td></tr>
+        <tr><td>LP API</td><td>API GW + Lambda + DynamoDB</td><td>事前登録の頻度では Lambda 1 関数で十分、運用コスト最小</td></tr>
+        <tr><td>メール</td><td>SES（sandbox 解除予定）</td><td>送信単価が安く、独自ドメインで送信可能</td></tr>
+        <tr><td>本体（予定）</td><td>Vercel + Supabase</td><td>Next.js 15 App Router + Postgres + 認証統合、MVP 規模で無料枠十分</td></tr>
+        <tr><td>LLM API</td><td>OpenAI + Anthropic 両対応</td><td>カスケード + キャッシング + 障害時フェイルオーバー</td></tr>
+        <tr><td>決済</td><td>Stripe Checkout</td><td>日本円対応、サブスク、最小実装で導入可能</td></tr>
+      </table>
+    </div>
+
+    <div class="h-section">
+      <h2>運用上の工夫</h2>
+      <ul>
+        <li><strong>NS 切替時のダウンタイム回避</strong>: 旧 zone と新 zone の両方に同じ A/CNAME/MX/TXT を持たせ、ドメインの NS を切替えてから DNS 伝播完了を待ち、旧 zone を破棄。</li>
+        <li><strong>SES 送信元の verify</strong>: <code>contact@getdocchain.com</code> を Email Identity 登録 + DKIM 設定。送信失敗時は CloudWatch アラームで即通知。</li>
+        <li><strong>DynamoDB の重複防止</strong>: <code>email</code> を PK にすることで複数回登録を構造的に弾く。</li>
+        <li><strong>LP の OGP 画像</strong>: <code>/og.png</code> を事前生成して CloudFront でキャッシュ、SNS シェア時の画像取得を高速化。</li>
+      </ul>
+    </div>
+
+    <div class="h-section">
+      <h2>これからやる予定</h2>
+      <ul>
+        <li>本体 Phase 0 完了 → Phase 1（MVP 開発、2〜3 ヶ月）に着手</li>
+        <li><code>app.getdocchain.com</code> を Vercel に向け、ベータ提供（5 名）開始（2026/9 予定）</li>
+        <li>SI 業界向け Qiita / Zenn 連載記事 (15〜20 本) で集客導線を作る</li>
+        <li>X（旧 Twitter）でフリーランス SE 界隈に告知強化</li>
+      </ul>
+    </div>
+
+    <div class="h-section">
+      <h2>関連リンク</h2>
+      <ul>
+        <li><a href="https://getdocchain.com/" target="_blank" rel="noopener">本番 LP getdocchain.com</a></li>
+        <li><a href="https://getdocchain.com/privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a></li>
+        <li><a href="https://getdocchain.com/terms.html" target="_blank" rel="noopener">利用規約</a></li>
+        <li><a href="/works.html">← Works 一覧へ戻る</a></li>
+      </ul>
+    </div>
+
+  </section>
+
+</main>
+
+<footer>
+  <div>© 2026 iigtn — Built with Terraform &amp; GitHub Actions</div>
+  <div>
+    <a href="/learn.html">解説書</a>
+    &nbsp;·&nbsp;
+    <a href="https://github.com/iigtn/iigtn-platform">GitHub</a>
+    &nbsp;·&nbsp;
+    <a href="/privacy.html">プライバシーポリシー</a>
+  </div>
+</footer>
+
+</body>
+</html>

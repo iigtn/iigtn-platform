@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>グランピング × キャンプ場マップ 構成解説 | iigtn</title>
+  <meta name="description" content="グランピング特化＋一般キャンプ場のハイブリッド地理データ可視化メディアの構成計画。Next.js (Static Export) + S3 + CloudFront + DynamoDB + Lambda + Maptiler + 楽天トラベル API を組合せた AWS サーバレス構成を設計版で公開。">
+  <meta name="author" content="iigtn">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://www.iigtn.com/projects/glamping-map.html">
+  <meta property="og:title" content="グランピング × キャンプ場マップ 構成解説">
+  <meta property="og:description" content="地図 UI 特化のアフィリエイトメディアの AWS サーバレス構成計画。">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://www.iigtn.com/projects/glamping-map.html">
+  <meta property="og:site_name" content="iigtn">
+  <meta property="og:image" content="https://www.iigtn.com/assets/icon.svg">
+  <meta property="og:locale" content="ja_JP">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="グランピング × キャンプ場マップ 構成解説">
+  <meta name="twitter:description" content="地図 UI 特化のアフィリエイトメディアの AWS サーバレス構成計画。">
+  <meta name="twitter:image" content="https://www.iigtn.com/assets/icon.svg">
+  <link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+  <link rel="apple-touch-icon" href="/assets/icon.svg">
+  <link rel="stylesheet" href="/site.css">
+
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7533093647574923" crossorigin="anonymous"></script>
+  <meta name="google-adsense-account" content="ca-pub-7533093647574923">
+
+  <style>
+    .h-section { padding: 1.6rem 1.8rem; background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--radius); margin: 1.4rem 0; }
+    .h-section h2 { font-size: 1.2rem; margin: 0 0 0.7rem; color: var(--c-accent-dark); }
+    .h-section p { margin: 0.5rem 0; }
+    .h-section ul, .h-section ol { padding-left: 1.4rem; margin: 0.5rem 0; }
+    .h-section li { margin: 0.25rem 0; }
+    .h-section table { width: 100%; border-collapse: collapse; margin: 0.8rem 0; font-size: 0.92rem; }
+    .h-section th, .h-section td { border: 1px solid var(--c-border); padding: 0.5rem 0.7rem; text-align: left; vertical-align: top; }
+    .h-section th { background: var(--c-surface-2); }
+    .h-meta { color: var(--c-muted); font-size: 0.88rem; }
+    .h-cta { display: flex; gap: 0.8rem; flex-wrap: wrap; margin: 1rem 0 1.6rem; }
+    .h-callout { padding: 0.7rem 1rem; border-left: 4px solid #ffd54f; background: #fff8e1; border-radius: 5px; margin: 0.8rem 0; font-size: 0.93rem; }
+    @media (prefers-color-scheme: dark) { .h-callout { background: #2a210d; color: var(--c-text-2); } }
+  </style>
+</head>
+<body>
+
+<a href="#main" class="skip-link">本文へスキップ</a>
+
+<header class="site-header">
+  <nav class="nav">
+    <a href="/" class="logo" aria-label="iigtn">
+      <img src="/assets/logo.svg" alt="iigtn" height="32">
+    </a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html" class="active">Works</a></li>
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main id="main">
+
+  <header class="page-header">
+    <p class="h-meta">プロジェクト解説 · 構想中（立ち上げ準備中）</p>
+    <h1>グランピング × キャンプ場マップ</h1>
+    <p class="lead">
+      日本全国のグランピング施設・キャンプ場を地図 UI で可視化し、予約サイトへ送客するアフィリエイトメディアの
+      構成計画です。グランピング (高単価) を主軸にしつつ、一般キャンプ場 (数勝負) も網羅。
+      子育てマップと技術基盤を共通化する想定で、Next.js (Static Export) + S3 + CloudFront + DynamoDB +
+      Lambda の AWS サーバレス構成を設計済みです。
+    </p>
+    <div class="h-cta">
+      <a class="btn btn-ghost" href="/works.html">← Works に戻る</a>
+    </div>
+  </header>
+
+  <section class="page-section">
+
+    <div class="h-callout">
+      <strong>注:</strong> 現在は構想決定 + 立ち上げ準備の段階で、本番ドメインはまだ取得していません。
+      AWS 構成図と実行計画は ChatGPT 共同レビューを経て確定済み（Yes, with Caution 判定）。
+    </div>
+
+    <div class="h-section">
+      <h2>サマリ</h2>
+      <table>
+        <tr><th>プロジェクト</th><td>グランピング × キャンプ場マップ（仮）</td></tr>
+        <tr><th>ステータス</th><td>構想決定、立ち上げ準備中（ドメイン未取得）</td></tr>
+        <tr><th>ドメイン候補</th><td>glamping-map.jp / glamp-camp.com / glamping-japan.com / camp-map.jp / glcamp.jp</td></tr>
+        <tr><th>収益モデル</th><td>楽天トラベル / じゃらん / 独自プログラム アフィリ + AdSense</td></tr>
+        <tr><th>目標 (24 ヶ月後)</th><td>MRR ¥20〜50 万 / 月間 PV 5〜10 万 / 月額運用費 ¥1,000〜10,000 / 粗利 95% 超</td></tr>
+        <tr><th>構成方針</th><td>Next.js (Static Export) + S3 + CloudFront + DynamoDB + Lambda + Maptiler API</td></tr>
+        <tr><th>共通化</th><td>子育てマップと Terraform モジュールを共有、同一 AWS アカウント、タグでプロジェクト分離</td></tr>
+      </table>
+    </div>
+
+    <div class="h-section">
+      <h2>A. なぜグランピング特化か</h2>
+      <ul>
+        <li><strong>一般キャンプ場のみだと収益薄い</strong>: 楽天/じゃらんアフィリ報酬率 1〜2%、1 泊 ¥5,000〜10,000 × 1% で CV 単価 ¥50〜100。月数百件でも月収 ¥5 万円程度に頭打ち。</li>
+        <li><strong>グランピング特化なら高単価</strong>: 1 泊 ¥20,000〜50,000 × 1.5% で CV 単価 ¥300〜750。独自プログラムなら 5〜10% で ¥1,000〜5,000。月 50 件で月収 ¥5〜25 万円。</li>
+        <li><strong>市場の追い風</strong>: コロナ後の継続需要、ファミリー / カップル層の拡大、インバウンド需要、まだ大手寡占ではない。</li>
+        <li><strong>ハイブリッド戦略</strong>: グランピング (高単価) + 一般キャンプ場 (ロングテール集客) で複合収益化。</li>
+      </ul>
+    </div>
+
+    <div class="h-section">
+      <h2>B. 全体アーキテクチャ（計画）</h2>
+      <ul>
+        <li><strong>配信レイヤー</strong>: Route53 (Hosted Zone) + ACM (us-east-1) + CloudFront (HTTP/3、価格クラス：日本＋一部アジア) + S3 (静的サイト + 画像オリジン、Public Access Block + OAC)</li>
+        <li><strong>データレイヤー</strong>: DynamoDB (オンデマンド、PK: <code>施設タイプ#都道府県</code> / SK: <code>施設ID</code> / GSI1: 緯度経度クラスタ、PITR 有効)</li>
+        <li><strong>データ取込</strong>: EventBridge (月 1 cron) + Lambda (楽天トラベル API 取込 / URL 死活監視) + Secrets Manager (API キー保管)</li>
+        <li><strong>地図 UI</strong>: Maptiler API（外部・無料枠から開始）+ Next.js コンポーネント (Leaflet or MapLibre GL JS)</li>
+        <li><strong>問い合わせ</strong>: API Gateway + Lambda (problem-form 受付) + SES (管理者通知)</li>
+        <li><strong>監視</strong>: CloudWatch Logs / Alarms + SNS (コスト・エラー通知)</li>
+        <li><strong>セキュリティ (Phase 2)</strong>: AWS WAF Managed Rules（アクセス急増時に追加）</li>
+      </ul>
+    </div>
+
+    <div class="h-section">
+      <h2>C. データ取込パイプライン</h2>
+      <ol>
+        <li><strong>EventBridge</strong> が月 1 回 cron で発火</li>
+        <li><strong>Lambda (ingest)</strong> が楽天トラベル API を叩いて施設マスタを取得 → DynamoDB に upsert</li>
+        <li><strong>Lambda (monitor)</strong> が各施設の URL 死活を HTTP HEAD で確認、404/500 検知時は SES でアラート</li>
+        <li><strong>GitHub Actions</strong> が新規施設追加時に DDB を読み出し → <code>next build</code> で SSG 再生成 → S3 同期</li>
+      </ol>
+      <p>
+        手動メンテはレッドフラグ。月 1 回の Lambda 実行で完結する設計を厳格に守る。
+      </p>
+    </div>
+
+    <div class="h-section">
+      <h2>採用判断のポイント</h2>
+      <table>
+        <tr><th>項目</th><th>採用</th><th>理由</th></tr>
+        <tr><td>静的化</td><td>Next.js Static Export</td><td>SSR / ISR は使わない。CloudFront キャッシュで応答完結、コスト最小化</td></tr>
+        <tr><td>地図</td><td>Maptiler API（外部）</td><td>Mapbox より安い、無料枠あり、自前タイル運用は維持コスト過大</td></tr>
+        <tr><td>データ</td><td>DynamoDB オンデマンド</td><td>初期はオンデマンドで様子見、安定したらプロビジョン課金へ切替検討</td></tr>
+        <tr><td>共通化</td><td>子育てマップと Terraform モジュール共有</td><td>同一 AWS アカウントでタグ分離、運用負荷集約</td></tr>
+        <tr><td>監視</td><td>段階導入</td><td>Phase 0〜1 は最小、Phase 2 で WAF + 監視拡張</td></tr>
+        <tr><td>収益化</td><td>楽天 + じゃらん + 独自プログラム複合</td><td>単一 ASP 依存リスクを避ける、独自報酬で単価上振れを狙う</td></tr>
+      </table>
+    </div>
+
+    <div class="h-section">
+      <h2>これからやる予定</h2>
+      <ul>
+        <li>ドメイン取得（候補比較で 1 つに絞り込み）</li>
+        <li>Phase 0: 構想固め + ChatGPT 検証（実施済）</li>
+        <li>Phase 1: MVP 構築（地図 UI + 主要 50 施設のデータ + アフィリ link）</li>
+        <li>Phase 2: 全国カバー + WAF / 監視拡張 + SEO 育成</li>
+      </ul>
+    </div>
+
+    <div class="h-section">
+      <h2>関連リンク</h2>
+      <ul>
+        <li><a href="/works.html">← Works 一覧へ戻る</a></li>
+        <li><a href="/projects/kosodate-map.html">子育てマップ（共通技術基盤）</a></li>
+      </ul>
+    </div>
+
+  </section>
+
+</main>
+
+<footer>
+  <div>© 2026 iigtn — Built with Terraform &amp; GitHub Actions</div>
+  <div>
+    <a href="/learn.html">解説書</a>
+    &nbsp;·&nbsp;
+    <a href="https://github.com/iigtn/iigtn-platform">GitHub</a>
+    &nbsp;·&nbsp;
+    <a href="/privacy.html">プライバシーポリシー</a>
+  </div>
+</footer>
+
+</body>
+</html>

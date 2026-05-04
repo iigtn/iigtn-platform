@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SNS 運営フロー 構成解説 — 自社メディア連動の X アカウント運用 | iigtn</title>
+  <meta name="description" content="自社メディア (hojokin.iigtn.com / hojinka.com / iigtn.com) と連動した X アカウントの運用フロー。アカウント設計からハッシュタグ戦略までを 60 ステップ超のスクリーンショットで記録し、将来の自動化 (Lambda + EventBridge) を見据えた手順書として整備中。">
+  <meta name="author" content="iigtn">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://www.iigtn.com/projects/sns-ops.html">
+  <meta property="og:title" content="SNS 運営フロー 構成解説 — 自社メディア連動の X アカウント運用">
+  <meta property="og:description" content="自社メディアと連動した X アカウント運用フローと、将来の自動化を見据えた手順書整備の解説。">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://www.iigtn.com/projects/sns-ops.html">
+  <meta property="og:site_name" content="iigtn">
+  <meta property="og:image" content="https://www.iigtn.com/assets/icon.svg">
+  <meta property="og:locale" content="ja_JP">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="SNS 運営フロー 構成解説">
+  <meta name="twitter:description" content="自社メディアと連動した X アカウント運用と自動化に向けた手順書整備の解説。">
+  <meta name="twitter:image" content="https://www.iigtn.com/assets/icon.svg">
+  <link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+  <link rel="apple-touch-icon" href="/assets/icon.svg">
+  <link rel="stylesheet" href="/site.css">
+
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7533093647574923" crossorigin="anonymous"></script>
+  <meta name="google-adsense-account" content="ca-pub-7533093647574923">
+
+  <style>
+    .h-section { padding: 1.6rem 1.8rem; background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--radius); margin: 1.4rem 0; }
+    .h-section h2 { font-size: 1.2rem; margin: 0 0 0.7rem; color: var(--c-accent-dark); }
+    .h-section p { margin: 0.5rem 0; }
+    .h-section ul, .h-section ol { padding-left: 1.4rem; margin: 0.5rem 0; }
+    .h-section li { margin: 0.25rem 0; }
+    .h-section table { width: 100%; border-collapse: collapse; margin: 0.8rem 0; font-size: 0.92rem; }
+    .h-section th, .h-section td { border: 1px solid var(--c-border); padding: 0.5rem 0.7rem; text-align: left; vertical-align: top; }
+    .h-section th { background: var(--c-surface-2); }
+    .h-meta { color: var(--c-muted); font-size: 0.88rem; }
+    .h-cta { display: flex; gap: 0.8rem; flex-wrap: wrap; margin: 1rem 0 1.6rem; }
+  </style>
+</head>
+<body>
+
+<a href="#main" class="skip-link">本文へスキップ</a>
+
+<header class="site-header">
+  <nav class="nav">
+    <a href="/" class="logo" aria-label="iigtn">
+      <img src="/assets/logo.svg" alt="iigtn" height="32">
+    </a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html" class="active">Works</a></li>
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main id="main">
+
+  <header class="page-header">
+    <p class="h-meta">プロジェクト解説 · 個人運用 / 進行中</p>
+    <h1>SNS 運営フロー — 自社メディア連動の X アカウント運用</h1>
+    <p class="lead">
+      自社メディア (<code>hojokin.iigtn.com</code> / <code>hojinka.com</code> / <code>iigtn.com</code>) と連動した
+      X (旧 Twitter) アカウントの運用フローを構築しています。アカウント設計からハッシュタグ戦略までを
+      60 ステップ超のスクリーンショットで記録し、将来的な投稿自動化（Lambda + EventBridge）を見据えた
+      再現可能な手順書として整備中。
+    </p>
+    <div class="h-cta">
+      <a class="btn btn-ghost" href="/works.html">← Works に戻る</a>
+    </div>
+  </header>
+
+  <section class="page-section">
+
+    <div class="h-section">
+      <h2>サマリ</h2>
+      <table>
+        <tr><th>プロジェクト</th><td>SNS 運営フロー（自社メディア連動の X アカウント運用 + 自動化前段階）</td></tr>
+        <tr><th>対象アカウント</th><td>hojokin / hojinka / iigtn の X 公式アカウント（全 3 件）</td></tr>
+        <tr><th>記録形式</th><td>60 ステップ超のスクリーンショット + 手順メモ</td></tr>
+        <tr><th>現状</th><td>手動運用、再現可能な手順書として整備中</td></tr>
+        <tr><th>将来構成（自動化後）</th><td>Lambda + EventBridge + DynamoDB + Secrets Manager + X API v2</td></tr>
+      </table>
+    </div>
+
+    <div class="h-section">
+      <h2>A. 手動運用フェーズ（現在）</h2>
+      <p>
+        まず手動で運用フローを確立し、再現可能な手順書として整備するアプローチ。「自動化する前に、自動化すべき手順が
+        正しいか」を検証する目的です。
+      </p>
+      <ol>
+        <li><strong>アカウント設計</strong> ― ペルソナ・bio・固定ツイート・ヘッダー画像を 3 メディアごとに設計</li>
+        <li><strong>プロフィール最適化</strong> ― アバター 400px / ヘッダー light/dark の SVG → PNG レンダラを実装</li>
+        <li><strong>初期投稿</strong> ― 1 アカウントあたり 5〜10 件の固定型ポストを下書き → 公開予約</li>
+        <li><strong>投稿スケジューリング</strong> ― X 公式 UI の予約投稿で平日朝 / 夜のスロットに割り当て</li>
+        <li><strong>ハッシュタグ戦略</strong> ― 補助金 / 法人化 / AWS / Terraform / インフラ関連のタグで実験 → 反応率を計測</li>
+      </ol>
+      <p>
+        各ステップを 60 枚超のスクリーンショットで記録し、「次に運用を引き継ぐ人 (or 自分自身) が再現できる」
+        粒度に整備。これがそのまま自動化フェーズの仕様書になります。
+      </p>
+    </div>
+
+    <div class="h-section">
+      <h2>B. 自動化フェーズ（次のステップ）</h2>
+      <p>
+        手動フローが安定したら、Lambda + EventBridge + X API v2 で投稿自動化に発展させる予定です。
+      </p>
+      <ol>
+        <li><strong>EventBridge</strong> ― 平日朝 / 昼 / 夜のスケジュールで Lambda を起動</li>
+        <li><strong>Lambda (post_scheduler)</strong> ― DynamoDB の <code>posts_queue</code> テーブルから次の予定投稿を取得</li>
+        <li><strong>Secrets Manager</strong> ― X API v2 の OAuth 2.0 Bearer Token / API Key を保管</li>
+        <li><strong>X API v2 (POST /tweets)</strong> ― 本文 + メディア + ハッシュタグを送信</li>
+        <li><strong>DynamoDB (posts_log)</strong> ― 投稿結果（tweet_id / 投稿時刻 / エラー有無）を記録</li>
+        <li><strong>CloudWatch Alarms</strong> ― 投稿失敗が続いたら SNS Email で通知</li>
+      </ol>
+    </div>
+
+    <div class="h-section">
+      <h2>C. メディア連動の設計</h2>
+      <p>
+        各メディアの新規記事公開 → SNS 告知 → 反応率計測のループを回すため、メディア側の sitemap 更新を
+        トリガに自動投稿候補を生成する設計を検討中です。
+      </p>
+      <ul>
+        <li><strong>sitemap.xml の差分検知</strong>: Lambda が定期的に sitemap を取得して差分（新規 URL）を抽出</li>
+        <li><strong>OGP メタの取得</strong>: 新規 URL から og:title / og:description / og:image を抽出して投稿テンプレートに流し込む</li>
+        <li><strong>投稿候補のキューイング</strong>: <code>posts_queue</code> テーブルに「24h 後 / 3d 後 / 1w 後」のリマインド枠で複数投稿を予約</li>
+        <li><strong>反応率計測</strong>: 投稿後 24h で imp / engage 数を取得して DynamoDB に記録、ハッシュタグ別の効果を継続評価</li>
+      </ul>
+    </div>
+
+    <div class="h-section">
+      <h2>採用判断のポイント</h2>
+      <table>
+        <tr><th>項目</th><th>採用</th><th>理由</th></tr>
+        <tr><td>運用順序</td><td>手動 → 自動化</td><td>自動化する前に手順の正解を見つけることが重要。手動運用 = 仕様書化フェーズ</td></tr>
+        <tr><td>スケジューラ</td><td>EventBridge</td><td>cron 表記で柔軟、Lambda と相性良し、追加コストほぼゼロ</td></tr>
+        <tr><td>状態管理</td><td>DynamoDB On-Demand</td><td>投稿頻度では十分、PITR 有効でロールバック可能</td></tr>
+        <tr><td>シークレット</td><td>Secrets Manager</td><td>API キーをコードに置かない、ローテーション対応、IAM で参照権限を絞れる</td></tr>
+        <tr><td>API</td><td>X API v2</td><td>投稿 / メディアアップロード / 計測 API が分離されており実装しやすい</td></tr>
+        <tr><td>記録媒体</td><td>スクリーンショット 60+ 枚</td><td>UI 変更時の差分追跡、後続の自動化 spec の根拠として残す</td></tr>
+      </table>
+    </div>
+
+    <div class="h-section">
+      <h2>運用上の工夫</h2>
+      <ul>
+        <li><strong>ヘッダー画像の SVG → PNG 自動レンダラ</strong>: <code>frontend/assets/sns/_render_icon.py</code> で SVG を 1500×500 PNG に変換</li>
+        <li><strong>X strategy.md</strong>: 投稿頻度・カテゴリ・やらないこと（炎上対応 / 引用 RT 等）を明文化、運用ブレを防ぐ</li>
+        <li><strong>3 アカウント横断のトーン統一</strong>: 各メディアごとに bio・固定ツイートのトンマナを明示、サブアカ感を出さない</li>
+      </ul>
+    </div>
+
+    <div class="h-section">
+      <h2>これからやる予定</h2>
+      <ul>
+        <li>手動運用 30 日間の運用ログをまとめて、自動化要件定義に落とし込む</li>
+        <li>Lambda 投稿関数の PoC（X API v2 OAuth 2.0 + tweepy or 公式 SDK）</li>
+        <li>DynamoDB <code>posts_queue</code> / <code>posts_log</code> テーブル設計</li>
+        <li>Terraform モジュール化（他メディアでも流用できる形）</li>
+      </ul>
+    </div>
+
+    <div class="h-section">
+      <h2>関連リンク</h2>
+      <ul>
+        <li><a href="/works.html">← Works 一覧へ戻る</a></li>
+        <li><a href="/projects/hojinka.html">hojinka.com 構成解説</a></li>
+        <li><a href="/projects/ai-erabikata.html">AI えらびかた 構成解説</a></li>
+      </ul>
+    </div>
+
+  </section>
+
+</main>
+
+<footer>
+  <div>© 2026 iigtn — Built with Terraform &amp; GitHub Actions</div>
+  <div>
+    <a href="/learn.html">解説書</a>
+    &nbsp;·&nbsp;
+    <a href="https://github.com/iigtn/iigtn-platform">GitHub</a>
+    &nbsp;·&nbsp;
+    <a href="/privacy.html">プライバシーポリシー</a>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>hojinka.com 構成解説 — フリーランス→法人化 ナレッジ＆比較メディア | iigtn</title>
+  <meta name="description" content="hojinka.com（フリーランス→法人化ナレッジ＆比較メディア）がどう動いているかを解説するページ。素 HTML/CSS + S3 + CloudFront (OAC) + ACM + Route 53 + GitHub Actions OIDC の構成を、配信フロー・シミュレーター・IaC の観点で解説します。">
+  <meta name="author" content="iigtn">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://www.iigtn.com/projects/hojinka.html">
+  <meta property="og:title" content="hojinka.com 構成解説 — フリーランス→法人化 ナレッジ＆比較メディア">
+  <meta property="og:description" content="素 HTML/CSS + S3/CloudFront + ACM + Route 53 + GitHub Actions OIDC で組んだ静的メディアサイトの構成解説。法人化シミュレーターは Vanilla JS で内蔵。">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://www.iigtn.com/projects/hojinka.html">
+  <meta property="og:site_name" content="iigtn">
+  <meta property="og:image" content="https://www.iigtn.com/assets/icon.svg">
+  <meta property="og:locale" content="ja_JP">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="hojinka.com 構成解説">
+  <meta name="twitter:description" content="フリーランス→法人化メディアの AWS 静的配信構成解説。">
+  <meta name="twitter:image" content="https://www.iigtn.com/assets/icon.svg">
+  <link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+  <link rel="apple-touch-icon" href="/assets/icon.svg">
+  <link rel="stylesheet" href="/site.css">
+
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7533093647574923" crossorigin="anonymous"></script>
+  <meta name="google-adsense-account" content="ca-pub-7533093647574923">
+
+  <style>
+    .h-section { padding: 1.6rem 1.8rem; background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--radius); margin: 1.4rem 0; }
+    .h-section h2 { font-size: 1.2rem; margin: 0 0 0.7rem; color: var(--c-accent-dark); }
+    .h-section p { margin: 0.5rem 0; }
+    .h-section ul, .h-section ol { padding-left: 1.4rem; margin: 0.5rem 0; }
+    .h-section li { margin: 0.25rem 0; }
+    .h-section table { width: 100%; border-collapse: collapse; margin: 0.8rem 0; font-size: 0.92rem; }
+    .h-section th, .h-section td { border: 1px solid var(--c-border); padding: 0.5rem 0.7rem; text-align: left; vertical-align: top; }
+    .h-section th { background: var(--c-surface-2); }
+    .h-meta { color: var(--c-muted); font-size: 0.88rem; }
+    .h-cta { display: flex; gap: 0.8rem; flex-wrap: wrap; margin: 1rem 0 1.6rem; }
+  </style>
+</head>
+<body>
+
+<a href="#main" class="skip-link">本文へスキップ</a>
+
+<header class="site-header">
+  <nav class="nav">
+    <a href="/" class="logo" aria-label="iigtn">
+      <img src="/assets/logo.svg" alt="iigtn" height="32">
+    </a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html" class="active">Works</a></li>
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main id="main">
+
+  <header class="page-header">
+    <p class="h-meta">プロジェクト解説 · 公開稼働中</p>
+    <h1>hojinka.com — フリーランス→法人化 ナレッジ＆比較メディア</h1>
+    <p class="lead">
+      <code>hojinka.com</code> は、開業届・確定申告・案件獲得・法人化判断・会社設立・法人運営という、
+      フリーランスからマイクロ法人までのライフサイクルを 6 ステージで横断する比較メディアです。
+      法人化シミュレーターを Vanilla JS で実装し、税負担と社会保険料を試算可能。
+      静的サイトを AWS で配信、IaC + OIDC デプロイで運用しています。
+    </p>
+    <div class="h-cta">
+      <a class="btn btn-primary" href="https://hojinka.com/" target="_blank" rel="noopener">本番サイトを開く →</a>
+      <a class="btn btn-ghost" href="/works.html">← Works に戻る</a>
+    </div>
+  </header>
+
+  <section class="page-section">
+
+    <div class="h-section">
+      <h2>サマリ</h2>
+      <table>
+        <tr><th>プロジェクト</th><td>hojinka.com (フリーランス→法人化 ナレッジ＆比較メディア)</td></tr>
+        <tr><th>公開 URL</th><td><a href="https://hojinka.com/" target="_blank" rel="noopener">https://hojinka.com/</a></td></tr>
+        <tr><th>用途</th><td>開業届〜法人運営までのライフサイクル全工程の比較・解説 + 法人化シミュレーター</td></tr>
+        <tr><th>構成</th><td>素 HTML/CSS + Vanilla JS + S3 + CloudFront (OAC) + ACM + Route 53 + GitHub Actions OIDC</td></tr>
+        <tr><th>運用コスト</th><td>月 数百円〜千円台（CloudFront 配信 + Route53 zone + 少額の ACM）</td></tr>
+        <tr><th>運用形態</th><td>main ブランチ push → GitHub Actions OIDC で自動 S3 sync + CloudFront invalidate</td></tr>
+      </table>
+    </div>
+
+    <div class="h-section">
+      <h2>サイト構造（6 ステージ）</h2>
+      <p>
+        フリーランス／個人事業主からマイクロ法人化までを 6 つのステージに分け、各ステージごとに
+        静的ページとサブディレクトリを切っています。
+      </p>
+      <table>
+        <tr><th>ステージ</th><th>パス</th><th>カバー範囲</th></tr>
+        <tr><td>1. 開業</td><td><code>/kaigyo/</code></td><td>開業届、青色申告、屋号、会計ソフト選び</td></tr>
+        <tr><td>2. 確定申告</td><td>(企画中)</td><td>確定申告手順、節税策、e-Tax 対応</td></tr>
+        <tr><td>3. 案件獲得</td><td>(企画中)</td><td>案件サイト比較、単価交渉、契約のポイント</td></tr>
+        <tr><td>4. 法人化判断</td><td><code>/hanrei/</code></td><td>判断ポイント、シミュレーター（年収×役員報酬で税負担試算）</td></tr>
+        <tr><td>5. 会社設立</td><td><code>/setsuritsu/</code></td><td>定款、登記、印鑑、許認可、設立後手続き</td></tr>
+        <tr><td>6. 法人運営</td><td><code>/zeimu/</code> + <code>/card/</code></td><td>税務会計、法人カード比較、社会保険、決算</td></tr>
+      </table>
+    </div>
+
+    <div class="h-section">
+      <h2>A. 訪問者の閲覧フロー</h2>
+      <ol>
+        <li><strong>DNS</strong> ― ドメイン <code>hojinka.com</code> を Route 53 hosted zone (Z**********) で管理。apex の A/AAAA を CloudFront alias に設定。</li>
+        <li><strong>CloudFront</strong> ― TLS 終端 + 静的キャッシュ。<code>hojinka.com</code> + <code>*.hojinka.com</code> をカバーする ACM 証明書（us-east-1）を関連付け。</li>
+        <li><strong>S3 (private)</strong> ― 静的 HTML/CSS/JS/画像を配置。Public Access Block 全 true、CloudFront の Origin Access Control 経由でしか読めない構造。</li>
+      </ol>
+      <p>
+        S3 への直アクセスは構造的に不可。CloudFront 経由でのみ読める設計のため、誤アップロードによる
+        機密漏れリスクが小さい。
+      </p>
+    </div>
+
+    <div class="h-section">
+      <h2>B. 法人化シミュレーター（Vanilla JS）</h2>
+      <p>
+        <code>/hanrei/simulator/</code> 配下に、Vanilla JS で実装した法人化シミュレーターを配置しています。
+      </p>
+      <ul>
+        <li><strong>入力</strong>: 想定年収、役員報酬、配偶者役員の有無、業種別概算 など</li>
+        <li><strong>処理</strong>: 個人事業主のままの場合 / 法人化した場合の<strong>所得税・住民税・社会保険料・法人税</strong>の概算を計算</li>
+        <li><strong>出力</strong>: 比較表 + 「法人化が得になるライン」を可視化</li>
+      </ul>
+      <p>
+        ブラウザ上で完結する実装にしているため、サーバ・API 不要。CloudFront キャッシュだけで動作するので、
+        利用者が増えてもコストが上がらない設計です。
+      </p>
+    </div>
+
+    <div class="h-section">
+      <h2>C. デプロイフロー — GitHub Actions OIDC</h2>
+      <ol>
+        <li>ローカルで <code>frontend/</code> を編集 → main ブランチに push</li>
+        <li><strong>GitHub Actions</strong> が起動、<code>aws-actions/configure-aws-credentials</code> で OIDC を使い、IAM Role <code>hojinka-github-actions-deploy</code> を AssumeRole（永続キーレス）</li>
+        <li><code>aws s3 sync frontend/ s3://hojinka-web-prod-XXXXXXXXXXXX/ --delete</code></li>
+        <li><code>aws cloudfront create-invalidation --distribution-id E********** --paths "/*"</code></li>
+      </ol>
+      <p>
+        GitHub Secrets に AWS の長期アクセスキーを置かない設計。OIDC 連合認証で一時クレデンシャルだけを発行し、
+        IAM Role 側で対象 S3 / CloudFront のみに権限を絞っています。
+      </p>
+    </div>
+
+    <div class="h-section">
+      <h2>D. IaC — Terraform 構成</h2>
+      <p>
+        AWS リソースは Terraform で管理。state は専用 S3 バケットに DynamoDB Lock 付きで保管。
+      </p>
+      <ul>
+        <li><code>acm.tf</code> — us-east-1 の ACM 証明書（<code>hojinka.com</code> + <code>*.hojinka.com</code>）</li>
+        <li><code>s3_cloudfront.tf</code> — S3 (private) + Public Access Block + Versioning + OAC + CloudFront Distribution</li>
+        <li><code>route53.tf</code> — Hosted Zone (Z**********) + apex A/AAAA エイリアス（CloudFront へ）</li>
+        <li><code>iam_oidc.tf</code> — GitHub Actions OIDC Provider + Role + 最小権限ポリシー（対象 S3 と CloudFront 限定）</li>
+      </ul>
+      <p>
+        個人 AWS アカウント (aws-prod / Account ID は伏字) に apply。state バケットは <code>hojinka-tfstate-XXXXXXXXXXXX</code>。
+      </p>
+    </div>
+
+    <div class="h-section">
+      <h2>採用判断のポイント</h2>
+      <table>
+        <tr><th>項目</th><th>採用</th><th>理由</th></tr>
+        <tr><td>フロント</td><td>素 HTML/CSS + Vanilla JS</td><td>記事性・速度重視。ビルド不要、全ページ即見れる、SEO に強い</td></tr>
+        <tr><td>シミュレーター</td><td>Vanilla JS（フレームワーク無し）</td><td>計算ロジックが軽量で React/Vue を持ち込むほどではない</td></tr>
+        <tr><td>ホスティング</td><td>S3 + CloudFront (OAC)</td><td>静的配信で月数百円、TLS は ACM 自動更新、SEO に強い</td></tr>
+        <tr><td>DNS</td><td>Route 53 (apex alias)</td><td>apex を CloudFront に直接向けたい（CNAME 不可制約の回避）</td></tr>
+        <tr><td>CI/CD</td><td>GitHub Actions OIDC</td><td>静的キーゼロでデプロイ、main push のみで完了</td></tr>
+        <tr><td>IaC</td><td>Terraform</td><td>再現性、構成の差分管理、複数プロジェクト統一運用</td></tr>
+      </table>
+    </div>
+
+    <div class="h-section">
+      <h2>運用上の工夫</h2>
+      <ul>
+        <li><strong>差分 sync</strong>: <code>aws s3 sync --delete</code> で変更分のみアップ、削除も追従。CloudFront <code>/*</code> 1 発で全体反映。</li>
+        <li><strong>シミュレーターのテスト</strong>: 入力値の境界値と典型値で expected JSON を作り、ブラウザコンソールで一括検証。</li>
+        <li><strong>記事更新の Pull Request 化</strong>: 構成変更（ステージ追加 / カードリンク変更等）は必ず PR レビューを通す。</li>
+      </ul>
+    </div>
+
+    <div class="h-section">
+      <h2>これからやる予定</h2>
+      <ul>
+        <li>記事ステージ 2（確定申告）と 3（案件獲得）の本文充実</li>
+        <li>シミュレーターに「役員社宅」「出張旅費規程」など節税オプション追加</li>
+        <li>関連アフィリ（会計ソフト・登記サービス）の比較記事追加</li>
+        <li>sitemap.xml / 構造化データ整備で SEO 強化</li>
+      </ul>
+    </div>
+
+    <div class="h-section">
+      <h2>関連リンク</h2>
+      <ul>
+        <li><a href="https://hojinka.com/" target="_blank" rel="noopener">本番サイト hojinka.com</a></li>
+        <li><a href="/works.html">← Works 一覧へ戻る</a></li>
+        <li><a href="/learn.html">iigtn-platform 解説書（同じ構成パターンの詳解）</a></li>
+      </ul>
+    </div>
+
+  </section>
+
+</main>
+
+<footer>
+  <div>© 2026 iigtn — Built with Terraform &amp; GitHub Actions</div>
+  <div>
+    <a href="/learn.html">解説書</a>
+    &nbsp;·&nbsp;
+    <a href="https://github.com/iigtn/iigtn-platform">GitHub</a>
+    &nbsp;·&nbsp;
+    <a href="/privacy.html">プライバシーポリシー</a>
+  </div>
+</footer>
+
+</body>
+</html>

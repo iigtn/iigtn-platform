@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI えらびかた 構成解説 — タスク別・業界別 AI 比較レビューメディア | iigtn</title>
+  <meta name="description" content="ai-erabikata.com（AI 比較レビューメディア）がどう動いているかを解説するページ。Next.js (App Router) + AWS Amplify Hosting + Route 53 + ACM の構成を、配信フロー・コンテンツ運用・SEO の観点で解説します。">
+  <meta name="author" content="iigtn">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://www.iigtn.com/projects/ai-erabikata.html">
+  <meta property="og:title" content="AI えらびかた 構成解説 — タスク別・業界別 AI 比較レビューメディア">
+  <meta property="og:description" content="Next.js + AWS Amplify Hosting で組んだ SEO + アフィリエイト型コンテンツメディアの構成解説。">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://www.iigtn.com/projects/ai-erabikata.html">
+  <meta property="og:site_name" content="iigtn">
+  <meta property="og:image" content="https://www.iigtn.com/assets/icon.svg">
+  <meta property="og:locale" content="ja_JP">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="AI えらびかた 構成解説">
+  <meta name="twitter:description" content="Next.js + Amplify で組んだ AI 比較メディアの構成解説。">
+  <meta name="twitter:image" content="https://www.iigtn.com/assets/icon.svg">
+  <link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+  <link rel="apple-touch-icon" href="/assets/icon.svg">
+  <link rel="stylesheet" href="/site.css">
+
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7533093647574923" crossorigin="anonymous"></script>
+  <meta name="google-adsense-account" content="ca-pub-7533093647574923">
+
+  <style>
+    .h-section { padding: 1.6rem 1.8rem; background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--radius); margin: 1.4rem 0; }
+    .h-section h2 { font-size: 1.2rem; margin: 0 0 0.7rem; color: var(--c-accent-dark); }
+    .h-section p { margin: 0.5rem 0; }
+    .h-section ul, .h-section ol { padding-left: 1.4rem; margin: 0.5rem 0; }
+    .h-section li { margin: 0.25rem 0; }
+    .h-section table { width: 100%; border-collapse: collapse; margin: 0.8rem 0; font-size: 0.92rem; }
+    .h-section th, .h-section td { border: 1px solid var(--c-border); padding: 0.5rem 0.7rem; text-align: left; vertical-align: top; }
+    .h-section th { background: var(--c-surface-2); }
+    .h-meta { color: var(--c-muted); font-size: 0.88rem; }
+    .h-cta { display: flex; gap: 0.8rem; flex-wrap: wrap; margin: 1rem 0 1.6rem; }
+  </style>
+</head>
+<body>
+
+<a href="#main" class="skip-link">本文へスキップ</a>
+
+<header class="site-header">
+  <nav class="nav">
+    <a href="/" class="logo" aria-label="iigtn">
+      <img src="/assets/logo.svg" alt="iigtn" height="32">
+    </a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html" class="active">Works</a></li>
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main id="main">
+
+  <header class="page-header">
+    <p class="h-meta">プロジェクト解説 · 公開稼働中</p>
+    <h1>AI えらびかた — タスク別・業界別 AI 比較レビューメディア</h1>
+    <p class="lead">
+      <code>ai-erabikata.com</code> は、ChatGPT / Claude / Gemini 等の主要 AI を「タスク別・業界別の使い分け」で
+      解説する SEO メディアです。記事 30 本 + 比較ツール「AI セレクター」+ 構造化データ + PWA + ダークモード
+      まで実装。AWS Amplify Hosting で Next.js を SSG 配信、A8.net・楽天・Amazon アソシエイトでアフィリ収益化中。
+    </p>
+    <div class="h-cta">
+      <a class="btn btn-primary" href="https://ai-erabikata.com/" target="_blank" rel="noopener">本番サイトを開く →</a>
+      <a class="btn btn-ghost" href="https://ai-erabikata.com/tools/ai-selector" target="_blank" rel="noopener">AI セレクターを試す</a>
+      <a class="btn btn-ghost" href="/works.html">← Works に戻る</a>
+    </div>
+  </header>
+
+  <section class="page-section">
+
+    <div class="h-section">
+      <h2>サマリ</h2>
+      <table>
+        <tr><th>プロジェクト</th><td>AI えらびかた (タスク別・業界別 AI 比較レビューメディア)</td></tr>
+        <tr><th>公開 URL</th><td><a href="https://ai-erabikata.com/" target="_blank" rel="noopener">https://ai-erabikata.com/</a></td></tr>
+        <tr><th>用途</th><td>主要 AI のタスク別・業界別比較記事 + AI セレクター（質問応答型レコメンドツール）</td></tr>
+        <tr><th>コンテンツ規模</th><td>記事 30 本 + 比較ツール 1 + 法律/運営ページ 4 + 動的 sitemap (36 URL)</td></tr>
+        <tr><th>構成</th><td>Next.js (App Router) + AWS Amplify Hosting + Route 53 + ACM + GA4 + AdSense</td></tr>
+        <tr><th>収益モデル</th><td>A8.net / 楽天 / Amazon アソシエイト + AdSense 広告</td></tr>
+      </table>
+    </div>
+
+    <div class="h-section">
+      <h2>A. 訪問者の閲覧フロー</h2>
+      <ol>
+        <li><strong>DNS</strong> ― ドメイン <code>ai-erabikata.com</code> を Route 53 hosted zone (Z**********) で管理。<code>www</code> サブドメインも同時配信。</li>
+        <li><strong>ACM</strong> ― us-east-1 で <code>ai-erabikata.com</code> + <code>www.ai-erabikata.com</code> の証明書を発行・自動更新。</li>
+        <li><strong>AWS Amplify Hosting</strong> ― Next.js (App Router) のビルド成果物を配信。CloudFront ベースの CDN + 自動 HTTPS + プレビュー環境を統合提供。</li>
+        <li><strong>カスタムドメイン</strong> ― Amplify アプリ <code>d**********.amplifyapp.com</code> をエイリアスとして <code>ai-erabikata.com</code> 配下にマッピング。</li>
+      </ol>
+      <p>
+        Amplify を選んだ理由は <strong>Next.js App Router の SSG/ISR/Image Optimization</strong> に最初からネイティブ対応していること。
+        S3 + CloudFront 自前配線でも同じことはできますが、<code>output: "export"</code> しない場合の image/route 最適化を
+        手配する手間が省けます。
+      </p>
+    </div>
+
+    <div class="h-section">
+      <h2>B. コンテンツ運用フロー</h2>
+      <ol>
+        <li>記事原稿は MDX (Markdown + JSX) でリポジトリに直接書く。AI 各社の出力比較は同一プロンプトで揃え、スクリーンショットや出力例を併記。</li>
+        <li><code>main</code> ブランチに push すると、Amplify が webhook で検知し、自動ビルド → デプロイ → ドメイン反映まで一気通貫。</li>
+        <li>カテゴリ・タグ・関連記事は MDX frontmatter から動的に生成。<code>?cat=...</code> URL クエリでフィルタ可能。</li>
+        <li>OGP 画像は Next.js の <code>ImageResponse</code> で動的生成し、記事ごとに自動で違う図が出る。</li>
+      </ol>
+    </div>
+
+    <div class="h-section">
+      <h2>C. 比較ツール「AI セレクター」</h2>
+      <p>
+        集客フックの 1 つとして、<a href="https://ai-erabikata.com/tools/ai-selector" target="_blank" rel="noopener">/tools/ai-selector</a> に
+        質問応答型のレコメンドツールを実装しています。
+      </p>
+      <ul>
+        <li>5〜7 問の質問に答えると、用途・予算・優先度から ChatGPT / Claude / Gemini の中で「あなたに合う AI」を推奨</li>
+        <li>クライアントサイドのみで完結（Lambda 不要、CloudFront キャッシュで完結）</li>
+        <li>結果ページから関連レビュー記事 + アフィリリンクへ誘導</li>
+      </ul>
+    </div>
+
+    <div class="h-section">
+      <h2>D. SEO + 計測 + 収益化</h2>
+      <ul>
+        <li><strong>構造化データ (JSON-LD)</strong>: Article / FAQPage（記事末尾の用語解説） / BreadcrumbList / WebSite を全記事に埋め込み</li>
+        <li><strong>動的 sitemap.xml</strong>: 記事数の増加に追従。記事 30 + 静的 6 = 36 URL</li>
+        <li><strong>RSS フィード</strong>: <code>/rss.xml</code> で記事更新を配信、note や Feedly 取り込みに対応</li>
+        <li><strong>GA4 計測</strong>: <code>G-XXXXXXXXX</code>（ID は伏字）でユーザー行動分析</li>
+        <li><strong>AdSense 申請済み</strong>: <code>ads.txt</code> + meta + script 配置、審査依頼中</li>
+        <li><strong>アフィリエイト</strong>: A8.net (ZENCHORD1 / Languise / PLAUD NOTE / Notta / DMM 生成 AI CAMP / Doraverse) + 楽天 (Microsoft 365) + Amazon アソシエイト</li>
+        <li><strong>記事ページの読了支援</strong>: パンくず / 目次 (TOC) / 関連記事 / シェアボタン / 読書プログレスバー / スクロールトップ</li>
+      </ul>
+    </div>
+
+    <div class="h-section">
+      <h2>採用判断のポイント</h2>
+      <table>
+        <tr><th>項目</th><th>採用</th><th>理由</th></tr>
+        <tr><td>フロント</td><td>Next.js (App Router)</td><td>SSG + Image Optimization + ImageResponse の OGP 自動生成、MDX が一級扱い</td></tr>
+        <tr><td>ホスティング</td><td>AWS Amplify Hosting</td><td>Next.js ネイティブ対応、push 即デプロイ、CloudFront ベースで日本配信も速い</td></tr>
+        <tr><td>DNS / TLS</td><td>Route 53 + ACM (us-east-1)</td><td>www / apex 両方を 1 証明書でカバー、自動更新</td></tr>
+        <tr><td>計測</td><td>GA4</td><td>無料、Search Console と統合、EE-A-T 計測の事実上の標準</td></tr>
+        <tr><td>収益化</td><td>AdSense + 複数 ASP</td><td>記事クラスタごとに最適 ASP を出し分け、リスク分散</td></tr>
+        <tr><td>SEO 軸</td><td>2 軸絞り込み（業界 × タスク）</td><td>レッドオーシャン回避、ロングテールに振る</td></tr>
+      </table>
+    </div>
+
+    <div class="h-section">
+      <h2>運用上の工夫</h2>
+      <ul>
+        <li><strong>記事の 1 次情報化</strong>: 同一プロンプトで全 AI を回した自前のスクリーンショット・出力比較を必ず併載</li>
+        <li><strong>カテゴリ絞り込み URL</strong>: <code>?cat=programming</code> など URL クエリで動的フィルタ、シェア URL がそのまま絞り込み済みになる</li>
+        <li><strong>ダークモード対応</strong>: <code>localStorage</code> + <code>prefers-color-scheme</code> 両対応、深夜閲覧の負担軽減</li>
+        <li><strong>PWA manifest</strong>: ホーム画面追加対応、再訪率改善期待</li>
+        <li><strong>カスタム 404</strong>: 関連記事のおすすめを表示して離脱率を抑える</li>
+      </ul>
+    </div>
+
+    <div class="h-section">
+      <h2>これからやる予定</h2>
+      <ul>
+        <li>記事を月 8〜12 本ペースで継続投下（KW クラスタ C1〜C5 の偏りを毎月リバランス）</li>
+        <li>競合 KW の上位記事リライト・内部リンク強化</li>
+        <li>DocChain（自社 SaaS）と連携する記事クラスタを追加（エンジニア × AI 活用）</li>
+        <li>AdSense 審査通過後の広告配置 A/B テスト</li>
+      </ul>
+    </div>
+
+    <div class="h-section">
+      <h2>関連リンク</h2>
+      <ul>
+        <li><a href="https://ai-erabikata.com/" target="_blank" rel="noopener">本番サイト ai-erabikata.com</a></li>
+        <li><a href="https://ai-erabikata.com/tools/ai-selector" target="_blank" rel="noopener">AI セレクター（比較ツール）</a></li>
+        <li><a href="https://ai-erabikata.com/rss.xml" target="_blank" rel="noopener">RSS フィード</a></li>
+        <li><a href="/works.html">← Works 一覧へ戻る</a></li>
+      </ul>
+    </div>
+
+  </section>
+
+</main>
+
+<footer>
+  <div>© 2026 iigtn — Built with Terraform &amp; GitHub Actions</div>
+  <div>
+    <a href="/learn.html">解説書</a>
+    &nbsp;·&nbsp;
+    <a href="https://github.com/iigtn/iigtn-platform">GitHub</a>
+    &nbsp;·&nbsp;
+    <a href="/privacy.html">プライバシーポリシー</a>
+  </div>
+</footer>
+
+</body>
+</html>
