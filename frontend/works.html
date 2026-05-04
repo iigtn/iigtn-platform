@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Works — iigtn / 実績・制作物</title>
-  <meta name="description" content="フリーランス・インフラエンジニア iigtn のこれまでの主な制作・構築実績。AWS サーバレス + Terraform + GitHub Actions OIDC で組んだ案件・自作サンプル。">
+  <meta name="description" content="フリーランス・インフラエンジニア iigtn の制作・構築実績。AWS サーバレス + Terraform で運用中のメディア (hojokin.iigtn.com / hojinka.com / ai-erabikata.com) と SaaS LP (getdocchain.com)、自動売買リサーチ (autoST) など。">
   <meta name="author" content="iigtn">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://lab.iigtn.com/works.html">
@@ -51,7 +51,7 @@
     <p class="lead">これまでの主な制作・構築物。匿名化したケーススタディとして、技術選定の判断記録 (ADR) と運用記録 (post-mortem) も合わせて公開していきます。</p>
   </header>
 
-  <section class="page-section">
+  <section class="page-section reveal">
     <h2>公開稼働中の Works</h2>
 
     <div class="works-list">
@@ -85,9 +85,53 @@
         </article>
       </a>
 
+      <a href="https://ai-erabikata.com/" target="_blank" rel="noopener" class="work-card-link">
+        <article class="work-card">
+          <div class="work-meta">2026 / 個人 / 公開稼働中 · ai-erabikata.com</div>
+          <h3>AI えらびかた — タスク別・業界別 AI 比較レビューメディア →</h3>
+          <p class="work-summary">
+            主要 AI (ChatGPT / Claude / Gemini 等) をタスク・業界別に解説する SEO メディアを構築しています。
+            記事 30 本と比較ツール「AI セレクター」を備え、GA4 計測と AdSense 審査を完了。アフィリエイト
+            (A8.net / 楽天 / Amazon) で収益化し、構造化データ・PWA・ダークモード・読書プログレスも実装済みです。
+          </p>
+          <ul class="skill-tags">
+            <li class="skill-tag">Next.js</li>
+            <li class="skill-tag">TypeScript</li>
+            <li class="skill-tag">構造化データ (JSON-LD)</li>
+            <li class="skill-tag">SEO</li>
+            <li class="skill-tag">PWA</li>
+            <li class="skill-tag">GA4</li>
+            <li class="skill-tag">AdSense</li>
+            <li class="skill-tag">アフィリエイト統合</li>
+          </ul>
+        </article>
+      </a>
+
+      <a href="https://hojinka.com/" target="_blank" rel="noopener" class="work-card-link">
+        <article class="work-card">
+          <div class="work-meta">2026 / 個人 / 公開稼働中 · hojinka.com</div>
+          <h3>hojinka.com — フリーランス → 法人化 ナレッジ＆比較メディア →</h3>
+          <p class="work-summary">
+            フリーランスから法人化までの 6 ステージ (開業届・確定申告・案件獲得・法人化判断・会社設立・法人運営)
+            を横断する比較メディアを運営しています。法人化シミュレーターを Vanilla JS で実装し、税負担と
+            社会保険料を試算可能。AWS S3 + CloudFront (OAC) + ACM + Route 53 で配信し、GitHub Actions OIDC
+            で静的キーレスの自動デプロイを実装しています。
+          </p>
+          <ul class="skill-tags">
+            <li class="skill-tag">HTML/CSS</li>
+            <li class="skill-tag">Vanilla JS</li>
+            <li class="skill-tag">S3 + CloudFront (OAC)</li>
+            <li class="skill-tag">ACM</li>
+            <li class="skill-tag">Route 53</li>
+            <li class="skill-tag">Terraform</li>
+            <li class="skill-tag">GitHub Actions OIDC</li>
+          </ul>
+        </article>
+      </a>
+
       <a href="/learn.html" class="work-card-link">
         <article class="work-card">
-          <div class="work-meta">2026 / 個人 / 公開稼働中</div>
+          <div class="work-meta">2026 / 個人 / 公開稼働中 · iigtn.com</div>
           <h3>iigtn-platform — Serverless Portfolio Lab →</h3>
           <p class="work-summary">
             このサイト本体。AWS サーバレス + Terraform + GitHub Actions OIDC でゼロから設計・構築。
@@ -104,6 +148,28 @@
             <li class="skill-tag">DynamoDB</li>
             <li class="skill-tag">SES / SNS</li>
             <li class="skill-tag">CloudWatch</li>
+          </ul>
+        </article>
+      </a>
+
+      <a href="https://getdocchain.com/" target="_blank" rel="noopener" class="work-card-link">
+        <article class="work-card">
+          <div class="work-meta">2026 / 個人 / LP 稼働中・事前登録受付 · getdocchain.com</div>
+          <h3>DocChain — SI 業界向け 設計書連鎖生成 AI（LP）→</h3>
+          <p class="work-summary">
+            上流工程 (要件定義書) から下流工程 (基本設計書 → 詳細設計書 → テスト仕様書) を AI が自動生成する
+            SaaS の Landing Page を構築しています。Next.js (Static Export) + Lambda + API Gateway + DynamoDB +
+            SES + CloudFront で事前登録を受付中。本体はモデルカスケード (4o-mini / 4o) と Anthropic Prompt
+            Caching で API 原価 89% 削減を狙う設計です。
+          </p>
+          <ul class="skill-tags">
+            <li class="skill-tag">Next.js (Static Export)</li>
+            <li class="skill-tag">Lambda + API GW</li>
+            <li class="skill-tag">DynamoDB</li>
+            <li class="skill-tag">SES</li>
+            <li class="skill-tag">OpenAI / Anthropic API</li>
+            <li class="skill-tag">Prompt Caching</li>
+            <li class="skill-tag">CloudFront</li>
           </ul>
         </article>
       </a>
@@ -129,10 +195,68 @@
     </div>
   </section>
 
-  <section class="page-section">
+  <section class="page-section reveal">
+    <h2>個人研究プロジェクト</h2>
+
+    <div class="works-list">
+
+      <article class="work-card">
+        <div class="work-meta">2026 / 個人研究 / 内部運用</div>
+        <h3>autoST — 自動売買リサーチ＆運用フレームワーク</h3>
+        <p class="work-summary">
+          日本株 / 米国 ETF を対象にした自動売買戦略の検証＆運用フレームワーク。Lambda + EventBridge +
+          DynamoDB + S3 を Terraform で IaC 化し、ローカル PC は kabu STATION API と連携。20 を超える戦略
+          を AI 共同レビューでバックテストし、最終的に 1545 (米国 S&amp;P500 ETF) + 200 日 MA + 月次キャッシュ
+          確定型に収束。16 年 OOS で CAGR +26.7%、月勝率 63% を達成しています。
+        </p>
+        <ul class="skill-tags">
+          <li class="skill-tag">Python</li>
+          <li class="skill-tag">Lambda + EventBridge</li>
+          <li class="skill-tag">DynamoDB</li>
+          <li class="skill-tag">Terraform</li>
+          <li class="skill-tag">Backtesting</li>
+          <li class="skill-tag">kabu STATION API</li>
+          <li class="skill-tag">PDCA × ChatGPT</li>
+        </ul>
+      </article>
+
+    </div>
+  </section>
+
+  <section class="page-section reveal">
     <h2>Coming Soon</h2>
 
     <div class="works-list">
+
+      <article class="work-card">
+        <div class="work-meta">構想中 / 立ち上げ準備中</div>
+        <h3>グランピング × キャンプ場マップ</h3>
+        <p class="work-summary">
+          日本全国のグランピング施設・キャンプ場を地図 UI で可視化し、予約サイトへ送客するアフィリエイト
+          メディア。グランピング (高単価) を主軸にしつつ、一般キャンプ場 (数勝負) も網羅。子育てマップと
+          技術基盤を共通化する想定です。
+        </p>
+        <ul class="skill-tags">
+          <li class="skill-tag">構想中</li>
+          <li class="skill-tag">地図 UI</li>
+          <li class="skill-tag">アフィリエイト</li>
+        </ul>
+      </article>
+
+      <article class="work-card">
+        <div class="work-meta">構想中 / 立ち上げ準備中</div>
+        <h3>子育てマップ — 保活＋学区＋学童＋塾の統合可視化</h3>
+        <p class="work-summary">
+          保活マップから入って学区マップ・学童・塾までライフステージ 5〜10 年に渡って使われる、子育て
+          世代向け地理データ可視化メディア。同一ドメインのサブディレクトリ展開で、保活 → 学区 → 学童 → 塾
+          と段階的に拡張する計画です。
+        </p>
+        <ul class="skill-tags">
+          <li class="skill-tag">構想中</li>
+          <li class="skill-tag">地図 UI</li>
+          <li class="skill-tag">子育て世代</li>
+        </ul>
+      </article>
 
       <article class="work-card">
         <div class="work-meta">準備中</div>
@@ -189,5 +313,17 @@
   </div>
 </footer>
 
+<script>
+  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && 'IntersectionObserver' in window) {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) { e.target.classList.add('is-visible'); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+    document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+  } else {
+    document.querySelectorAll('.reveal').forEach((el) => el.classList.add('is-visible'));
+  }
+</script>
 </body>
 </html>
