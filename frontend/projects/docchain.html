@@ -37,6 +37,8 @@
     .h-section th { background: var(--c-surface-2); }
     .h-meta { color: var(--c-muted); font-size: 0.88rem; }
     .h-cta { display: flex; gap: 0.8rem; flex-wrap: wrap; margin: 1rem 0 1.6rem; }
+    .diagram-wrap { background: var(--c-surface-2); border: 1px solid var(--c-border); border-radius: var(--radius); padding: 0.6rem; margin: 1rem 0; overflow-x: auto; }
+    .diagram-wrap .mxgraph { max-width: 100%; }
     .h-callout { padding: 0.7rem 1rem; border-left: 4px solid #ffd54f; background: #fff8e1; border-radius: 5px; margin: 0.8rem 0; font-size: 0.93rem; }
     @media (prefers-color-scheme: dark) { .h-callout { background: #2a210d; color: var(--c-text-2); } }
   </style>
@@ -91,6 +93,21 @@
         <tr><th>LP 構成</th><td>Next.js (Static Export) + Lambda + API GW + DynamoDB + SES + CloudFront + Route 53</td></tr>
       </table>
     </div>
+    <div class="h-section">
+      <h2>全体アーキテクチャ</h2>
+      <p>
+        構成図は drawio (AWS 公式アイコン v2026 系) で作成しています。下のビューアは <code>.drawio</code> ファイルを
+        直接レンダリングしています。zoom / pan / 編集ボタンが使えます。
+      </p>
+      <div class="diagram-wrap">
+        <div class="mxgraph" style="max-width:100%;" data-mxgraph='{"highlight":"#0000ff","nav":true,"resize":true,"toolbar":"zoom","edit":"_blank","url":"https://www.iigtn.com/diagrams/docchain/architecture.drawio"}'></div>
+      </div>
+      <p class="h-meta">
+        ソース: <a href="/diagrams/docchain/architecture.drawio">/diagrams/docchain/architecture.drawio</a>
+        （drawio で開けば編集可能）
+      </p>
+    </div>
+
 
     <div class="h-section">
       <h2>A. LP の配信フロー</h2>
@@ -213,5 +230,8 @@
   </div>
 </footer>
 
+
+<!-- drawio inline viewer (renders all <div class="mxgraph">) -->
+<script src="https://viewer.diagrams.net/js/viewer-static.min.js"></script>
 </body>
 </html>

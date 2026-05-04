@@ -1,0 +1,134 @@
+<mxfile host="www.iigtn.com" modified="2026-05-04T00:00:00.000Z" agent="iigtn-platform" version="24.0.0">
+  <diagram name="Kosodate Map Architecture" id="koso-arch">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="780" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="子育てマップ — 段階展開設計版 (構想中)" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=18;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="280" y="20" width="640" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="lyrA" value="A. 訪問者の閲覧フロー (サブディレクトリ展開)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fafafa;strokeColor=#cccccc;dashed=1;fontSize=12;fontStyle=2;align=left;verticalAlign=top;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="80" width="1120" height="290" as="geometry" />
+        </mxCell>
+
+        <mxCell id="user" value="🌐 訪問者&#xa;kosodate-map.jp (候補)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="80" y="180" width="180" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="r53" value="Route 53&#xa;hosted zone" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#8C4FFF;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.route_53;" vertex="1" parent="1">
+          <mxGeometry x="320" y="170" width="78" height="78" as="geometry" />
+        </mxCell>
+
+        <mxCell id="acm" value="ACM&#xa;us-east-1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#DD344C;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.certificate_manager_3;" vertex="1" parent="1">
+          <mxGeometry x="330" y="280" width="58" height="58" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cf" value="CloudFront&#xa;HTTP/3 + OAC" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#8C4FFF;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudfront;" vertex="1" parent="1">
+          <mxGeometry x="510" y="170" width="78" height="78" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s3" value="S3 (private)&#xa;Next.js Static Export" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#7AA116;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;" vertex="1" parent="1">
+          <mxGeometry x="700" y="170" width="78" height="78" as="geometry" />
+        </mxCell>
+
+        <mxCell id="paths" value="サブディレクトリ展開&#xa;/hokatsu (Phase 1)&#xa;/gakku (Phase 3)&#xa;/gakudo /juku /iju /jushi /column (Phase 4)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e3f2fd;strokeColor=#1565c0;fontSize=10;align=left;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="880" y="160" width="240" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="map" value="Maptiler API&#xa;(共通基盤、外部)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3ECF8E;strokeColor=#1d8650;fontColor=#fff;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="510" y="290" width="180" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="aedge1" value="① DNS" style="endArrow=classic;html=1;fontSize=10;" edge="1" parent="1" source="user" target="r53">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="aedge2" value="② alias" style="endArrow=classic;html=1;fontSize=10;" edge="1" parent="1" source="r53" target="cf">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="aedge3" value="TLS" style="endArrow=classic;dashed=1;html=1;fontSize=10;" edge="1" parent="1" source="acm" target="cf">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="aedge4" value="③ HTML" style="endArrow=classic;html=1;fontSize=10;" edge="1" parent="1" source="cf" target="s3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="aedge5" value="serve" style="endArrow=classic;dashed=1;html=1;fontSize=10;" edge="1" parent="1" source="s3" target="paths">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="aedge6" value="tile" style="endArrow=classic;dashed=1;html=1;fontSize=10;" edge="1" parent="1" source="cf" target="map">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="lyrB" value="B. データ取込パイプライン (補助金検索の基盤を流用)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fafafa;strokeColor=#cccccc;dashed=1;fontSize=12;fontStyle=2;align=left;verticalAlign=top;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="400" width="700" height="320" as="geometry" />
+        </mxCell>
+
+        <mxCell id="eb" value="EventBridge&#xa;月次 cron" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.eventbridge;" vertex="1" parent="1">
+          <mxGeometry x="80" y="490" width="78" height="78" as="geometry" />
+        </mxCell>
+
+        <mxCell id="lambdaIng" value="Lambda&#xa;hokatsu_ingest&#xa;(Phase 1)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;" vertex="1" parent="1">
+          <mxGeometry x="270" y="450" width="78" height="78" as="geometry" />
+        </mxCell>
+
+        <mxCell id="lambdaIng2" value="Lambda&#xa;gakku_ingest&#xa;(Phase 3)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;" vertex="1" parent="1">
+          <mxGeometry x="270" y="580" width="78" height="78" as="geometry" />
+        </mxCell>
+
+        <mxCell id="muni" value="自治体オープンデータ&#xa;CSV / JSON" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff8e1;strokeColor=#ffa726;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="270" y="680" width="180" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ddb" value="DynamoDB&#xa;施設マスタ&#xa;(マップ別 GSI)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#3334B9;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;" vertex="1" parent="1">
+          <mxGeometry x="490" y="490" width="78" height="78" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cb" value="CodeBuild&#xa;DDB → JSON → next build" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#FF9900;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.codebuild;" vertex="1" parent="1">
+          <mxGeometry x="490" y="620" width="78" height="78" as="geometry" />
+        </mxCell>
+
+        <mxCell id="bedge1" value="① 起動" style="endArrow=classic;html=1;fontSize=10;" edge="1" parent="1" source="eb" target="lambdaIng">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="bedge1b" value="" style="endArrow=classic;html=1;fontSize=10;" edge="1" parent="1" source="eb" target="lambdaIng2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="bedge2" value="② fetch" style="endArrow=classic;dashed=1;html=1;fontSize=10;" edge="1" parent="1" source="lambdaIng" target="muni">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="bedge3" value="③ upsert" style="endArrow=classic;html=1;fontSize=10;" edge="1" parent="1" source="lambdaIng" target="ddb">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="bedge4" value="④ 再ビルド" style="endArrow=classic;html=1;fontSize=10;" edge="1" parent="1" source="ddb" target="cb">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="lyrC" value="C. 収益化レイヤー (アフィリ複合)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#cccccc;dashed=1;fontSize=12;fontStyle=2;align=left;verticalAlign=top;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="770" y="400" width="390" height="320" as="geometry" />
+        </mxCell>
+
+        <mxCell id="aff1" value="引越し一括見積&#xa;¥3,000〜10,000" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff8e1;strokeColor=#ffa726;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="800" y="440" width="180" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="aff2" value="不動産売買査定&#xa;¥10,000〜30,000" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff8e1;strokeColor=#ffa726;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="800" y="490" width="180" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="aff3" value="住宅ローン相談&#xa;¥5,000〜30,000" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff8e1;strokeColor=#ffa726;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="800" y="540" width="180" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="aff4" value="学資保険・塾・ベビーシッター&#xa;¥2,000〜15,000" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff8e1;strokeColor=#ffa726;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="800" y="590" width="180" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="adsense" value="Google AdSense&#xa;(全体 PV 依存)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff8e1;strokeColor=#ffa726;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="800" y="640" width="180" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="seg" value="保活ユーザー → 引越し / 学資 / シッター&#xa;学区ユーザー → 不動産 / ローン / 塾&#xa;LTV を最大化する段階提示" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e3f2fd;strokeColor=#1565c0;fontSize=10;align=left;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="490" width="140" height="100" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

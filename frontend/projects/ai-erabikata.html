@@ -37,6 +37,8 @@
     .h-section th { background: var(--c-surface-2); }
     .h-meta { color: var(--c-muted); font-size: 0.88rem; }
     .h-cta { display: flex; gap: 0.8rem; flex-wrap: wrap; margin: 1rem 0 1.6rem; }
+    .diagram-wrap { background: var(--c-surface-2); border: 1px solid var(--c-border); border-radius: var(--radius); padding: 0.6rem; margin: 1rem 0; overflow-x: auto; }
+    .diagram-wrap .mxgraph { max-width: 100%; }
   </style>
 </head>
 <body>
@@ -88,6 +90,21 @@
         <tr><th>収益モデル</th><td>A8.net / 楽天 / Amazon アソシエイト + AdSense 広告</td></tr>
       </table>
     </div>
+    <div class="h-section">
+      <h2>全体アーキテクチャ</h2>
+      <p>
+        構成図は drawio (AWS 公式アイコン v2026 系) で作成しています。下のビューアは <code>.drawio</code> ファイルを
+        直接レンダリングしています。zoom / pan / 編集ボタンが使えます。
+      </p>
+      <div class="diagram-wrap">
+        <div class="mxgraph" style="max-width:100%;" data-mxgraph='{"highlight":"#0000ff","nav":true,"resize":true,"toolbar":"zoom","edit":"_blank","url":"https://www.iigtn.com/diagrams/ai-erabikata/architecture.drawio"}'></div>
+      </div>
+      <p class="h-meta">
+        ソース: <a href="/diagrams/ai-erabikata/architecture.drawio">/diagrams/ai-erabikata/architecture.drawio</a>
+        （drawio で開けば編集可能）
+      </p>
+    </div>
+
 
     <div class="h-section">
       <h2>A. 訪問者の閲覧フロー</h2>
@@ -199,5 +216,8 @@
   </div>
 </footer>
 
+
+<!-- drawio inline viewer (renders all <div class="mxgraph">) -->
+<script src="https://viewer.diagrams.net/js/viewer-static.min.js"></script>
 </body>
 </html>
