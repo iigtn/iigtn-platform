@@ -28,21 +28,25 @@
   <meta name="google-adsense-account" content="ca-pub-7533093647574923">
 
   <style>
-    .h-section { padding: 1.6rem 1.8rem; background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 8px; margin: 1.4rem 0; }
+    .h-section { padding: 1.6rem 1.8rem; background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--radius); margin: 1.4rem 0; }
     .h-section h2 { font-size: 1.2rem; margin: 0 0 0.7rem; color: var(--c-accent-dark); }
     .h-section p { margin: 0.5rem 0; }
     .h-section ul, .h-section ol { padding-left: 1.4rem; margin: 0.5rem 0; }
     .h-section li { margin: 0.25rem 0; }
     .h-section table { width: 100%; border-collapse: collapse; margin: 0.8rem 0; font-size: 0.92rem; }
-    .h-section th, .h-section td { border: 1px solid var(--c-border); padding: 0.5rem 0.7rem; text-align: left; vertical-align: top; }
-    .h-section th { background: #f3f3f3; }
-    .h-section code { background: #f0f0f0; padding: 1px 6px; border-radius: 3px; font-size: 0.88em; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .h-section th, .h-section td { border: 1px solid var(--c-border); padding: 0.5rem 0.7rem; text-align: left; vertical-align: top; color: var(--c-text); }
+    .h-section th { background: var(--c-surface-2); color: var(--c-text); font-weight: 600; }
+    .h-section code { background: var(--c-surface-2); color: var(--c-text-2); padding: 1px 6px; border-radius: 3px; font-size: 0.88em; font-family: var(--font-mono, ui-monospace, SFMono-Regular, Consolas, monospace); }
     .h-meta { color: var(--c-muted); font-size: 0.88rem; }
     .h-cta { display: flex; gap: 0.8rem; flex-wrap: wrap; margin: 1rem 0 1.6rem; }
-    .diagram-wrap { background: #fff; border: 1px solid var(--c-border); border-radius: 6px; padding: 0.6rem; margin: 1rem 0; overflow-x: auto; }
+    .diagram-wrap { background: var(--c-surface-2); border: 1px solid var(--c-border); border-radius: var(--radius); padding: 0.6rem; margin: 1rem 0; overflow-x: auto; }
     .diagram-wrap .mxgraph { max-width: 100%; }
-    .h-callout { padding: 0.7rem 1rem; border-left: 4px solid var(--c-info-border, #90caf9); background: var(--c-info-bg, #e3f2fd); border-radius: 5px; margin: 0.8rem 0; font-size: 0.93rem; }
+    .h-callout { padding: 0.7rem 1rem; border-left: 4px solid #90caf9; background: #e3f2fd; color: var(--c-text); border-radius: 5px; margin: 0.8rem 0; font-size: 0.93rem; }
     .h-callout.warn { border-left-color: #ffd54f; background: #fff8e1; }
+    @media (prefers-color-scheme: dark) {
+      .h-callout { background: #1b2b48; }
+      .h-callout.warn { background: #2a210d; color: var(--c-text-2); }
+    }
   </style>
 </head>
 <body>
