@@ -112,9 +112,9 @@
     <div class="h-section">
       <h2>A. LP の配信フロー</h2>
       <ol>
-        <li><strong>DNS</strong> ― Route 53 hosted zone (Z**********) で <code>getdocchain.com</code> + <code>www.getdocchain.com</code> を管理。</li>
+        <li><strong>DNS</strong> ― Route 53 hosted zone (ZXXXXXXXXXX) で <code>getdocchain.com</code> + <code>www.getdocchain.com</code> を管理。</li>
         <li><strong>ACM</strong> ― us-east-1 で証明書発行（<code>getdocchain.com</code> + <code>www.getdocchain.com</code>）、自動更新。</li>
-        <li><strong>CloudFront</strong> ― 静的 LP を TLS 終端 + キャッシュ配信。Distribution ID は伏字（<code>E**********</code>）。</li>
+        <li><strong>CloudFront</strong> ― 静的 LP を TLS 終端 + キャッシュ配信。Distribution ID は伏字（<code>EXXXXXXXXXX</code>）。</li>
         <li><strong>S3 (private)</strong> ― Next.js (Static Export) のビルド成果物を配置。Public Access Block + OAC で CloudFront 経由のみアクセス可。</li>
       </ol>
     </div>

@@ -126,7 +126,7 @@
     <div class="h-section">
       <h2>A. 訪問者の閲覧フロー</h2>
       <ol>
-        <li><strong>DNS</strong> ― ドメイン <code>hojinka.com</code> を Route 53 hosted zone (Z**********) で管理。apex の A/AAAA を CloudFront alias に設定。</li>
+        <li><strong>DNS</strong> ― ドメイン <code>hojinka.com</code> を Route 53 hosted zone (ZXXXXXXXXXX) で管理。apex の A/AAAA を CloudFront alias に設定。</li>
         <li><strong>CloudFront</strong> ― TLS 終端 + 静的キャッシュ。<code>hojinka.com</code> + <code>*.hojinka.com</code> をカバーする ACM 証明書（us-east-1）を関連付け。</li>
         <li><strong>S3 (private)</strong> ― 静的 HTML/CSS/JS/画像を配置。Public Access Block 全 true、CloudFront の Origin Access Control 経由でしか読めない構造。</li>
       </ol>
@@ -158,7 +158,7 @@
         <li>ローカルで <code>frontend/</code> を編集 → main ブランチに push</li>
         <li><strong>GitHub Actions</strong> が起動、<code>aws-actions/configure-aws-credentials</code> で OIDC を使い、IAM Role <code>hojinka-github-actions-deploy</code> を AssumeRole（永続キーレス）</li>
         <li><code>aws s3 sync frontend/ s3://hojinka-web-prod-XXXXXXXXXXXX/ --delete</code></li>
-        <li><code>aws cloudfront create-invalidation --distribution-id E********** --paths "/*"</code></li>
+        <li><code>aws cloudfront create-invalidation --distribution-id EXXXXXXXXXX --paths "/*"</code></li>
       </ol>
       <p>
         GitHub Secrets に AWS の長期アクセスキーを置かない設計。OIDC 連合認証で一時クレデンシャルだけを発行し、
@@ -174,7 +174,7 @@
       <ul>
         <li><code>acm.tf</code> — us-east-1 の ACM 証明書（<code>hojinka.com</code> + <code>*.hojinka.com</code>）</li>
         <li><code>s3_cloudfront.tf</code> — S3 (private) + Public Access Block + Versioning + OAC + CloudFront Distribution</li>
-        <li><code>route53.tf</code> — Hosted Zone (Z**********) + apex A/AAAA エイリアス（CloudFront へ）</li>
+        <li><code>route53.tf</code> — Hosted Zone (ZXXXXXXXXXX) + apex A/AAAA エイリアス（CloudFront へ）</li>
         <li><code>iam_oidc.tf</code> — GitHub Actions OIDC Provider + Role + 最小権限ポリシー（対象 S3 と CloudFront 限定）</li>
       </ul>
       <p>

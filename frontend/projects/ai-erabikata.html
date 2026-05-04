@@ -109,10 +109,10 @@
     <div class="h-section">
       <h2>A. 訪問者の閲覧フロー</h2>
       <ol>
-        <li><strong>DNS</strong> ― ドメイン <code>ai-erabikata.com</code> を Route 53 hosted zone (Z**********) で管理。<code>www</code> サブドメインも同時配信。</li>
+        <li><strong>DNS</strong> ― ドメイン <code>ai-erabikata.com</code> を Route 53 hosted zone (ZXXXXXXXXXX) で管理。<code>www</code> サブドメインも同時配信。</li>
         <li><strong>ACM</strong> ― us-east-1 で <code>ai-erabikata.com</code> + <code>www.ai-erabikata.com</code> の証明書を発行・自動更新。</li>
         <li><strong>AWS Amplify Hosting</strong> ― Next.js (App Router) のビルド成果物を配信。CloudFront ベースの CDN + 自動 HTTPS + プレビュー環境を統合提供。</li>
-        <li><strong>カスタムドメイン</strong> ― Amplify アプリ <code>d**********.amplifyapp.com</code> をエイリアスとして <code>ai-erabikata.com</code> 配下にマッピング。</li>
+        <li><strong>カスタムドメイン</strong> ― Amplify アプリ <code>dXXXXXXXXXX.amplifyapp.com</code> をエイリアスとして <code>ai-erabikata.com</code> 配下にマッピング。</li>
       </ol>
       <p>
         Amplify を選んだ理由は <strong>Next.js App Router の SSG/ISR/Image Optimization</strong> に最初からネイティブ対応していること。
