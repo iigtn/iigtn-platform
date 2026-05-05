@@ -61,7 +61,7 @@
     line-height: 1.75;
     color: var(--c-text);
     margin: 0; padding: 0;
-    background: #fbfaf7;
+    background: #eef3fa;
   }
   body::before {
     content: '';
@@ -73,7 +73,22 @@
       radial-gradient(900px 500px at -10% 110%, rgba(10, 163, 163, 0.08), transparent 60%);
     z-index: -1;
   }
-  .wrap { max-width: 880px; margin: 0 auto; padding: 2rem 1.2rem 6rem; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 2rem 1.2rem 6rem; position: relative; }
+  .wrap::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: calc(-50vw + 50%);
+    right: calc(-50vw + 50%);
+    height: 240px;
+    background: linear-gradient(135deg,
+      rgba(42, 106, 204, 0.22) 0%,
+      rgba(10, 163, 163, 0.18) 60%,
+      transparent 100%);
+    z-index: -1;
+    pointer-events: none;
+    border-bottom: 1px solid rgba(42, 106, 204, 0.10);
+  }
   h1 { font-size: 1.9rem; margin-top: 0; }
   h2 {
     font-size: 1.5rem;
@@ -245,6 +260,35 @@
     overflow-x: auto;
   }
   .mermaid svg { max-width: 100%; height: auto; }
+
+  /* ── Dark mode (matches site.css palette) ─────────────────── */
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --c-text: #e7ecf2;
+      --c-muted: #8995a4;
+      --c-border: #232c39;
+      --c-code-bg: #131a23;
+      --c-link: #4d8cf0;
+      --c-warn-bg: #2a210d;
+      --c-warn-border: #ffd54f;
+      --c-info-bg: #1b2b48;
+      --c-info-border: #4d8cf0;
+      --c-good-bg: #102816;
+      --c-good-border: #5fc76e;
+    }
+    body { background: #0e1117; }
+    body::before {
+      background-image:
+        radial-gradient(1200px 600px at 80% -10%, rgba(77, 140, 240, 0.30), transparent 60%),
+        radial-gradient(900px 500px at -10% 110%, rgba(45, 212, 207, 0.10), transparent 60%);
+    }
+    h4 { color: #cfd6df; }
+    th { background: #1c2532; }
+    details, .toc, .mermaid { background: #161d27; }
+    details summary { background: #1c2532; }
+    .site-header { background: rgba(19, 26, 35, 0.85); }
+    nav.doc-toc { background: rgba(19, 26, 35, 0.85); }
+  }
 </style>
 
   <!-- Google AdSense -->
