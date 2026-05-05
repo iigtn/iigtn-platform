@@ -1,4 +1,4 @@
-<mxfile host="www.iigtn.com" modified="2026-05-05T15:00:00.000Z" agent="iigtn-platform" version="24.0.0">
+<mxfile host="www.iigtn.com" modified="2026-05-05T16:00:00.000Z" agent="iigtn-platform" version="24.0.0">
   <diagram name="Glamping Map Architecture" id="glamp-arch">
     <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="780" math="0" shadow="0">
       <root>
@@ -33,10 +33,6 @@
           <mxGeometry x="600" y="160" width="78" height="78" as="geometry" />
         </mxCell>
 
-        <mxCell id="map" value="Maptiler API" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3ECF8E;strokeColor=#1d8650;fontColor=#fff;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="780" y="120" width="170" height="50" as="geometry" />
-        </mxCell>
-
         <mxCell id="ae1" value="DNS" style="endArrow=classic;html=1;fontSize=10;" edge="1" parent="1" source="user" target="r53">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
@@ -50,9 +46,6 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="ae5" value="image" style="endArrow=classic;html=1;fontSize=10;" edge="1" parent="1" source="cf" target="s3img">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="ae6" value="tile" style="endArrow=classic;dashed=1;html=1;fontSize=10;" edge="1" parent="1" source="cf" target="map">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
