@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>個人開発で SI 業界向け SaaS『DocChain』を作って公開した話 (Builder in Public #2) | iigtn 構築日誌</title>
+<meta name="description" content="個人開発で『設計書連鎖生成 SaaS』を作って公開しました。詳細設計書 → テスト仕様書、基本設計書 → AWS パラメータシートを AI で連鎖生成。Wizard UI で 5〜7 問に答えるだけ。技術スタック、価格設計、Builder in Public で残す進捗を共有します。">
+<meta name="author" content="iigtn">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://lab.iigtn.com/blog/22-docchain-launch.html">
+<meta property="og:title" content="個人開発で SI 業界向け SaaS『DocChain』を作って公開した話">
+<meta property="og:description" content="設計書連鎖生成 SaaS を AWS サーバレスで個人開発しました。Wizard UI で 5〜7 問の選択式に答えるだけで AWS パラメータシート / テスト仕様書を生成。Builder in Public で進捗を残します。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://lab.iigtn.com/blog/22-docchain-launch.html">
+<meta property="og:site_name" content="iigtn">
+<meta property="og:image" content="https://lab.iigtn.com/assets/icon.svg">
+<meta property="og:locale" content="ja_JP">
+<meta property="article:author" content="iigtn">
+<meta property="article:published_time" content="2026-05-04T00:00:00+09:00">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="個人開発で SI 業界向け SaaS『DocChain』を作って公開した話">
+<meta name="twitter:description" content="設計書連鎖生成 SaaS を AWS サーバレスで個人開発しました。Wizard UI で 5〜7 問の選択式に答えるだけで AWS パラメータシート / テスト仕様書を生成。Builder in Public で進捗を残します。">
+<meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "個人開発で SI 業界向け SaaS『DocChain』を作って公開した話 (Builder in Public #2)",
+  "description": "設計書連鎖生成 SaaS を AWS サーバレスで個人開発し公開した経緯と技術構成を共有します。",
+  "datePublished": "2026-05-04",
+  "author": { "@type": "Person", "name": "iigtn", "url": "https://lab.iigtn.com/" },
+  "publisher": { "@type": "Person", "name": "iigtn" },
+  "url": "https://lab.iigtn.com/blog/22-docchain-launch.html",
+  "mainEntityOfPage": "https://lab.iigtn.com/blog/22-docchain-launch.html",
+  "image": "https://lab.iigtn.com/assets/icon.svg",
+  "inLanguage": "ja",
+  "isPartOf": { "@id": "https://lab.iigtn.com/blog/#blog" }
+}
+</script>
+<link rel="stylesheet" href="/blog/style.css?v=20260505b">
+
+  <!-- Google AdSense -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7533093647574923" crossorigin="anonymous"></script>
+  <meta name="google-adsense-account" content="ca-pub-7533093647574923">
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="/" class="logo" aria-label="iigtn">
+      <img src="/assets/logo.svg" alt="iigtn" height="32">
+    </a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html">Works</a></li>
+      <li><a href="/blog/" class="active">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+    </ul>
+  </nav>
+</header>
+
+<article class="post">
+<header class="post-header">
+  <p class="post-meta">2026-05-04 · DocChain Builder in Public #2</p>
+  <h1>個人開発で SI 業界向け SaaS『DocChain』を作って公開した話</h1>
+</header>
+
+<div class="post-body">
+
+<h2>はじめに</h2>
+<p>SI 現場で「設計書づくりに 1 週間溶ける」を何度も経験してきた個人開発者として、これを LLM で半自動化する SaaS『<strong>DocChain</strong>』を作って公開しました。LP は <a href="https://getdocchain.com" rel="noopener noreferrer">getdocchain.com</a>、アプリ本体は <a href="https://app.getdocchain.com/wizard" rel="noopener noreferrer">app.getdocchain.com/wizard</a> で稼働しています。</p>
+<p>本記事は <strong>DocChain Builder in Public シリーズの第 2 回</strong> として、なぜ作ったか、何ができるか、どう作ったか、これからどう進めるかを 1 つにまとめたものです (第 1 回は Qiita の <a href="https://qiita.com/iigtn/items/d581bc78005e507299aa" rel="noopener noreferrer">「AWS パラメータシート手書きの苦行を、AI で自動化する SaaS（DocChain）を作り始めた話」</a>)。</p>
+
+<h2>動機 — 設計書工程の繰り返し作業を消したい</h2>
+<p>SI 案件で AWS パラメータシートを 1 本書くのに 8 時間近くかけていた時期がありました。VPC、サブネット、SG、RDS、ALB と 1 リソース 1 行で Excel を埋めていく作業で、半分以上は機械的に決まる項目です。テスト仕様書も同じで、詳細設計書から派生する単体・結合テストの観点は、7 割が「決まったパターン」を機械的に展開しているだけ。</p>
+<p>同業の SE と話すと「Excel に殺される」が共通言語になります。一方で生成 AI は、構造化された設計書からの派生ドキュメント生成が得意な領域です。GPT-4o レベルになって、ようやく実用品質の連鎖生成が個人レベルで作れる状況になりました。</p>
+
+<h2>DocChain でできること</h2>
+<p>DocChain は <strong>「設計書を AI で連鎖生成する SaaS」</strong> です。要件定義書 → 基本設計書 → 詳細設計書 → テスト仕様書、という SI のドキュメント工程を AI でつなぎます。</p>
+<ul>
+  <li><strong>主戦場: 詳細設計書 → テスト仕様書</strong>(最も需要・精度・受容性が高い領域に集中)</li>
+  <li><strong>並行: 基本設計書 → AWS パラメータシート</strong>(インフラ系の派生工程)</li>
+  <li>開発系 / インフラ系のスキーマは <strong>完全分離</strong>。同じ「詳細設計書」でも開発系は処理ロジック記述、インフラ系はパラメータシート (リソース別 Excel) と性質が違うので、共通化はせず別系統で進めます</li>
+</ul>
+
+<h2>入口は Wizard 形式 — 設計書がまだ無い人にも開く</h2>
+<p>当初は「基本設計書 (YAML) を入力して連鎖生成」という UX で立ち上げましたが、<strong>「YAML を書ける人がそもそも少ない」</strong> という壁に当たりました。「設計書を書けるベテラン向け」に絞ると、ターゲットが薄くなります。</p>
+<p>そこで <strong>5〜7 問の選択式 Wizard</strong> に切り替え、「設計書がまだ無い人にも価値を提供する」ポジションへ転換しました。たとえば以下のような問いに答えるだけで、AWS の構成案 (パラメータシート YAML) が生成されます。</p>
+<ul>
+  <li>システム名・想定ユーザー数</li>
+  <li>システム種別 (Web / API / バッチ など)</li>
+  <li>規模 (PoC / 小規模 / 中規模 / 大規模)</li>
+  <li>可用性要件 (Single AZ / Multi-AZ / マルチリージョン)</li>
+  <li>機密性レベルと使用するコンポーネント</li>
+  <li>運用ツール (CloudWatch / Datadog 等)</li>
+  <li>補足要件 (自由記述)</li>
+</ul>
+<p>これにより、「初めて AWS で立ち上げる SE」「上司に基本設計書を求められた中小 SIer の若手」「個人開発者・スタートアップ」も入口に立てるようになりました。</p>
+
+<h2>ターゲットと、あえて捨てるセグメント</h2>
+<p>狙うのは以下の 3 ペルソナです。</p>
+<ul>
+  <li><strong>A. 副業フリーランス SE</strong>: 35 歳前後、月収 80 万円帯、ChatGPT Plus 課金中。月 ¥5,000 程度なら即決できる層</li>
+  <li><strong>B. 中小 SIer 所属の PM</strong>: 42 歳前後、20 名規模、ツール選定権あり、月 ¥3〜10 万の予算枠を持つ層</li>
+  <li><strong>C. 自社プロダクト企業の社内 SE</strong>: 30 歳前後、SaaS 企業所属、個人裁量で月 ¥5,000 まで動かせる層</li>
+</ul>
+<p>逆に、<strong>大手 SIer 社員 (ツール選定権なし、お客様標準縛り)</strong>、<strong>金融・公共系 (機密性問題でクラウド不可)</strong>、<strong>Web 系完全アジャイル企業 (設計書文化が薄い)</strong> はあえて捨てています。富士通 Takane など大手向け AI と正面衝突せず、Takane の射程外に集中するのが戦略の根幹です。</p>
+
+<h2>価格プラン</h2>
+<table>
+<tr><th>プラン</th><th>価格</th><th>月生成回数</th><th>用途</th></tr>
+<tr><td><strong>ベータ (〜2026 年末)</strong></td><td><strong>完全無料</strong></td><td>月 50 回</td><td>フィードバック取得期間</td></tr>
+<tr><td>Free (正式版〜)</td><td>¥0</td><td>月 3 回</td><td>入口・コミュニティ</td></tr>
+<tr><td><strong>Pro (正式版〜)</strong></td><td><strong>¥4,980</strong></td><td>月 50 回</td><td>経費計上ライン (ChatGPT Plus 同等)</td></tr>
+<tr><td>Team (v0.3)</td><td>¥9,800</td><td>共有</td><td>中小 SIer のチーム利用</td></tr>
+</table>
+<p>個人開発で集客が苦手なのは自覚しているので、Free 月 3 回でまず入口を広げ、Pro は経費計上できる ChatGPT Plus 同等水準に置きました。</p>
+
+<h2>技術スタック</h2>
+<p>LP とアプリで構成を分けています。</p>
+
+<h3>LP (getdocchain.com) — AWS サーバレス</h3>
+<ul>
+  <li>静的 HTML + Tailwind CSS (CDN) で軽量に</li>
+  <li>S3 + CloudFront + ACM + Route53 で配信、IaC は Terraform 1.10 (モジュール 5 個構成)</li>
+  <li>事前登録 API: API Gateway + Lambda (Node.js 20) + DynamoDB (Pay-per-request)</li>
+  <li>CI/CD: GitHub Actions OIDC (キーレスデプロイ)</li>
+  <li>月額コスト: 約 <strong>$2〜3</strong> (S3+CloudFront $0.5、Lambda+API GW 無料枠、DynamoDB 無料枠、Route53 hosted zone $0.5、ACM 無料、ドメイン更新按分 $1.08)</li>
+</ul>
+
+<h3>App (app.getdocchain.com) — Vercel + LLM</h3>
+<ul>
+  <li>Next.js 16 (App Router) + TypeScript + Tailwind CSS v4 + Turbopack</li>
+  <li>LLM: OpenAI GPT-4o (既定) + Anthropic Claude Sonnet 4.6 (キー設定で切替可能)</li>
+  <li>認証: Auth.js v5 + Google OAuth</li>
+  <li>DB: Supabase Postgres free tier (users / generations テーブル)</li>
+  <li>通知: Resend → contact@getdocchain.com (新規ユーザー / 課金時)</li>
+  <li>課金: Stripe (live mode は正式版時に切替予定)</li>
+  <li>ホスト: Vercel (CNAME app.getdocchain.com → cname.vercel-dns.com、Terraform 管理)</li>
+</ul>
+
+<h2>あえて作らないもの</h2>
+<p>個人開発で手を広げすぎないために、明確に「作らないリスト」を持っています。</p>
+<ul>
+  <li><strong>AI コード生成</strong> (GitHub Copilot / Cursor / Claude Code と被る領域)</li>
+  <li><strong>IDE 統合</strong> (既存 IDE プラグインの役割と被る)</li>
+  <li><strong>ガントチャート・課題管理</strong> (Backlog / JIRA の領域)</li>
+</ul>
+<p>「設計書 → 設計書」一本に絞ることで、SE 経験という参入障壁が最大化されます。</p>
+
+<h2>これから / Builder in Public で記録する</h2>
+<p>今後はこのブログと Qiita で、月 1〜2 回ペースで以下を残していきます。</p>
+<ul>
+  <li>機能追加・UX 改善ログ (Wizard の問い直し、自然言語入力 v0.2、Excel/Word アップロード v0.3 等)</li>
+  <li>運用コスト・トークン消費の実測値</li>
+  <li>ベータユーザーから来たフィードバックと、それを受けた仕様変更</li>
+  <li>成功・失敗の両方の意思決定ログ</li>
+</ul>
+
+<h2>ベータテスター募集中</h2>
+<p>現在、<strong>ベータテスターを募集中</strong> です。〜2026 年末まで完全無料 (月 50 回) で、条件は「<strong>1 件以上の生成 + 5 行程度の感想</strong>」だけです。</p>
+<p>2 つの入口があります。</p>
+<ul>
+  <li><strong>すぐ試したい方</strong>: <a href="https://app.getdocchain.com/wizard" rel="noopener noreferrer">app.getdocchain.com/wizard</a> から Google ログインで即利用開始</li>
+  <li><strong>後日招待を受けたい方</strong>: <a href="https://getdocchain.com" rel="noopener noreferrer">getdocchain.com</a> でメールアドレスを事前登録 (ベータ希望チェックあり)</li>
+</ul>
+<p>料金プランの詳細は <a href="https://app.getdocchain.com/pricing" rel="noopener noreferrer">/pricing</a>、ご意見・ご要望は <a href="https://app.getdocchain.com/survey" rel="noopener noreferrer">/survey</a> から受け付けています。</p>
+
+</div>
+
+<footer class="post-footer">
+<span>← 前 <a href="/blog/">Blog 一覧へ</a></span>
+<span>次 → <a href="https://getdocchain.com" rel="noopener noreferrer">DocChain LP を見る</a></span>
+</footer>
+
+</article>
+<footer style="max-width:920px;margin:3rem auto 0;padding:1.5rem 1.6rem;border-top:1px solid #e5e5e5;color:#666;font-size:0.85rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.6rem;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','Noto Sans JP',system-ui,sans-serif;">
+  <div>&copy; 2026 iigtn &mdash; Built with Terraform &amp; GitHub Actions</div>
+  <div>
+    <a href="/learn.html" style="color:#2a6acc;text-decoration:none;">解説書</a>
+    &nbsp;&middot;&nbsp;
+    <a href="https://github.com/iigtn/iigtn-platform" style="color:#2a6acc;text-decoration:none;">GitHub</a>
+    &nbsp;&middot;&nbsp;
+    <a href="/privacy.html" style="color:#2a6acc;text-decoration:none;">プライバシーポリシー</a>
+  </div>
+</footer>
+
+
+</body>
+</html>
