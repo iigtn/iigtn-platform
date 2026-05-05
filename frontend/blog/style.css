@@ -208,14 +208,15 @@ article.post::before, .blog-index::before {
   top: 0;
   left: calc(-50vw + 50%);
   right: calc(-50vw + 50%);
-  height: 240px;
-  background: linear-gradient(135deg,
-    rgba(42, 106, 204, 0.22) 0%,
-    rgba(10, 163, 163, 0.18) 60%,
-    transparent 100%);
+  height: 170px;
+  background:
+    linear-gradient(to bottom, rgba(0, 0, 0, 0) 55%, var(--c-bg) 100%),
+    linear-gradient(135deg,
+      rgba(42, 106, 204, 0.22) 0%,
+      rgba(10, 163, 163, 0.18) 60%,
+      transparent 100%);
   z-index: -1;
   pointer-events: none;
-  border-bottom: 1px solid rgba(42, 106, 204, 0.10);
 }
 .blog-index h1 { font-size: 1.7rem; margin: 0 0 0.5rem; }
 .blog-index .lead { color: var(--c-muted); margin: 0 0 2rem; }
