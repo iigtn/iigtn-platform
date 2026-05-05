@@ -1,4 +1,4 @@
-<mxfile host="www.iigtn.com" modified="2026-05-05T10:00:00.000Z" agent="iigtn-platform" version="24.0.0">
+<mxfile host="www.iigtn.com" modified="2026-05-05T11:00:00.000Z" agent="iigtn-platform" version="24.0.0">
   <diagram name="Glamping Map Architecture" id="glamp-arch">
     <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="780" math="0" shadow="0">
       <root>
@@ -7,10 +7,6 @@
 
         <mxCell id="title" value="グランピング × キャンプ場マップ — 設計版 (構想中)" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=18;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="280" y="20" width="640" height="30" as="geometry" />
-        </mxCell>
-
-        <mxCell id="subA" value="A. 訪問者の閲覧フロー" style="text;html=1;align=left;fontSize=12;fontStyle=2;fontColor=#1565C0;" vertex="1" parent="1">
-          <mxGeometry x="50" y="80" width="400" height="22" as="geometry" />
         </mxCell>
 
         <mxCell id="user" value="訪問者&#xa;glamping-map.jp" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666;fontSize=11;" vertex="1" parent="1">
@@ -60,10 +56,6 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <mxCell id="subB" value="B. データ取込パイプライン (月 1 自動更新)" style="text;html=1;align=left;fontSize=12;fontStyle=2;fontColor=#1565C0;" vertex="1" parent="1">
-          <mxGeometry x="50" y="320" width="500" height="22" as="geometry" />
-        </mxCell>
-
         <mxCell id="eb" value="EventBridge (monthly)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.eventbridge;" vertex="1" parent="1">
           <mxGeometry x="60" y="370" width="78" height="78" as="geometry" />
         </mxCell>
@@ -88,10 +80,10 @@
           <mxGeometry x="60" y="500" width="78" height="78" as="geometry" />
         </mxCell>
 
-        <mxCell id="be1" value="起動" style="endArrow=classic;html=1;fontSize=10;" edge="1" parent="1" source="eb" target="lambdaIng">
+        <mxCell id="be1" value="" style="endArrow=classic;html=1;fontSize=10;" edge="1" parent="1" source="eb" target="lambdaIng">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="be2" value="起動" style="endArrow=classic;html=1;fontSize=10;" edge="1" parent="1" source="eb" target="lambdaMon">
+        <mxCell id="be2" value="" style="endArrow=classic;html=1;fontSize=10;" edge="1" parent="1" source="eb" target="lambdaMon">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="be3" value="API call" style="endArrow=classic;dashed=1;html=1;fontSize=10;" edge="1" parent="1" source="lambdaIng" target="rakuten">
@@ -105,10 +97,6 @@
         </mxCell>
         <mxCell id="be6" value="key" style="endArrow=classic;dashed=1;html=1;fontSize=10;" edge="1" parent="1" source="lambdaIng" target="sm">
           <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-
-        <mxCell id="subC" value="C. 問い合わせフォーム + 監視" style="text;html=1;align=left;fontSize=12;fontStyle=2;fontColor=#1565C0;" vertex="1" parent="1">
-          <mxGeometry x="600" y="320" width="500" height="22" as="geometry" />
         </mxCell>
 
         <mxCell id="apigw" value="API Gateway" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#FF4F8B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.api_gateway;" vertex="1" parent="1">
