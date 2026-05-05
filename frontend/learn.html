@@ -61,7 +61,17 @@
     line-height: 1.75;
     color: var(--c-text);
     margin: 0; padding: 0;
-    background: #fafafa;
+    background: #fbfaf7;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      radial-gradient(1200px 600px at 80% -10%, rgba(42, 106, 204, 0.18), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(10, 163, 163, 0.08), transparent 60%);
+    z-index: -1;
   }
   .wrap { max-width: 880px; margin: 0 auto; padding: 2rem 1.2rem 6rem; }
   h1 { font-size: 1.9rem; margin-top: 0; }
@@ -210,7 +220,8 @@
   }
   /* legacy doc TOC nav (not sticky anymore — site-header already sticky) */
   nav.doc-toc {
-    background: #fff;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(8px);
     border-bottom: 1px solid var(--c-border);
     padding: 0.6rem 1.2rem;
     font-size: 0.88rem;
