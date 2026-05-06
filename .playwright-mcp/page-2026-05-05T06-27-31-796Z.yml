@@ -1,0 +1,288 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - navigation [ref=e3]:
+      - link "iigtn" [ref=e4] [cursor=pointer]:
+        - /url: /
+        - img "iigtn" [ref=e5]
+      - list [ref=e6]:
+        - listitem [ref=e7]:
+          - link "About" [ref=e8] [cursor=pointer]:
+            - /url: /about.html
+        - listitem [ref=e9]:
+          - link "Skills" [ref=e10] [cursor=pointer]:
+            - /url: /skills.html
+        - listitem [ref=e11]:
+          - link "Works" [ref=e12] [cursor=pointer]:
+            - /url: /works.html
+        - listitem [ref=e13]:
+          - link "Blog" [ref=e14] [cursor=pointer]:
+            - /url: /blog/
+        - listitem [ref=e15]:
+          - link "Contact" [ref=e16] [cursor=pointer]:
+            - /url: /contact.html
+  - main [ref=e17]:
+    - generic [ref=e18]:
+      - paragraph [ref=e19]: プロジェクト解説 · 2026-04-26 公開稼働中
+      - heading "hojokin-db — 補助金検索データベース" [level=1] [ref=e20]
+      - paragraph [ref=e21]:
+        - code [ref=e22]: hojokin.iigtn.com
+        - text: がどう動いているかをモジュール単位で解説するページです。 AWS のフル解説ではなく、
+        - strong [ref=e23]: 「個人で AWS サーバレス + IaC + 自動更新 + AI 整形まで運用している」
+        - text: 事実が伝わる粒度に絞っています。
+      - generic [ref=e24]:
+        - link "本番サイトを開く →" [ref=e25] [cursor=pointer]:
+          - /url: https://hojokin.iigtn.com/
+        - link "GitHub (private)" [ref=e26] [cursor=pointer]:
+          - /url: https://github.com/iigtn/hojokin-db
+        - link "← Works に戻る" [ref=e27] [cursor=pointer]:
+          - /url: /works.html
+    - generic [ref=e28]:
+      - generic [ref=e29]:
+        - heading "サマリ" [level=2] [ref=e30]
+        - table [ref=e31]:
+          - rowgroup [ref=e32]:
+            - row "プロジェクト hojokin-db (補助金検索データベース)" [ref=e33]:
+              - rowheader "プロジェクト" [ref=e34]
+              - cell "hojokin-db (補助金検索データベース)" [ref=e35]
+            - row "公開 URL https://hojokin.iigtn.com/" [ref=e36]:
+              - rowheader "公開 URL" [ref=e37]
+              - cell "https://hojokin.iigtn.com/" [ref=e38]:
+                - link "https://hojokin.iigtn.com/" [ref=e39] [cursor=pointer]:
+                  - /url: https://hojokin.iigtn.com/
+            - row "公開日 2026-04-26 (Live)" [ref=e40]:
+              - rowheader "公開日" [ref=e41]
+              - cell "2026-04-26 (Live)" [ref=e42]
+            - row "用途 業種 × 地域 × 種別で絞り込める日本の補助金 / 助成金検索 (SEO ロングテール 4,500 ページ予定)" [ref=e43]:
+              - rowheader "用途" [ref=e44]
+              - cell "業種 × 地域 × 種別で絞り込める日本の補助金 / 助成金検索 (SEO ロングテール 4,500 ページ予定)" [ref=e45]
+            - row "運用コスト 5,500 〜 10,500 円 / 月（補助金件数の伸びに応じて）" [ref=e46]:
+              - rowheader "運用コスト" [ref=e47]
+              - cell "5,500 〜 10,500 円 / 月（補助金件数の伸びに応じて）" [ref=e48]
+            - row "構成 Next.js 16 + S3 + CloudFront + DynamoDB + Lambda + Bedrock + CodeBuild + Terraform" [ref=e49]:
+              - rowheader "構成" [ref=e50]
+              - cell "Next.js 16 + S3 + CloudFront + DynamoDB + Lambda + Bedrock + CodeBuild + Terraform" [ref=e51]
+            - row "運用形態 毎日 02:00 にクローラ、03:00 に再ビルドの 2 段自動運転（ノータッチ）" [ref=e52]:
+              - rowheader "運用形態" [ref=e53]
+              - cell "毎日 02:00 にクローラ、03:00 に再ビルドの 2 段自動運転（ノータッチ）" [ref=e54]
+      - generic [ref=e55]:
+        - heading "全体アーキテクチャ" [level=2] [ref=e56]
+        - paragraph [ref=e57]:
+          - text: 構成図は drawio (AWS 公式アイコン) で作成しています。下に同等の図解を埋め込んでいます（GitHub 上の
+          - code [ref=e58]: .drawio
+          - text: ファイルもそのままレンダリング可能）。
+        - paragraph [ref=e61]:
+          - text: "ソース:"
+          - link "/diagrams/hojokin-db/architecture.drawio" [ref=e62] [cursor=pointer]:
+            - /url: /diagrams/hojokin-db/architecture.drawio?v=20260505a
+          - text: （drawio で開けば編集可能）
+      - generic [ref=e63]:
+        - heading "A. 訪問者の閲覧フロー" [level=2] [ref=e64]
+        - list [ref=e65]:
+          - listitem [ref=e66]:
+            - strong [ref=e67]: DNS
+            - text: ― Squarespace で管理する
+            - code [ref=e68]: iigtn.com
+            - text: の DNS に
+            - code [ref=e69]: hojokin
+            - text: の CNAME を仕込み、CloudFront へ向けています。
+          - listitem [ref=e70]:
+            - strong [ref=e71]: CloudFront
+            - text: ― TLS 終端 + 静的キャッシュ。
+            - code [ref=e72]: "*.iigtn.com"
+            - text: の ACM 証明書（us-east-1）を関連付け。
+          - listitem [ref=e73]:
+            - strong [ref=e74]: S3 (private)
+            - text: ― 静的サイトと
+            - code [ref=e75]: /data/*.json
+            - text: を配置。Public Access Block を全 true にして、Origin Access Control 経由でしか読めない構造に。
+        - paragraph [ref=e76]: S3 への直アクセスは構造的にできないので、誤ってバケットに上がった機密データが漏れる心配がない、というのが採用理由です。
+      - generic [ref=e77]:
+        - heading "B. 毎日 02:00 JST — クローラ & AI 整形" [level=2] [ref=e78]
+        - list [ref=e79]:
+          - listitem [ref=e80]:
+            - strong [ref=e81]: EventBridge
+            - text: が
+            - code [ref=e82]: cron(0 17 * * ? *)
+            - text: （UTC 17:00 = JST 02:00）で発火し、Lambda を起動します。
+          - listitem [ref=e83]:
+            - strong [ref=e84]: Lambda (Python 3.13)
+            - text: が
+            - code [ref=e85]: sources.yaml
+            - text: に定義した一次ソース（J-Net21 / ミラサポplus / 自治体ページ）を巡回。
+          - listitem [ref=e86]:
+            - text: 取得した HTML を
+            - strong [ref=e87]: Amazon Bedrock (Claude Sonnet 4.6)
+            - text: に渡し、補助金タイトル・対象業種・地域・締切などを構造化 JSON として抽出。
+          - listitem [ref=e88]:
+            - text: 結果を
+            - strong [ref=e89]: DynamoDB
+            - text: （
+            - code [ref=e90]: subsidies
+            - text: テーブル + GSI ×3）に
+            - code [ref=e91]: put_item
+            - text: 。重複は PK で吸収。
+        - paragraph [ref=e92]: AI 整形を Bedrock + IAM だけで完結させているので、API キー文字列をどこにも置かない運用です（OpenAI 等の外部 API を使う場合に発生するキー管理コストがゼロ）。
+      - generic [ref=e93]:
+        - heading "C. 毎日 03:00 JST — サイト再ビルド" [level=2] [ref=e94]
+        - list [ref=e95]:
+          - listitem [ref=e96]:
+            - strong [ref=e97]: EventBridge
+            - text: が
+            - code [ref=e98]: cron(0 18 * * ? *)
+            - text: （UTC 18:00 = JST 03:00）で
+            - strong [ref=e99]: CodeBuild
+            - text: を起動。
+          - listitem [ref=e100]:
+            - text: CodeBuild が
+            - code [ref=e101]: iigtn/hojokin-db
+            - text: リポジトリを
+            - code [ref=e102]: git clone
+            - text: 、依存をインストール、
+            - code [ref=e103]: scripts/export-data.ts
+            - text: で
+            - strong [ref=e104]: DynamoDB → JSON
+            - text: エクスポート。
+          - listitem [ref=e105]:
+            - code [ref=e106]: next build
+            - text: （App Router の
+            - code [ref=e107]: "output: \"export\""
+            - text: ）で
+            - strong [ref=e108]: 4,500 ページ予定
+            - text: の SSG を生成。
+          - listitem [ref=e109]:
+            - code [ref=e110]: aws s3 sync
+            - text: で S3 に同期 → CloudFront を invalidate。
+        - paragraph [ref=e111]: SSG（静的サイト生成）にしているため、訪問者リクエストごとに DB を引かない設計です。 CloudFront のキャッシュだけで応答が返るので、月数百円のコストで配信できます。
+      - generic [ref=e112]:
+        - heading "D. IaC — Terraform で 25 リソース全部" [level=2] [ref=e113]
+        - paragraph [ref=e114]:
+          - code [ref=e115]: infra/
+          - text: 配下に Terraform を集約し、aws-prod アカウント（XXXXXXXXXXXX）に
+          - strong [ref=e116]: 25 リソース
+          - text: を apply しています。
+        - list [ref=e117]:
+          - listitem [ref=e118]:
+            - code [ref=e119]: acm.tf
+            - text: — *.iigtn.com 用の ACM 証明書（us-east-1、検証 CNAME は Squarespace で手動投入）
+          - listitem [ref=e120]:
+            - code [ref=e121]: s3_cloudfront.tf
+            - text: — S3 + Public Access Block + Versioning + OAC + CloudFront Distribution + Function（末尾 / の URI 書換）
+          - listitem [ref=e122]:
+            - code [ref=e123]: dynamodb.tf
+            - text: —
+            - code [ref=e124]: subsidies
+            - text: （GSI ×3）+
+            - code [ref=e125]: seo-keywords
+            - text: テーブル
+          - listitem [ref=e126]:
+            - code [ref=e127]: lambda_crawler.tf
+            - text: — Lambda 関数 + 専用 Role + EventBridge ルール（02:00 JST）
+          - listitem [ref=e128]:
+            - code [ref=e129]: codebuild.tf
+            - text: — CodeBuild プロジェクト + EventBridge ルール（03:00 JST）+ buildspec.yml
+        - paragraph [ref=e130]:
+          - text: state は S3 backend + DynamoDB Lock で管理。
+          - code [ref=e131]: terraform apply
+          - text: 1 発で全部立ち上がります。
+      - generic [ref=e132]:
+        - heading "採用判断のポイント" [level=2] [ref=e133]
+        - table [ref=e134]:
+          - rowgroup [ref=e135]:
+            - row "項目 採用 理由" [ref=e136]:
+              - columnheader "項目" [ref=e137]
+              - columnheader "採用" [ref=e138]
+              - columnheader "理由" [ref=e139]
+            - row "ホスティング S3 + CloudFront 静的配信 iigtn.com と同パターンで運用統一、月数百円、SEO 強い" [ref=e140]:
+              - cell "ホスティング" [ref=e141]
+              - cell "S3 + CloudFront 静的配信" [ref=e142]
+              - cell "iigtn.com と同パターンで運用統一、月数百円、SEO 強い" [ref=e143]
+            - row "フロント Next.js 16 (static export) 4,500 ロングテール SSG、ビルド時に DDB から JSON にして埋め込み" [ref=e144]:
+              - cell "フロント" [ref=e145]
+              - cell "Next.js 16 (static export)" [ref=e146]
+              - cell "4,500 ロングテール SSG、ビルド時に DDB から JSON にして埋め込み" [ref=e147]
+            - row "検索 UI クライアント JSON fetch Lambda 不要、CloudFront キャッシュで完結" [ref=e148]:
+              - cell "検索 UI" [ref=e149]
+              - cell "クライアント JSON fetch" [ref=e150]
+              - cell "Lambda 不要、CloudFront キャッシュで完結" [ref=e151]
+            - row "データ DynamoDB On-Demand + GSI ×3 サーバレス、低コスト、IAM 制御" [ref=e152]:
+              - cell "データ" [ref=e153]
+              - cell "DynamoDB On-Demand + GSI ×3" [ref=e154]
+              - cell "サーバレス、低コスト、IAM 制御" [ref=e155]
+            - row "クローラ Lambda Python + EventBridge iigtn-platform の IaC 流用、運用ノータッチ" [ref=e156]:
+              - cell "クローラ" [ref=e157]
+              - cell "Lambda Python + EventBridge" [ref=e158]
+              - cell "iigtn-platform の IaC 流用、運用ノータッチ" [ref=e159]
+            - row "AI 整形 Bedrock API キー不要、IAM だけで認可、AWS 内完結" [ref=e160]:
+              - cell "AI 整形" [ref=e161]
+              - cell "Bedrock" [ref=e162]
+              - cell "API キー不要、IAM だけで認可、AWS 内完結" [ref=e163]
+            - row "再ビルド CodeBuild + EventBridge 毎日 03:00 で DDB→JSON→S3 sync" [ref=e164]:
+              - cell "再ビルド" [ref=e165]
+              - cell "CodeBuild + EventBridge" [ref=e166]
+              - cell "毎日 03:00 で DDB→JSON→S3 sync" [ref=e167]
+            - row "IaC Terraform 全部 aws-prod アカウント、再現性確保" [ref=e168]:
+              - cell "IaC" [ref=e169]
+              - cell "Terraform 全部" [ref=e170]
+              - cell "aws-prod アカウント、再現性確保" [ref=e171]
+      - generic [ref=e172]:
+        - heading "運用上の工夫" [level=2] [ref=e173]
+        - list [ref=e174]:
+          - listitem [ref=e175]:
+            - strong [ref=e176]: Lambda → Bedrock の retry/backoff
+            - text: ― 起動直後に呼ぶとモデル warm-up でタイムアウトすることがあるため、ジッタ付き指数バックオフで 3 回までリトライ。
+          - listitem [ref=e177]:
+            - strong [ref=e178]: クローラの dry-run モード
+            - text: ―
+            - code [ref=e179]: sources.yaml
+            - text: 追加時に Lambda の環境変数で
+            - code [ref=e180]: DRY_RUN=true
+            - text: を立て、DynamoDB に書き込まずログだけ確認。
+          - listitem [ref=e181]:
+            - strong [ref=e182]: CodeBuild の差分 sync
+            - text: ―
+            - code [ref=e183]: aws s3 sync --delete
+            - text: で 4,500 ページの差分のみアップロード、CloudFront
+            - code [ref=e184]: /*
+            - text: invalidation は build 末尾で。
+          - listitem [ref=e185]:
+            - strong [ref=e186]: コスト監視
+            - text: ― AWS Budgets を
+            - code [ref=e187]: iigtn-platform
+            - text: 側に集約し、月次予算超過で SNS Email 通知。
+      - generic [ref=e188]:
+        - heading "これからやる予定" [level=2] [ref=e189]
+        - list [ref=e190]:
+          - listitem [ref=e191]: 補助金件数を 12 件 → 1,000 件に拡大（クローラ / sources.yaml の充実）
+          - listitem [ref=e192]: 診断ツール（5 問→該当補助金）の追加
+          - listitem [ref=e193]: sitemap.xml 生成 + Search Console 登録 + ロングテール記事化
+          - listitem [ref=e194]: Bedrock のレート制限・コスト最適化（Sonnet → Haiku の使い分け）
+      - generic [ref=e195]:
+        - heading "関連リンク" [level=2] [ref=e196]
+        - list [ref=e197]:
+          - listitem [ref=e198]:
+            - link "本番サイト hojokin.iigtn.com" [ref=e199] [cursor=pointer]:
+              - /url: https://hojokin.iigtn.com/
+          - listitem [ref=e200]:
+            - 'link "GitHub: iigtn/hojokin-db" [ref=e201] [cursor=pointer]':
+              - /url: https://github.com/iigtn/hojokin-db
+            - text: （private）
+          - listitem [ref=e202]:
+            - link "← Works 一覧へ戻る" [ref=e203] [cursor=pointer]:
+              - /url: /works.html
+          - listitem [ref=e204]:
+            - link "iigtn-platform 解説書（このサイト本体の構築解説）" [ref=e205] [cursor=pointer]:
+              - /url: /learn.html
+          - listitem [ref=e206]:
+            - link "構築日誌 / コマンドリファレンス" [ref=e207] [cursor=pointer]:
+              - /url: /blog/
+  - contentinfo [ref=e208]:
+    - generic [ref=e209]: © 2026 iigtn — Built with Terraform & GitHub Actions
+    - generic [ref=e210]:
+      - link "解説書" [ref=e211] [cursor=pointer]:
+        - /url: /learn.html
+      - text: ·
+      - link "GitHub" [ref=e212] [cursor=pointer]:
+        - /url: https://github.com/iigtn/iigtn-platform
+      - text: ·
+      - link "プライバシーポリシー" [ref=e213] [cursor=pointer]:
+        - /url: /privacy.html

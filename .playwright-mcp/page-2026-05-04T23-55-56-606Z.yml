@@ -1,0 +1,192 @@
+- generic [active] [ref=e1]:
+  - link "本文へスキップ" [ref=e2] [cursor=pointer]:
+    - /url: "#main"
+  - banner [ref=e3]:
+    - navigation [ref=e4]:
+      - link "iigtn" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - img "iigtn" [ref=e6]
+      - list [ref=e7]:
+        - listitem [ref=e8]:
+          - link "About" [ref=e9] [cursor=pointer]:
+            - /url: /about.html
+        - listitem [ref=e10]:
+          - link "Skills" [ref=e11] [cursor=pointer]:
+            - /url: /skills.html
+        - listitem [ref=e12]:
+          - link "Works" [ref=e13] [cursor=pointer]:
+            - /url: /works.html
+        - listitem [ref=e14]:
+          - link "Blog" [ref=e15] [cursor=pointer]:
+            - /url: /blog/
+        - listitem [ref=e16]:
+          - link "Contact" [ref=e17] [cursor=pointer]:
+            - /url: /contact.html
+  - main [ref=e18]:
+    - generic [ref=e19]:
+      - paragraph [ref=e20]: プロジェクト解説 · 構想中（立ち上げ準備中）
+      - heading "グランピング × キャンプ場マップ" [level=1] [ref=e21]
+      - paragraph [ref=e22]: 日本全国のグランピング施設・キャンプ場を地図 UI で可視化し、予約サイトへ送客するアフィリエイトメディアの 構成計画です。グランピング (高単価) を主軸にしつつ、一般キャンプ場 (数勝負) も網羅。 子育てマップと技術基盤を共通化する想定で、Next.js (Static Export) + S3 + CloudFront + DynamoDB + Lambda の AWS サーバレス構成を設計済みです。
+      - link "← Works に戻る" [ref=e24] [cursor=pointer]:
+        - /url: /works.html
+    - generic [ref=e25]:
+      - generic [ref=e26]:
+        - strong [ref=e27]: "注:"
+        - text: 現在は構想決定 + 立ち上げ準備の段階で、本番ドメインはまだ取得していません。 AWS 構成図と実行計画は ChatGPT 共同レビューを経て確定済み（Yes, with Caution 判定）。
+      - generic [ref=e28]:
+        - heading "サマリ" [level=2] [ref=e29]
+        - table [ref=e30]:
+          - rowgroup [ref=e31]:
+            - row "プロジェクト グランピング × キャンプ場マップ（仮）" [ref=e32]:
+              - rowheader "プロジェクト" [ref=e33]
+              - cell "グランピング × キャンプ場マップ（仮）" [ref=e34]
+            - row "ステータス 構想決定、立ち上げ準備中（ドメイン未取得）" [ref=e35]:
+              - rowheader "ステータス" [ref=e36]
+              - cell "構想決定、立ち上げ準備中（ドメイン未取得）" [ref=e37]
+            - row "ドメイン候補 glamping-map.jp / glamp-camp.com / glamping-japan.com / camp-map.jp / glcamp.jp" [ref=e38]:
+              - rowheader "ドメイン候補" [ref=e39]
+              - cell "glamping-map.jp / glamp-camp.com / glamping-japan.com / camp-map.jp / glcamp.jp" [ref=e40]
+            - row "収益モデル 楽天トラベル / じゃらん / 独自プログラム アフィリ + AdSense" [ref=e41]:
+              - rowheader "収益モデル" [ref=e42]
+              - cell "楽天トラベル / じゃらん / 独自プログラム アフィリ + AdSense" [ref=e43]
+            - row "目標 (24 ヶ月後) MRR ¥20〜50 万 / 月間 PV 5〜10 万 / 月額運用費 ¥1,000〜10,000 / 粗利 95% 超" [ref=e44]:
+              - rowheader "目標 (24 ヶ月後)" [ref=e45]
+              - cell "MRR ¥20〜50 万 / 月間 PV 5〜10 万 / 月額運用費 ¥1,000〜10,000 / 粗利 95% 超" [ref=e46]
+            - row "構成方針 Next.js (Static Export) + S3 + CloudFront + DynamoDB + Lambda + Maptiler API" [ref=e47]:
+              - rowheader "構成方針" [ref=e48]
+              - cell "Next.js (Static Export) + S3 + CloudFront + DynamoDB + Lambda + Maptiler API" [ref=e49]
+            - row "共通化 子育てマップと Terraform モジュールを共有、同一 AWS アカウント、タグでプロジェクト分離" [ref=e50]:
+              - rowheader "共通化" [ref=e51]
+              - cell "子育てマップと Terraform モジュールを共有、同一 AWS アカウント、タグでプロジェクト分離" [ref=e52]
+      - generic [ref=e53]:
+        - heading "全体アーキテクチャ" [level=2] [ref=e54]
+        - paragraph [ref=e55]:
+          - text: 構成図は drawio (AWS 公式アイコン v2026 系) で作成しています。下のビューアは
+          - code [ref=e56]: .drawio
+          - text: ファイルを 直接レンダリングしています。zoom / pan / 編集ボタンが使えます。
+        - img [ref=e59] [cursor=pointer]
+        - paragraph [ref=e60]:
+          - text: "ソース:"
+          - link "/diagrams/glamping-map/architecture.drawio" [ref=e61] [cursor=pointer]:
+            - /url: /diagrams/glamping-map/architecture.drawio?v=20260505a
+          - text: （drawio で開けば編集可能）
+      - generic [ref=e62]:
+        - heading "A. なぜグランピング特化か" [level=2] [ref=e63]
+        - list [ref=e64]:
+          - listitem [ref=e65]:
+            - strong [ref=e66]: 一般キャンプ場のみだと収益薄い
+            - text: ": 楽天/じゃらんアフィリ報酬率 1〜2%、1 泊 ¥5,000〜10,000 × 1% で CV 単価 ¥50〜100。月数百件でも月収 ¥5 万円程度に頭打ち。"
+          - listitem [ref=e67]:
+            - strong [ref=e68]: グランピング特化なら高単価
+            - text: ": 1 泊 ¥20,000〜50,000 × 1.5% で CV 単価 ¥300〜750。独自プログラムなら 5〜10% で ¥1,000〜5,000。月 50 件で月収 ¥5〜25 万円。"
+          - listitem [ref=e69]:
+            - strong [ref=e70]: 市場の追い風
+            - text: ": コロナ後の継続需要、ファミリー / カップル層の拡大、インバウンド需要、まだ大手寡占ではない。"
+          - listitem [ref=e71]:
+            - strong [ref=e72]: ハイブリッド戦略
+            - text: ": グランピング (高単価) + 一般キャンプ場 (ロングテール集客) で複合収益化。"
+      - generic [ref=e73]:
+        - heading "B. 全体アーキテクチャ（計画）" [level=2] [ref=e74]
+        - list [ref=e75]:
+          - listitem [ref=e76]:
+            - strong [ref=e77]: 配信レイヤー
+            - text: ": Route53 (Hosted Zone) + ACM (us-east-1) + CloudFront (HTTP/3、価格クラス：日本＋一部アジア) + S3 (静的サイト + 画像オリジン、Public Access Block + OAC)"
+          - listitem [ref=e78]:
+            - strong [ref=e79]: データレイヤー
+            - text: ": DynamoDB (オンデマンド、PK:"
+            - code [ref=e80]: 施設タイプ#都道府県
+            - text: "/ SK:"
+            - code [ref=e81]: 施設ID
+            - text: "/ GSI1: 緯度経度クラスタ、PITR 有効)"
+          - listitem [ref=e82]:
+            - strong [ref=e83]: データ取込
+            - text: ": EventBridge (月 1 cron) + Lambda (楽天トラベル API 取込 / URL 死活監視) + Secrets Manager (API キー保管)"
+          - listitem [ref=e84]:
+            - strong [ref=e85]: 地図 UI
+            - text: ": Maptiler API（外部・無料枠から開始）+ Next.js コンポーネント (Leaflet or MapLibre GL JS)"
+          - listitem [ref=e86]:
+            - strong [ref=e87]: 問い合わせ
+            - text: ": API Gateway + Lambda (problem-form 受付) + SES (管理者通知)"
+          - listitem [ref=e88]:
+            - strong [ref=e89]: 監視
+            - text: ": CloudWatch Logs / Alarms + SNS (コスト・エラー通知)"
+          - listitem [ref=e90]:
+            - strong [ref=e91]: セキュリティ (Phase 2)
+            - text: ": AWS WAF Managed Rules（アクセス急増時に追加）"
+      - generic [ref=e92]:
+        - heading "C. データ取込パイプライン" [level=2] [ref=e93]
+        - list [ref=e94]:
+          - listitem [ref=e95]:
+            - strong [ref=e96]: EventBridge
+            - text: が月 1 回 cron で発火
+          - listitem [ref=e97]:
+            - strong [ref=e98]: Lambda (ingest)
+            - text: が楽天トラベル API を叩いて施設マスタを取得 → DynamoDB に upsert
+          - listitem [ref=e99]:
+            - strong [ref=e100]: Lambda (monitor)
+            - text: が各施設の URL 死活を HTTP HEAD で確認、404/500 検知時は SES でアラート
+          - listitem [ref=e101]:
+            - strong [ref=e102]: GitHub Actions
+            - text: が新規施設追加時に DDB を読み出し →
+            - code [ref=e103]: next build
+            - text: で SSG 再生成 → S3 同期
+        - paragraph [ref=e104]: 手動メンテはレッドフラグ。月 1 回の Lambda 実行で完結する設計を厳格に守る。
+      - generic [ref=e105]:
+        - heading "採用判断のポイント" [level=2] [ref=e106]
+        - table [ref=e107]:
+          - rowgroup [ref=e108]:
+            - row "項目 採用 理由" [ref=e109]:
+              - columnheader "項目" [ref=e110]
+              - columnheader "採用" [ref=e111]
+              - columnheader "理由" [ref=e112]
+            - row "静的化 Next.js Static Export SSR / ISR は使わない。CloudFront キャッシュで応答完結、コスト最小化" [ref=e113]:
+              - cell "静的化" [ref=e114]
+              - cell "Next.js Static Export" [ref=e115]
+              - cell "SSR / ISR は使わない。CloudFront キャッシュで応答完結、コスト最小化" [ref=e116]
+            - row "地図 Maptiler API（外部） Mapbox より安い、無料枠あり、自前タイル運用は維持コスト過大" [ref=e117]:
+              - cell "地図" [ref=e118]
+              - cell "Maptiler API（外部）" [ref=e119]
+              - cell "Mapbox より安い、無料枠あり、自前タイル運用は維持コスト過大" [ref=e120]
+            - row "データ DynamoDB オンデマンド 初期はオンデマンドで様子見、安定したらプロビジョン課金へ切替検討" [ref=e121]:
+              - cell "データ" [ref=e122]
+              - cell "DynamoDB オンデマンド" [ref=e123]
+              - cell "初期はオンデマンドで様子見、安定したらプロビジョン課金へ切替検討" [ref=e124]
+            - row "共通化 子育てマップと Terraform モジュール共有 同一 AWS アカウントでタグ分離、運用負荷集約" [ref=e125]:
+              - cell "共通化" [ref=e126]
+              - cell "子育てマップと Terraform モジュール共有" [ref=e127]
+              - cell "同一 AWS アカウントでタグ分離、運用負荷集約" [ref=e128]
+            - row "監視 段階導入 Phase 0〜1 は最小、Phase 2 で WAF + 監視拡張" [ref=e129]:
+              - cell "監視" [ref=e130]
+              - cell "段階導入" [ref=e131]
+              - cell "Phase 0〜1 は最小、Phase 2 で WAF + 監視拡張" [ref=e132]
+            - row "収益化 楽天 + じゃらん + 独自プログラム複合 単一 ASP 依存リスクを避ける、独自報酬で単価上振れを狙う" [ref=e133]:
+              - cell "収益化" [ref=e134]
+              - cell "楽天 + じゃらん + 独自プログラム複合" [ref=e135]
+              - cell "単一 ASP 依存リスクを避ける、独自報酬で単価上振れを狙う" [ref=e136]
+      - generic [ref=e137]:
+        - heading "これからやる予定" [level=2] [ref=e138]
+        - list [ref=e139]:
+          - listitem [ref=e140]: ドメイン取得（候補比較で 1 つに絞り込み）
+          - listitem [ref=e141]: "Phase 0: 構想固め + ChatGPT 検証（実施済）"
+          - listitem [ref=e142]: "Phase 1: MVP 構築（地図 UI + 主要 50 施設のデータ + アフィリ link）"
+          - listitem [ref=e143]: "Phase 2: 全国カバー + WAF / 監視拡張 + SEO 育成"
+      - generic [ref=e144]:
+        - heading "関連リンク" [level=2] [ref=e145]
+        - list [ref=e146]:
+          - listitem [ref=e147]:
+            - link "← Works 一覧へ戻る" [ref=e148] [cursor=pointer]:
+              - /url: /works.html
+          - listitem [ref=e149]:
+            - link "子育てマップ（共通技術基盤）" [ref=e150] [cursor=pointer]:
+              - /url: /projects/kosodate-map.html
+  - contentinfo [ref=e151]:
+    - generic [ref=e152]: © 2026 iigtn — Built with Terraform & GitHub Actions
+    - generic [ref=e153]:
+      - link "解説書" [ref=e154] [cursor=pointer]:
+        - /url: /learn.html
+      - text: ·
+      - link "GitHub" [ref=e155] [cursor=pointer]:
+        - /url: https://github.com/iigtn/iigtn-platform
+      - text: ·
+      - link "プライバシーポリシー" [ref=e156] [cursor=pointer]:
+        - /url: /privacy.html

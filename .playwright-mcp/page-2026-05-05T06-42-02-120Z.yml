@@ -1,0 +1,252 @@
+- generic [active] [ref=e1]:
+  - link "本文へスキップ" [ref=e2] [cursor=pointer]:
+    - /url: "#main"
+  - banner [ref=e3]:
+    - navigation [ref=e4]:
+      - link "iigtn" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - img "iigtn" [ref=e6]
+      - list [ref=e7]:
+        - listitem [ref=e8]:
+          - link "About" [ref=e9] [cursor=pointer]:
+            - /url: /about.html
+        - listitem [ref=e10]:
+          - link "Skills" [ref=e11] [cursor=pointer]:
+            - /url: /skills.html
+        - listitem [ref=e12]:
+          - link "Works" [ref=e13] [cursor=pointer]:
+            - /url: /works.html
+        - listitem [ref=e14]:
+          - link "Blog" [ref=e15] [cursor=pointer]:
+            - /url: /blog/
+        - listitem [ref=e16]:
+          - link "Contact" [ref=e17] [cursor=pointer]:
+            - /url: /contact.html
+  - main [ref=e18]:
+    - generic [ref=e19]:
+      - paragraph [ref=e20]: プロジェクト解説 · 公開稼働中
+      - heading "AI えらびかた — タスク別・業界別 AI 比較レビューメディア" [level=1] [ref=e21]
+      - paragraph [ref=e22]:
+        - code [ref=e23]: ai-erabikata.com
+        - text: は、ChatGPT / Claude / Gemini 等の主要 AI を「タスク別・業界別の使い分け」で 解説する SEO メディアです。記事 30 本 + 比較ツール「AI セレクター」+ 構造化データ + PWA + ダークモード まで実装。AWS Amplify Hosting で Next.js を SSG 配信、A8.net・楽天・Amazon アソシエイトでアフィリ収益化中。
+      - generic [ref=e24]:
+        - link "本番サイトを開く →" [ref=e25] [cursor=pointer]:
+          - /url: https://ai-erabikata.com/
+        - link "AI セレクターを試す" [ref=e26] [cursor=pointer]:
+          - /url: https://ai-erabikata.com/tools/ai-selector
+        - link "← Works に戻る" [ref=e27] [cursor=pointer]:
+          - /url: /works.html
+    - generic [ref=e28]:
+      - generic [ref=e29]:
+        - heading "サマリ" [level=2] [ref=e30]
+        - table [ref=e31]:
+          - rowgroup [ref=e32]:
+            - row "プロジェクト AI えらびかた (タスク別・業界別 AI 比較レビューメディア)" [ref=e33]:
+              - rowheader "プロジェクト" [ref=e34]
+              - cell "AI えらびかた (タスク別・業界別 AI 比較レビューメディア)" [ref=e35]
+            - row "公開 URL https://ai-erabikata.com/" [ref=e36]:
+              - rowheader "公開 URL" [ref=e37]
+              - cell "https://ai-erabikata.com/" [ref=e38]:
+                - link "https://ai-erabikata.com/" [ref=e39] [cursor=pointer]:
+                  - /url: https://ai-erabikata.com/
+            - row "用途 主要 AI のタスク別・業界別比較記事 + AI セレクター（質問応答型レコメンドツール）" [ref=e40]:
+              - rowheader "用途" [ref=e41]
+              - cell "主要 AI のタスク別・業界別比較記事 + AI セレクター（質問応答型レコメンドツール）" [ref=e42]
+            - row "コンテンツ規模 記事 30 本 + 比較ツール 1 + 法律/運営ページ 4 + 動的 sitemap (36 URL)" [ref=e43]:
+              - rowheader "コンテンツ規模" [ref=e44]
+              - cell "記事 30 本 + 比較ツール 1 + 法律/運営ページ 4 + 動的 sitemap (36 URL)" [ref=e45]
+            - row "構成 Next.js (App Router) + AWS Amplify Hosting + Route 53 + ACM + GA4 + AdSense" [ref=e46]:
+              - rowheader "構成" [ref=e47]
+              - cell "Next.js (App Router) + AWS Amplify Hosting + Route 53 + ACM + GA4 + AdSense" [ref=e48]
+            - row "収益モデル A8.net / 楽天 / Amazon アソシエイト + AdSense 広告" [ref=e49]:
+              - rowheader "収益モデル" [ref=e50]
+              - cell "A8.net / 楽天 / Amazon アソシエイト + AdSense 広告" [ref=e51]
+      - generic [ref=e52]:
+        - heading "全体アーキテクチャ" [level=2] [ref=e53]
+        - paragraph [ref=e54]:
+          - text: 構成図は drawio (AWS 公式アイコン v2026 系) で作成しています。下のビューアは
+          - code [ref=e55]: .drawio
+          - text: ファイルを 直接レンダリングしています。zoom / pan / 編集ボタンが使えます。
+        - paragraph [ref=e57]:
+          - text: "ソース:"
+          - link "/diagrams/ai-erabikata/architecture.drawio" [ref=e58] [cursor=pointer]:
+            - /url: /diagrams/ai-erabikata/architecture.drawio?v=20260505a
+          - text: （drawio で開けば編集可能）
+      - generic [ref=e59]:
+        - heading "A. 訪問者の閲覧フロー" [level=2] [ref=e60]
+        - list [ref=e61]:
+          - listitem [ref=e62]:
+            - strong [ref=e63]: DNS
+            - text: ― ドメイン
+            - code [ref=e64]: ai-erabikata.com
+            - text: を Route 53 hosted zone (ZXXXXXXXXXX) で管理。
+            - code [ref=e65]: www
+            - text: サブドメインも同時配信。
+          - listitem [ref=e66]:
+            - strong [ref=e67]: ACM
+            - text: ― us-east-1 で
+            - code [ref=e68]: ai-erabikata.com
+            - text: +
+            - code [ref=e69]: www.ai-erabikata.com
+            - text: の証明書を発行・自動更新。
+          - listitem [ref=e70]:
+            - strong [ref=e71]: AWS Amplify Hosting
+            - text: ― Next.js (App Router) のビルド成果物を配信。CloudFront ベースの CDN + 自動 HTTPS + プレビュー環境を統合提供。
+          - listitem [ref=e72]:
+            - strong [ref=e73]: カスタムドメイン
+            - text: ― Amplify アプリ
+            - code [ref=e74]: dXXXXXXXXXX.amplifyapp.com
+            - text: をエイリアスとして
+            - code [ref=e75]: ai-erabikata.com
+            - text: 配下にマッピング。
+        - paragraph [ref=e76]:
+          - text: Amplify を選んだ理由は
+          - strong [ref=e77]: Next.js App Router の SSG/ISR/Image Optimization
+          - text: に最初からネイティブ対応していること。 S3 + CloudFront 自前配線でも同じことはできますが、
+          - code [ref=e78]: "output: \"export\""
+          - text: しない場合の image/route 最適化を 手配する手間が省けます。
+      - generic [ref=e79]:
+        - heading "B. コンテンツ運用フロー" [level=2] [ref=e80]
+        - list [ref=e81]:
+          - listitem [ref=e82]: 記事原稿は MDX (Markdown + JSX) でリポジトリに直接書く。AI 各社の出力比較は同一プロンプトで揃え、スクリーンショットや出力例を併記。
+          - listitem [ref=e83]:
+            - code [ref=e84]: main
+            - text: ブランチに push すると、Amplify が webhook で検知し、自動ビルド → デプロイ → ドメイン反映まで一気通貫。
+          - listitem [ref=e85]:
+            - text: カテゴリ・タグ・関連記事は MDX frontmatter から動的に生成。
+            - code [ref=e86]: "?cat=..."
+            - text: URL クエリでフィルタ可能。
+          - listitem [ref=e87]:
+            - text: OGP 画像は Next.js の
+            - code [ref=e88]: ImageResponse
+            - text: で動的生成し、記事ごとに自動で違う図が出る。
+      - generic [ref=e89]:
+        - heading "C. 比較ツール「AI セレクター」" [level=2] [ref=e90]
+        - paragraph [ref=e91]:
+          - text: 集客フックの 1 つとして、
+          - link "/tools/ai-selector" [ref=e92] [cursor=pointer]:
+            - /url: https://ai-erabikata.com/tools/ai-selector
+          - text: に 質問応答型のレコメンドツールを実装しています。
+        - list [ref=e93]:
+          - listitem [ref=e94]: 5〜7 問の質問に答えると、用途・予算・優先度から ChatGPT / Claude / Gemini の中で「あなたに合う AI」を推奨
+          - listitem [ref=e95]: クライアントサイドのみで完結（Lambda 不要、CloudFront キャッシュで完結）
+          - listitem [ref=e96]: 結果ページから関連レビュー記事 + アフィリリンクへ誘導
+      - generic [ref=e97]:
+        - heading "D. SEO + 計測 + 収益化" [level=2] [ref=e98]
+        - list [ref=e99]:
+          - listitem [ref=e100]:
+            - strong [ref=e101]: 構造化データ (JSON-LD)
+            - text: ": Article / FAQPage（記事末尾の用語解説） / BreadcrumbList / WebSite を全記事に埋め込み"
+          - listitem [ref=e102]:
+            - strong [ref=e103]: 動的 sitemap.xml
+            - text: ": 記事数の増加に追従。記事 30 + 静的 6 = 36 URL"
+          - listitem [ref=e104]:
+            - strong [ref=e105]: RSS フィード
+            - text: ":"
+            - code [ref=e106]: /rss.xml
+            - text: で記事更新を配信、note や Feedly 取り込みに対応
+          - listitem [ref=e107]:
+            - strong [ref=e108]: GA4 計測
+            - text: ":"
+            - code [ref=e109]: G-XXXXXXXXX
+            - text: （ID は伏字）でユーザー行動分析
+          - listitem [ref=e110]:
+            - strong [ref=e111]: AdSense 申請済み
+            - text: ":"
+            - code [ref=e112]: ads.txt
+            - text: + meta + script 配置、審査依頼中
+          - listitem [ref=e113]:
+            - strong [ref=e114]: アフィリエイト
+            - text: ": A8.net (ZENCHORD1 / Languise / PLAUD NOTE / Notta / DMM 生成 AI CAMP / Doraverse) + 楽天 (Microsoft 365) + Amazon アソシエイト"
+          - listitem [ref=e115]:
+            - strong [ref=e116]: 記事ページの読了支援
+            - text: ": パンくず / 目次 (TOC) / 関連記事 / シェアボタン / 読書プログレスバー / スクロールトップ"
+      - generic [ref=e117]:
+        - heading "採用判断のポイント" [level=2] [ref=e118]
+        - table [ref=e119]:
+          - rowgroup [ref=e120]:
+            - row "項目 採用 理由" [ref=e121]:
+              - columnheader "項目" [ref=e122]
+              - columnheader "採用" [ref=e123]
+              - columnheader "理由" [ref=e124]
+            - row "フロント Next.js (App Router) SSG + Image Optimization + ImageResponse の OGP 自動生成、MDX が一級扱い" [ref=e125]:
+              - cell "フロント" [ref=e126]
+              - cell "Next.js (App Router)" [ref=e127]
+              - cell "SSG + Image Optimization + ImageResponse の OGP 自動生成、MDX が一級扱い" [ref=e128]
+            - row "ホスティング AWS Amplify Hosting Next.js ネイティブ対応、push 即デプロイ、CloudFront ベースで日本配信も速い" [ref=e129]:
+              - cell "ホスティング" [ref=e130]
+              - cell "AWS Amplify Hosting" [ref=e131]
+              - cell "Next.js ネイティブ対応、push 即デプロイ、CloudFront ベースで日本配信も速い" [ref=e132]
+            - row "DNS / TLS Route 53 + ACM (us-east-1) www / apex 両方を 1 証明書でカバー、自動更新" [ref=e133]:
+              - cell "DNS / TLS" [ref=e134]
+              - cell "Route 53 + ACM (us-east-1)" [ref=e135]
+              - cell "www / apex 両方を 1 証明書でカバー、自動更新" [ref=e136]
+            - row "計測 GA4 無料、Search Console と統合、EE-A-T 計測の事実上の標準" [ref=e137]:
+              - cell "計測" [ref=e138]
+              - cell "GA4" [ref=e139]
+              - cell "無料、Search Console と統合、EE-A-T 計測の事実上の標準" [ref=e140]
+            - row "収益化 AdSense + 複数 ASP 記事クラスタごとに最適 ASP を出し分け、リスク分散" [ref=e141]:
+              - cell "収益化" [ref=e142]
+              - cell "AdSense + 複数 ASP" [ref=e143]
+              - cell "記事クラスタごとに最適 ASP を出し分け、リスク分散" [ref=e144]
+            - row "SEO 軸 2 軸絞り込み（業界 × タスク） レッドオーシャン回避、ロングテールに振る" [ref=e145]:
+              - cell "SEO 軸" [ref=e146]
+              - cell "2 軸絞り込み（業界 × タスク）" [ref=e147]
+              - cell "レッドオーシャン回避、ロングテールに振る" [ref=e148]
+      - generic [ref=e149]:
+        - heading "運用上の工夫" [level=2] [ref=e150]
+        - list [ref=e151]:
+          - listitem [ref=e152]:
+            - strong [ref=e153]: 記事の 1 次情報化
+            - text: ": 同一プロンプトで全 AI を回した自前のスクリーンショット・出力比較を必ず併載"
+          - listitem [ref=e154]:
+            - strong [ref=e155]: カテゴリ絞り込み URL
+            - text: ":"
+            - code [ref=e156]: "?cat=programming"
+            - text: など URL クエリで動的フィルタ、シェア URL がそのまま絞り込み済みになる
+          - listitem [ref=e157]:
+            - strong [ref=e158]: ダークモード対応
+            - text: ":"
+            - code [ref=e159]: localStorage
+            - text: +
+            - code [ref=e160]: prefers-color-scheme
+            - text: 両対応、深夜閲覧の負担軽減
+          - listitem [ref=e161]:
+            - strong [ref=e162]: PWA manifest
+            - text: ": ホーム画面追加対応、再訪率改善期待"
+          - listitem [ref=e163]:
+            - strong [ref=e164]: カスタム 404
+            - text: ": 関連記事のおすすめを表示して離脱率を抑える"
+      - generic [ref=e165]:
+        - heading "これからやる予定" [level=2] [ref=e166]
+        - list [ref=e167]:
+          - listitem [ref=e168]: 記事を月 8〜12 本ペースで継続投下（KW クラスタ C1〜C5 の偏りを毎月リバランス）
+          - listitem [ref=e169]: 競合 KW の上位記事リライト・内部リンク強化
+          - listitem [ref=e170]: DocChain（自社 SaaS）と連携する記事クラスタを追加（エンジニア × AI 活用）
+          - listitem [ref=e171]: AdSense 審査通過後の広告配置 A/B テスト
+      - generic [ref=e172]:
+        - heading "関連リンク" [level=2] [ref=e173]
+        - list [ref=e174]:
+          - listitem [ref=e175]:
+            - link "本番サイト ai-erabikata.com" [ref=e176] [cursor=pointer]:
+              - /url: https://ai-erabikata.com/
+          - listitem [ref=e177]:
+            - link "AI セレクター（比較ツール）" [ref=e178] [cursor=pointer]:
+              - /url: https://ai-erabikata.com/tools/ai-selector
+          - listitem [ref=e179]:
+            - link "RSS フィード" [ref=e180] [cursor=pointer]:
+              - /url: https://ai-erabikata.com/rss.xml
+          - listitem [ref=e181]:
+            - link "← Works 一覧へ戻る" [ref=e182] [cursor=pointer]:
+              - /url: /works.html
+  - contentinfo [ref=e183]:
+    - generic [ref=e184]: © 2026 iigtn — Built with Terraform & GitHub Actions
+    - generic [ref=e185]:
+      - link "解説書" [ref=e186] [cursor=pointer]:
+        - /url: /learn.html
+      - text: ·
+      - link "GitHub" [ref=e187] [cursor=pointer]:
+        - /url: https://github.com/iigtn/iigtn-platform
+      - text: ·
+      - link "プライバシーポリシー" [ref=e188] [cursor=pointer]:
+        - /url: /privacy.html

@@ -1,0 +1,324 @@
+- generic [active] [ref=e1]:
+  - link "本文へスキップ" [ref=e2] [cursor=pointer]:
+    - /url: "#main"
+  - banner [ref=e3]:
+    - navigation [ref=e4]:
+      - link "iigtn" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - img "iigtn" [ref=e6]
+      - list [ref=e7]:
+        - listitem [ref=e8]:
+          - link "About" [ref=e9] [cursor=pointer]:
+            - /url: /about.html
+        - listitem [ref=e10]:
+          - link "Skills" [ref=e11] [cursor=pointer]:
+            - /url: /skills.html
+        - listitem [ref=e12]:
+          - link "Works" [ref=e13] [cursor=pointer]:
+            - /url: /works.html
+        - listitem [ref=e14]:
+          - link "Blog" [ref=e15] [cursor=pointer]:
+            - /url: /blog/
+        - listitem [ref=e16]:
+          - link "Contact" [ref=e17] [cursor=pointer]:
+            - /url: /contact.html
+  - main [ref=e18]:
+    - generic [ref=e19]:
+      - paragraph [ref=e20]: プロジェクト解説 · LP 稼働中・事前登録受付中
+      - heading "DocChain — SI 業界向け 設計書連鎖生成 AI（LP）" [level=1] [ref=e21]
+      - paragraph [ref=e22]:
+        - code [ref=e23]: getdocchain.com
+        - text: は、上流工程 (要件定義書) から下流工程 (基本設計書 → 詳細設計書 → テスト仕様書) を AI が自動生成する SaaS の Landing Page。事前登録を受け付ける LP を AWS サーバレスで構築し、ベータ提供 (2026/9 予定) に向けて開発中です。本体は OpenAI / Anthropic API のカスケード + Prompt Caching で API 原価 89% 削減を狙う設計です。
+      - generic [ref=e24]:
+        - link "LP を開く →" [ref=e25] [cursor=pointer]:
+          - /url: https://getdocchain.com/
+        - link "← Works に戻る" [ref=e26] [cursor=pointer]:
+          - /url: /works.html
+    - generic [ref=e27]:
+      - generic [ref=e28]:
+        - heading "サマリ" [level=2] [ref=e29]
+        - table [ref=e30]:
+          - rowgroup [ref=e31]:
+            - row "プロジェクト DocChain (SI 業界向け 設計書連鎖生成 AI / SaaS)" [ref=e32]:
+              - rowheader "プロジェクト" [ref=e33]
+              - cell "DocChain (SI 業界向け 設計書連鎖生成 AI / SaaS)" [ref=e34]
+            - row "公開 URL (LP) https://getdocchain.com/" [ref=e35]:
+              - rowheader "公開 URL (LP)" [ref=e36]
+              - cell "https://getdocchain.com/" [ref=e37]:
+                - link "https://getdocchain.com/" [ref=e38] [cursor=pointer]:
+                  - /url: https://getdocchain.com/
+            - row "ステータス LP 稼働中（事前登録受付中）/ 本体は Phase 0（競合検証 + プロトタイプ）" [ref=e39]:
+              - rowheader "ステータス" [ref=e40]
+              - cell "LP 稼働中（事前登録受付中）/ 本体は Phase 0（競合検証 + プロトタイプ）" [ref=e41]
+            - row "第 1 ターゲット フリーランス SE / PM、中小 SIer 所属 PM" [ref=e42]:
+              - rowheader "第 1 ターゲット" [ref=e43]
+              - cell "フリーランス SE / PM、中小 SIer 所属 PM" [ref=e44]
+            - row "第 1 機能 詳細設計書 → テスト仕様書 自動生成" [ref=e45]:
+              - rowheader "第 1 機能" [ref=e46]
+              - cell "詳細設計書 → テスト仕様書 自動生成" [ref=e47]
+            - row "価格モデル 個人 ¥4,980/月 〜 法人 Business ¥80,000/月（ベータ期間は無料）" [ref=e48]:
+              - rowheader "価格モデル" [ref=e49]
+              - cell "個人 ¥4,980/月 〜 法人 Business ¥80,000/月（ベータ期間は無料）" [ref=e50]
+            - row "LP 構成 Next.js (Static Export) + Lambda + API GW + DynamoDB + SES + CloudFront + Route 53" [ref=e51]:
+              - rowheader "LP 構成" [ref=e52]
+              - cell "Next.js (Static Export) + Lambda + API GW + DynamoDB + SES + CloudFront + Route 53" [ref=e53]
+      - generic [ref=e54]:
+        - heading "全体アーキテクチャ" [level=2] [ref=e55]
+        - paragraph [ref=e56]:
+          - text: 構成図は drawio (AWS 公式アイコン v2026 系) で作成しています。下のビューアは
+          - code [ref=e57]: .drawio
+          - text: ファイルを 直接レンダリングしています。zoom / pan / 編集ボタンが使えます。
+        - img [ref=e60] [cursor=pointer]:
+          - generic [ref=e62]:
+            - generic [ref=e67]: "DocChain — LP (AWS) + 本体 (予定: Vercel) 構成"
+            - generic [ref=e72]: A. LP (getdocchain.com) — 静的配信 + 事前登録 API
+            - generic [ref=e77]:
+              - text: 🌐 訪問者
+              - text: getdocchain.com
+            - generic [ref=e83]:
+              - text: Route 53
+              - text: hosted zone
+            - generic [ref=e89]:
+              - text: ACM
+              - text: us-east-1
+            - generic [ref=e95]:
+              - text: CloudFront
+              - text: (OAC)
+            - generic [ref=e101]:
+              - text: S3 (private)
+              - text: Next.js Static Export
+            - generic [ref=e107]:
+              - text: API Gateway
+              - text: HTTP API
+            - generic [ref=e113]:
+              - text: Lambda (Node.js)
+              - text: subscribe handler
+            - generic [ref=e119]:
+              - text: DynamoDB
+              - text: subscribers
+            - generic [ref=e125]:
+              - text: SES
+              - text: auto reply + 管理者通知
+            - generic [ref=e131]: ① DNS
+            - generic [ref=e136]: ② alias
+            - generic [ref=e142]: TLS
+            - generic [ref=e148]:
+              - text: ③ default behavior
+              - text: (GET *)
+            - generic [ref=e154]:
+              - text: ④ /api/* behavior
+              - text: (POST)
+            - generic [ref=e159]: ⑤ proxy
+            - generic [ref=e164]: ⑥ put_item (PK=email)
+            - generic [ref=e169]: ⑦ SendEmail
+            - generic [ref=e174]: "B. 本体 (予定: app.getdocchain.com → Vercel)"
+            - generic [ref=e179]:
+              - text: 🌐 ユーザー
+              - text: app.getdocchain.com
+            - generic [ref=e184]:
+              - text: Vercel
+              - text: Next.js 15 (App Router)
+            - generic [ref=e189]:
+              - text: Supabase
+              - text: Postgres + Auth
+            - generic [ref=e194]:
+              - text: OpenAI API
+              - text: GPT-4o-mini → 4o カスケード
+            - generic [ref=e199]:
+              - text: Anthropic API
+              - text: Claude + Prompt Caching (-90% input)
+            - generic [ref=e204]:
+              - text: Stripe Checkout
+              - text: ¥4,980 サブスク
+            - generic [ref=e210]: ① ログイン (Google OAuth)
+            - generic [ref=e216]: ② DB / Auth
+            - generic [ref=e222]: ③ 設計書 → テスト仕様 生成
+            - generic [ref=e228]: ④ フェイルオーバ / Caching
+            - generic [ref=e234]: ⑤ 課金
+        - paragraph [ref=e235]:
+          - text: "ソース:"
+          - link "/diagrams/docchain/architecture.drawio" [ref=e236] [cursor=pointer]:
+            - /url: /diagrams/docchain/architecture.drawio
+          - text: （drawio で開けば編集可能）
+      - generic [ref=e237]:
+        - heading "A. LP の配信フロー" [level=2] [ref=e238]
+        - list [ref=e239]:
+          - listitem [ref=e240]:
+            - strong [ref=e241]: DNS
+            - text: ― Route 53 hosted zone (ZXXXXXXXXXX) で
+            - code [ref=e242]: getdocchain.com
+            - text: +
+            - code [ref=e243]: www.getdocchain.com
+            - text: を管理。
+          - listitem [ref=e244]:
+            - strong [ref=e245]: ACM
+            - text: ― us-east-1 で証明書発行（
+            - code [ref=e246]: getdocchain.com
+            - text: +
+            - code [ref=e247]: www.getdocchain.com
+            - text: ）、自動更新。
+          - listitem [ref=e248]:
+            - strong [ref=e249]: CloudFront
+            - text: ― 静的 LP を TLS 終端 + キャッシュ配信。Distribution ID は伏字（
+            - code [ref=e250]: EXXXXXXXXXX
+            - text: ）。
+          - listitem [ref=e251]:
+            - strong [ref=e252]: S3 (private)
+            - text: ― Next.js (Static Export) のビルド成果物を配置。Public Access Block + OAC で CloudFront 経由のみアクセス可。
+      - generic [ref=e253]:
+        - heading "B. 事前登録 API のサーバレス構成" [level=2] [ref=e254]
+        - paragraph [ref=e255]:
+          - text: LP のフォームから事前登録メアドを保存する API は、CloudFront の同一ドメインで
+          - code [ref=e256]: /api/*
+          - text: を API Gateway へ Origin behavior で振り分ける構成です。
+        - list [ref=e257]:
+          - listitem [ref=e258]:
+            - strong [ref=e259]: POST /api/subscribe
+            - text: ― API Gateway HTTP API → Lambda (Node.js)
+          - listitem [ref=e260]:
+            - text: Lambda がメアドを正規化 + バリデーション → DynamoDB (
+            - code [ref=e261]: subscribers
+            - text: テーブル) に
+            - code [ref=e262]: put_item
+            - text: (
+            - code [ref=e263]: email
+            - text: を PK に重複防止)
+          - listitem [ref=e264]: SES で「ご登録ありがとうございます」自動返信 + 管理者通知
+          - listitem [ref=e265]:
+            - text: レスポンスは
+            - code [ref=e266]: "{\"ok\": true}"
+            - text: / バリデーションエラーは 400 を返す
+        - paragraph [ref=e267]:
+          - code [ref=e268]: https://getdocchain.com/api/subscribe
+          - text: から動作確認済み。テスト登録 → DynamoDB 保存 → SES 自動返信 → DDB 削除のサイクルを実機検証しています。
+      - generic [ref=e269]:
+        - heading "C. 本体側（β提供時）のコスト戦略" [level=2] [ref=e270]
+        - paragraph [ref=e271]:
+          - text: SaaS 本体は LP とは別構成（
+          - code [ref=e272]: app.getdocchain.com
+          - text: ）で、Vercel 上の Next.js 15 + Supabase + Stripe で 構築予定。LLM API 周りは下記 4 戦略を組み合わせて API 原価 89% 削減を狙います。
+        - list [ref=e273]:
+          - listitem [ref=e274]:
+            - strong [ref=e275]: モデルカスケード
+            - text: ": GPT-4o-mini で草案 → 必要時のみ GPT-4o で仕上げ。設計書のような構造化データは mini で 80% 通る想定。"
+          - listitem [ref=e276]:
+            - strong [ref=e277]: Anthropic Prompt Caching
+            - text: ": 「設計書の章立てテンプレート」など固定プロンプトをキャッシュ。 入力コストを 90% 削減（Anthropic の SDK 標準機能）。"
+          - listitem [ref=e278]:
+            - strong [ref=e279]: BYOK プラン併設
+            - text: ": 法人 Business で「自社の API キーを持ち込む」プランを用意し、原価ゼロ運用も可能に。"
+          - listitem [ref=e280]:
+            - strong [ref=e281]: OpenRouter 経由
+            - text: ": ルーティングコスト 5〜15% 削減 + フェイルオーバー対応（OpenAI 障害時に Anthropic へ自動切替）。"
+        - generic [ref=e282]:
+          - strong [ref=e283]: "注:"
+          - text: 本体側はまだ Phase 0（競合検証 + プロトタイプ段階）。LP 公開と並行して PoC を回し、 ベータ提供 (2026/9 予定) 時に Vercel 配下に
+          - code [ref=e284]: app.getdocchain.com
+          - text: を立てる予定です。
+      - generic [ref=e285]:
+        - heading "D. データモデル（LP）" [level=2] [ref=e286]
+        - paragraph [ref=e287]: LP の DynamoDB テーブルは事前登録メアドのみを保存するシンプルな設計。本体提供時の認証・課金とは テーブルを分離する方針です。
+        - table [ref=e288]:
+          - rowgroup [ref=e289]:
+            - row "テーブル PK SK 用途" [ref=e290]:
+              - columnheader "テーブル" [ref=e291]
+              - columnheader "PK" [ref=e292]
+              - columnheader "SK" [ref=e293]
+              - columnheader "用途" [ref=e294]
+            - row "subscribers email (S) ― 事前登録メアド + 登録日時 + UTM 元" [ref=e295]:
+              - cell "subscribers" [ref=e296]:
+                - code [ref=e297]: subscribers
+              - cell "email (S)" [ref=e298]:
+                - code [ref=e299]: email
+                - text: (S)
+              - cell "―" [ref=e300]
+              - cell "事前登録メアド + 登録日時 + UTM 元" [ref=e301]
+        - paragraph [ref=e302]: On-Demand 課金 + PITR 有効化。アクセス数が安定したらプロビジョン課金への切替を検討。
+      - generic [ref=e303]:
+        - heading "採用判断のポイント" [level=2] [ref=e304]
+        - table [ref=e305]:
+          - rowgroup [ref=e306]:
+            - row "項目 採用 理由" [ref=e307]:
+              - columnheader "項目" [ref=e308]
+              - columnheader "採用" [ref=e309]
+              - columnheader "理由" [ref=e310]
+            - row "LP フロント Next.js (Static Export) SEO + OGP 動的生成、ビルド成果物は S3 で十分" [ref=e311]:
+              - cell "LP フロント" [ref=e312]
+              - cell "Next.js (Static Export)" [ref=e313]
+              - cell "SEO + OGP 動的生成、ビルド成果物は S3 で十分" [ref=e314]
+            - row "LP API API GW + Lambda + DynamoDB 事前登録の頻度では Lambda 1 関数で十分、運用コスト最小" [ref=e315]:
+              - cell "LP API" [ref=e316]
+              - cell "API GW + Lambda + DynamoDB" [ref=e317]
+              - cell "事前登録の頻度では Lambda 1 関数で十分、運用コスト最小" [ref=e318]
+            - row "メール SES（sandbox 解除予定） 送信単価が安く、独自ドメインで送信可能" [ref=e319]:
+              - cell "メール" [ref=e320]
+              - cell "SES（sandbox 解除予定）" [ref=e321]
+              - cell "送信単価が安く、独自ドメインで送信可能" [ref=e322]
+            - row "本体（予定） Vercel + Supabase Next.js 15 App Router + Postgres + 認証統合、MVP 規模で無料枠十分" [ref=e323]:
+              - cell "本体（予定）" [ref=e324]
+              - cell "Vercel + Supabase" [ref=e325]
+              - cell "Next.js 15 App Router + Postgres + 認証統合、MVP 規模で無料枠十分" [ref=e326]
+            - row "LLM API OpenAI + Anthropic 両対応 カスケード + キャッシング + 障害時フェイルオーバー" [ref=e327]:
+              - cell "LLM API" [ref=e328]
+              - cell "OpenAI + Anthropic 両対応" [ref=e329]
+              - cell "カスケード + キャッシング + 障害時フェイルオーバー" [ref=e330]
+            - row "決済 Stripe Checkout 日本円対応、サブスク、最小実装で導入可能" [ref=e331]:
+              - cell "決済" [ref=e332]
+              - cell "Stripe Checkout" [ref=e333]
+              - cell "日本円対応、サブスク、最小実装で導入可能" [ref=e334]
+      - generic [ref=e335]:
+        - heading "運用上の工夫" [level=2] [ref=e336]
+        - list [ref=e337]:
+          - listitem [ref=e338]:
+            - strong [ref=e339]: NS 切替時のダウンタイム回避
+            - text: ": 旧 zone と新 zone の両方に同じ A/CNAME/MX/TXT を持たせ、ドメインの NS を切替えてから DNS 伝播完了を待ち、旧 zone を破棄。"
+          - listitem [ref=e340]:
+            - strong [ref=e341]: SES 送信元の verify
+            - text: ":"
+            - code [ref=e342]: contact@getdocchain.com
+            - text: を Email Identity 登録 + DKIM 設定。送信失敗時は CloudWatch アラームで即通知。
+          - listitem [ref=e343]:
+            - strong [ref=e344]: DynamoDB の重複防止
+            - text: ":"
+            - code [ref=e345]: email
+            - text: を PK にすることで複数回登録を構造的に弾く。
+          - listitem [ref=e346]:
+            - strong [ref=e347]: LP の OGP 画像
+            - text: ":"
+            - code [ref=e348]: /og.png
+            - text: を事前生成して CloudFront でキャッシュ、SNS シェア時の画像取得を高速化。
+      - generic [ref=e349]:
+        - heading "これからやる予定" [level=2] [ref=e350]
+        - list [ref=e351]:
+          - listitem [ref=e352]: 本体 Phase 0 完了 → Phase 1（MVP 開発、2〜3 ヶ月）に着手
+          - listitem [ref=e353]:
+            - code [ref=e354]: app.getdocchain.com
+            - text: を Vercel に向け、ベータ提供（5 名）開始（2026/9 予定）
+          - listitem [ref=e355]: SI 業界向け Qiita / Zenn 連載記事 (15〜20 本) で集客導線を作る
+          - listitem [ref=e356]: X（旧 Twitter）でフリーランス SE 界隈に告知強化
+      - generic [ref=e357]:
+        - heading "関連リンク" [level=2] [ref=e358]
+        - list [ref=e359]:
+          - listitem [ref=e360]:
+            - link "本番 LP getdocchain.com" [ref=e361] [cursor=pointer]:
+              - /url: https://getdocchain.com/
+          - listitem [ref=e362]:
+            - link "プライバシーポリシー" [ref=e363] [cursor=pointer]:
+              - /url: https://getdocchain.com/privacy.html
+          - listitem [ref=e364]:
+            - link "利用規約" [ref=e365] [cursor=pointer]:
+              - /url: https://getdocchain.com/terms.html
+          - listitem [ref=e366]:
+            - link "← Works 一覧へ戻る" [ref=e367] [cursor=pointer]:
+              - /url: /works.html
+  - contentinfo [ref=e368]:
+    - generic [ref=e369]: © 2026 iigtn — Built with Terraform & GitHub Actions
+    - generic [ref=e370]:
+      - link "解説書" [ref=e371] [cursor=pointer]:
+        - /url: /learn.html
+      - text: ·
+      - link "GitHub" [ref=e372] [cursor=pointer]:
+        - /url: https://github.com/iigtn/iigtn-platform
+      - text: ·
+      - link "プライバシーポリシー" [ref=e373] [cursor=pointer]:
+        - /url: /privacy.html

@@ -1,0 +1,222 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - navigation [ref=e3]:
+      - link "iigtn" [ref=e4] [cursor=pointer]:
+        - /url: /
+        - img "iigtn" [ref=e5]
+      - list [ref=e6]:
+        - listitem [ref=e7]:
+          - link "About" [ref=e8] [cursor=pointer]:
+            - /url: /about.html
+        - listitem [ref=e9]:
+          - link "Skills" [ref=e10] [cursor=pointer]:
+            - /url: /skills.html
+        - listitem [ref=e11]:
+          - link "Works" [ref=e12] [cursor=pointer]:
+            - /url: /works.html
+        - listitem [ref=e13]:
+          - link "Blog" [ref=e14] [cursor=pointer]:
+            - /url: /blog/
+        - listitem [ref=e15]:
+          - link "Contact" [ref=e16] [cursor=pointer]:
+            - /url: /contact.html
+  - generic [ref=e17]:
+    - heading "iigtn Blog" [level=1] [ref=e18]
+    - paragraph [ref=e19]: フリーランス・インフラエンジニア iigtn のブログ。現在 3 シリーズを公開中です。
+    - generic [ref=e20]:
+      - link "▶ 表示中 📝 構築日誌（全 21 記事） AWS サーバレス + Terraform で iigtn-platform を 0 から構築するまでの記録" [ref=e21] [cursor=pointer]:
+        - /url: /blog/
+        - strong [ref=e22]: ▶ 表示中
+        - heading "📝 構築日誌（全 21 記事）" [level=3] [ref=e23]
+        - paragraph [ref=e24]: AWS サーバレス + Terraform で iigtn-platform を 0 から構築するまでの記録
+      - link "↗ 別シリーズへ ☁️ AWS 基本サービス入門（全 15 記事完結） S3 / Lambda / DynamoDB / VPC / IAM ほか 主要 15 サービスを採用判断視点で解説" [ref=e25] [cursor=pointer]:
+        - /url: /blog/aws-basics/
+        - strong [ref=e26]: ↗ 別シリーズへ
+        - heading "☁️ AWS 基本サービス入門（全 15 記事完結）" [level=3] [ref=e27]
+        - paragraph [ref=e28]: S3 / Lambda / DynamoDB / VPC / IAM ほか 主要 15 サービスを採用判断視点で解説
+      - link "↗ 別シリーズへ 📚 現場コマンドリファレンス（全 19 記事完結） Linux / AWS CLI / Terraform / Docker / Kubernetes ほか 800+ コマンドを深掘り" [ref=e29] [cursor=pointer]:
+        - /url: /blog/ref/
+        - strong [ref=e30]: ↗ 別シリーズへ
+        - heading "📚 現場コマンドリファレンス（全 19 記事完結）" [level=3] [ref=e31]
+        - paragraph [ref=e32]: Linux / AWS CLI / Terraform / Docker / Kubernetes ほか 800+ コマンドを深掘り
+    - heading "構築日誌 — 全 21 記事" [level=2] [ref=e33]
+    - paragraph [ref=e34]:
+      - text: AWS サーバレス + Terraform + GitHub Actions OIDC で、フリーランス・インフラエンジニアが ポートフォリオサイト
+      - code [ref=e35]: lab.iigtn.com
+      - text: を 0 から構築するまでの全 21 記事シリーズ。 各記事は 3,500〜5,000 字、末尾に用語集付き。
+    - generic [ref=e36]:
+      - img [ref=e38] [cursor=pointer]:
+        - generic [ref=e40]:
+          - generic [ref=e45]: 🌐 訪問者
+          - generic [ref=e50]: 👨‍💻 git push
+          - generic [ref=e55]: Squarespace DNS
+          - generic [ref=e60]: GitHub Actions
+          - generic [ref=e66]: ACM (us-east-1)
+          - generic [ref=e72]: CloudFront
+          - generic [ref=e78]: IAM Role (OIDC)
+          - generic [ref=e84]:
+            - text: S3
+            - text: 静的ファイル
+          - generic [ref=e90]:
+            - text: API Gateway
+            - text: HTTP API
+          - generic [ref=e96]:
+            - text: Lambda
+            - text: Node.js 20
+          - generic [ref=e102]: DynamoDB
+          - generic [ref=e108]: SES
+          - generic [ref=e114]:
+            - text: CloudWatch
+            - text: Logs + Alarms
+          - generic [ref=e120]:
+            - text: SNS
+            - text: 通知
+          - generic [ref=e133]: /*
+          - generic [ref=e139]: /api/*
+          - generic [ref=e160]: OIDC AssumeRole
+      - paragraph [ref=e167]:
+        - text: ▲ 本シリーズで構築する iigtn-platform の全体アーキテクチャ。drawio (AWS 公式アイコン) で作成、ソースは
+        - link "/diagrams/04-overall-architecture.drawio" [ref=e168] [cursor=pointer]:
+          - /url: /diagrams/04-overall-architecture.drawio?v=20260505a
+        - text: 。
+    - list [ref=e169]:
+      - listitem [ref=e170]:
+        - link "#01 序章 — フリーランスのインフラエンジニアが AWS でポートフォリオを作る理由" [ref=e171] [cursor=pointer]:
+          - /url: /blog/01-intro.html
+          - generic [ref=e172]: "#01"
+          - text: 序章 — フリーランスのインフラエンジニアが AWS でポートフォリオを作る理由
+        - generic [ref=e173]: プロジェクトの目的・設計思想 4 本柱・想定読者・全体ロードマップ
+      - listitem [ref=e174]:
+        - link "#02 ChatGPT と 6 ラウンドの設計レビュー" [ref=e175] [cursor=pointer]:
+          - /url: /blog/02-design-review.html
+          - generic [ref=e176]: "#02"
+          - text: ChatGPT と 6 ラウンドの設計レビュー
+        - generic [ref=e177]: 設計書を v1 から v5 まで磨いた過程と、テンプレ感の排除・実運用視点の追加
+      - listitem [ref=e178]:
+        - link "#03 AWS マルチアカウント運用 (dev / prod) と IAM 初期設定" [ref=e179] [cursor=pointer]:
+          - /url: /blog/03-aws-accounts.html
+          - generic [ref=e180]: "#03"
+          - text: AWS マルチアカウント運用 (dev / prod) と IAM 初期設定
+        - generic [ref=e181]: 2 アカウント分離・IAM ユーザ作成・アクセスキー vs OIDC の判断
+      - listitem [ref=e182]:
+        - link "#04 開発環境セットアップ — Windows で AWS / Terraform / GitHub を回す" [ref=e183] [cursor=pointer]:
+          - /url: /blog/04-dev-env.html
+          - generic [ref=e184]: "#04"
+          - text: 開発環境セットアップ — Windows で AWS / Terraform / GitHub を回す
+        - generic [ref=e185]: PowerShell / Git Bash / AWS CLI / Terraform / gh CLI のインストールと Windows 固有の罠
+      - listitem [ref=e186]:
+        - link "#05 Terraform Bootstrap — 鶏卵問題の解決" [ref=e187] [cursor=pointer]:
+          - /url: /blog/05-terraform-bootstrap.html
+          - generic [ref=e188]: "#05"
+          - text: Terraform Bootstrap — 鶏卵問題の解決
+        - generic [ref=e189]: S3 backend + DynamoDB Lock の手動初期化、setup.sh で idempotent 化
+      - listitem [ref=e190]:
+        - link "#06 Windows での Terraform Provider TLS 干渉と filesystem mirror 回避" [ref=e191] [cursor=pointer]:
+          - /url: /blog/06-terraform-tls.html
+          - generic [ref=e192]: "#06"
+          - text: Windows での Terraform Provider TLS 干渉と filesystem mirror 回避
+        - generic [ref=e193]: "tls: bad record MAC エラーの原因究明と、TLS 1.2 強制 + resume + filesystem mirror で解決"
+      - listitem [ref=e194]:
+        - link "#07 Terraform モジュール設計の考え方 — modules / envs / providers alias" [ref=e195] [cursor=pointer]:
+          - /url: /blog/07-terraform-modules.html
+          - generic [ref=e196]: "#07"
+          - text: Terraform モジュール設計の考え方 — modules / envs / providers alias
+        - generic [ref=e197]: 5 モジュール構成に収束した経緯、provider alias の使い方
+      - listitem [ref=e198]:
+        - link "#08 ACM 証明書の発行と DNS 検証フロー" [ref=e199] [cursor=pointer]:
+          - /url: /blog/08-acm-cert.html
+          - generic [ref=e200]: "#08"
+          - text: ACM 証明書の発行と DNS 検証フロー
+        - generic [ref=e201]: us-east-1 必須・DNS validation の流れ・ワイルドカード SAN・aws_acm_certificate_validation
+      - listitem [ref=e202]:
+        - link "#09 Squarespace の NS 委譲問題とアーキテクチャ pivot" [ref=e203] [cursor=pointer]:
+          - /url: /blog/09-squarespace-dns.html
+          - generic [ref=e204]: "#09"
+          - text: Squarespace の NS 委譲問題とアーキテクチャ pivot
+        - generic [ref=e205]: NS 拒否で詰まり、Route53 hosted zone を捨てて CNAME のみで運用する設計に変更
+      - listitem [ref=e206]:
+        - link "#10 CloudFront + S3 + OAC でセキュアな静的サイト配信" [ref=e207] [cursor=pointer]:
+          - /url: /blog/10-cloudfront-s3-oac.html
+          - generic [ref=e208]: "#10"
+          - text: CloudFront + S3 + OAC でセキュアな静的サイト配信
+        - generic [ref=e209]: OAC vs OAI、Bucket Policy の SourceArn 条件、両側設定のハマり
+      - listitem [ref=e210]:
+        - link "#11 CloudFront のキャッシュ・セキュリティ・SPA 設定" [ref=e211] [cursor=pointer]:
+          - /url: /blog/11-cloudfront-cache-spa.html
+          - generic [ref=e212]: "#11"
+          - text: CloudFront のキャッシュ・セキュリティ・SPA 設定
+        - generic [ref=e213]: マネージド Cache Policy / Response Headers Policy・SPA フォールバック・HTTP/3
+      - listitem [ref=e214]:
+        - link "#12 GitHub Actions OIDC の仕組み — JWT で AWS を静的キーレス操作" [ref=e215] [cursor=pointer]:
+          - /url: /blog/12-github-oidc.html
+          - generic [ref=e216]: "#12"
+          - text: GitHub Actions OIDC の仕組み — JWT で AWS を静的キーレス操作
+        - generic [ref=e217]: JWT・sub claim・AssumeRoleWithWebIdentity・Trust Policy / Permissions Policy
+      - listitem [ref=e218]:
+        - link "#13 静的キーレス CI/CD ワークフロー実装 — git push から本番反映まで" [ref=e219] [cursor=pointer]:
+          - /url: /blog/13-cicd-workflow.html
+          - generic [ref=e220]: "#13"
+          - text: 静的キーレス CI/CD ワークフロー実装 — git push から本番反映まで
+        - generic [ref=e221]: frontend-deploy.yml の各ステップ解説・concurrency・aws s3 sync・invalidation
+      - listitem [ref=e222]:
+        - link "#14 API Gateway HTTP API と Lambda Proxy 統合" [ref=e223] [cursor=pointer]:
+          - /url: /blog/14-api-gateway-lambda.html
+          - generic [ref=e224]: "#14"
+          - text: API Gateway HTTP API と Lambda Proxy 統合
+        - generic [ref=e225]: HTTP API vs REST API・Lambda Proxy 統合・payload 2.0・arm64 / 256MB / 10s
+      - listitem [ref=e226]:
+        - link "#15 DynamoDB テーブル設計と PII 配慮 — On-demand と PITR" [ref=e227] [cursor=pointer]:
+          - /url: /blog/15-dynamodb.html
+          - generic [ref=e228]: "#15"
+          - text: DynamoDB テーブル設計と PII 配慮 — On-demand と PITR
+        - generic [ref=e229]: PK 選定（PII を主キーにしない）・On-demand・PITR・SSE
+      - listitem [ref=e230]:
+        - link "#16 CloudFront /api/* で 1 ドメイン化" [ref=e231] [cursor=pointer]:
+          - /url: /blog/16-cloudfront-api-routing.html
+          - generic [ref=e232]: "#16"
+          - text: CloudFront /api/* で 1 ドメイン化
+        - generic [ref=e233]: dynamic block で条件付き origin 追加・AllViewerExceptHostHeader の罠
+      - listitem [ref=e234]:
+        - link "#17 CloudWatch Alarms + SNS でアラート構築" [ref=e235] [cursor=pointer]:
+          - /url: /blog/17-cloudwatch-sns.html
+          - generic [ref=e236]: "#17"
+          - text: CloudWatch Alarms + SNS でアラート構築
+        - generic [ref=e237]: Lambda Errors / Duration p95 / API GW 5xx の閾値設計と通知の組み立て
+      - listitem [ref=e238]:
+        - link "#18 Cross-Region SNS の落とし穴と AWS Budgets" [ref=e239] [cursor=pointer]:
+          - /url: /blog/18-cross-region-sns.html
+          - generic [ref=e240]: "#18"
+          - text: Cross-Region SNS の落とし穴と AWS Budgets
+        - generic [ref=e241]: CloudFront アラームは us-east-1 必須、SNS Topic も同一 region 必須の罠
+      - listitem [ref=e242]:
+        - link "#19 drawio (AWS 公式アイコン) でアーキテクチャ図を組み込む" [ref=e243] [cursor=pointer]:
+          - /url: /blog/19-drawio.html
+          - generic [ref=e244]: "#19"
+          - text: drawio (AWS 公式アイコン) でアーキテクチャ図を組み込む
+        - generic [ref=e245]: ASCII art → Mermaid → drawio aws4 公式アイコンへの段階的進化と使い分け
+      - listitem [ref=e246]:
+        - link "#20 ポートフォリオ標準構成への再設計 + SES 通知稼働" [ref=e247] [cursor=pointer]:
+          - /url: /blog/20-portfolio-ses.html
+          - generic [ref=e248]: "#20"
+          - text: ポートフォリオ標準構成への再設計 + SES 通知稼働
+        - generic [ref=e249]: Hero / About / Skills / Works / Blog / Contact 構成への再設計と SES sandbox からの稼働
+      - listitem [ref=e250]:
+        - 'link "#21 付録: 構築で使ったコマンド早見表" [ref=e251] [cursor=pointer]':
+          - /url: /blog/21-command-cheatsheet.html
+          - generic [ref=e252]: "#21"
+          - text: "付録: 構築で使ったコマンド早見表"
+        - generic [ref=e253]: PowerShell / Git / AWS CLI / Terraform / curl / npm / gh CLI の頻出コマンド集
+    - paragraph [ref=e254]:
+      - text: 全 21 記事 · 約 90,000 字 · 用語集約 300 用語
+      - text: "シリーズ完結: 2026-04-26"
+  - contentinfo [ref=e255]:
+    - generic [ref=e256]: © 2026 iigtn — Built with Terraform & GitHub Actions
+    - generic [ref=e257]:
+      - link "解説書" [ref=e258] [cursor=pointer]:
+        - /url: /learn.html
+      - text: ·
+      - link "GitHub" [ref=e259] [cursor=pointer]:
+        - /url: https://github.com/iigtn/iigtn-platform
+      - text: ·
+      - link "プライバシーポリシー" [ref=e260] [cursor=pointer]:
+        - /url: /privacy.html

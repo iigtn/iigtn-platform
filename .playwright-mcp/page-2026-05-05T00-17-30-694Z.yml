@@ -1,0 +1,251 @@
+- generic [active] [ref=e1]:
+  - link "本文へスキップ" [ref=e2] [cursor=pointer]:
+    - /url: "#main"
+  - banner [ref=e3]:
+    - navigation [ref=e4]:
+      - link "iigtn" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - img "iigtn" [ref=e6]
+      - list [ref=e7]:
+        - listitem [ref=e8]:
+          - link "About" [ref=e9] [cursor=pointer]:
+            - /url: /about.html
+        - listitem [ref=e10]:
+          - link "Skills" [ref=e11] [cursor=pointer]:
+            - /url: /skills.html
+        - listitem [ref=e12]:
+          - link "Works" [ref=e13] [cursor=pointer]:
+            - /url: /works.html
+        - listitem [ref=e14]:
+          - link "Blog" [ref=e15] [cursor=pointer]:
+            - /url: /blog/
+        - listitem [ref=e16]:
+          - link "Contact" [ref=e17] [cursor=pointer]:
+            - /url: /contact.html
+  - main [ref=e18]:
+    - generic [ref=e19]:
+      - paragraph [ref=e20]: プロジェクト解説 · 構想中（立ち上げ準備中）
+      - heading "子育てマップ — 保活＋学区＋学童＋塾の統合可視化" [level=1] [ref=e21]
+      - paragraph [ref=e22]: 30〜40 代の子育て世代向けに、保育園・学校・学童・塾・住宅情報を地図 UI で一括可視化する 地理データ可視化メディアの構成計画です。ライフステージに応じて長期間（5〜10 年）使われるサイトを目指し、 同一ドメインのサブディレクトリ展開で保活 → 学区 → 学童 → 塾と段階的に拡張します。
+      - link "← Works に戻る" [ref=e24] [cursor=pointer]:
+        - /url: /works.html
+    - generic [ref=e25]:
+      - generic [ref=e26]:
+        - strong [ref=e27]: "注:"
+        - text: 現在は構想決定 + 立ち上げ準備の段階で、本番ドメインはまだ取得していません。 グランピングマップと技術基盤を共通化する想定で構成を設計済み。
+      - generic [ref=e28]:
+        - heading "サマリ" [level=2] [ref=e29]
+        - table [ref=e30]:
+          - rowgroup [ref=e31]:
+            - row "プロジェクト 子育てマップ（仮）— 保活＋学区＋学童＋塾の統合可視化" [ref=e32]:
+              - rowheader "プロジェクト" [ref=e33]
+              - cell "子育てマップ（仮）— 保活＋学区＋学童＋塾の統合可視化" [ref=e34]
+            - row "ステータス 構想決定、立ち上げ準備中（ドメイン未取得）" [ref=e35]:
+              - rowheader "ステータス" [ref=e36]
+              - cell "構想決定、立ち上げ準備中（ドメイン未取得）" [ref=e37]
+            - row "ドメイン候補 kosodate-area.jp / mama-area.com / kosodate-map.jp / area-kosodate.jp / ie-kosodate.com" [ref=e38]:
+              - rowheader "ドメイン候補" [ref=e39]
+              - cell "kosodate-area.jp / mama-area.com / kosodate-map.jp / area-kosodate.jp / ie-kosodate.com" [ref=e40]
+            - row "立ち上げ順序 保活マップ先行 → 学区マップ追加 → 学童 / 塾 / 移住 / 物件" [ref=e41]:
+              - rowheader "立ち上げ順序" [ref=e42]
+              - cell "保活マップ先行 → 学区マップ追加 → 学童 / 塾 / 移住 / 物件" [ref=e43]
+            - row "目標 (24 ヶ月後) MRR ¥35〜50 万 / 月間 PV 10〜15 万 / 月額運用費 ¥1,000〜10,000 / 粗利 95% 超" [ref=e44]:
+              - rowheader "目標 (24 ヶ月後)" [ref=e45]
+              - cell "MRR ¥35〜50 万 / 月間 PV 10〜15 万 / 月額運用費 ¥1,000〜10,000 / 粗利 95% 超" [ref=e46]
+            - row "構成方針 Next.js (Static Export) + S3 + CloudFront + DynamoDB + Lambda + Maptiler API（グランピングマップと共通）" [ref=e47]:
+              - rowheader "構成方針" [ref=e48]
+              - cell "Next.js (Static Export) + S3 + CloudFront + DynamoDB + Lambda + Maptiler API（グランピングマップと共通）" [ref=e49]
+      - generic [ref=e50]:
+        - heading "全体アーキテクチャ" [level=2] [ref=e51]
+        - paragraph [ref=e52]:
+          - text: 構成図は drawio (AWS 公式アイコン v2026 系) で作成しています。下のビューアは
+          - code [ref=e53]: .drawio
+          - text: ファイルを 直接レンダリングしています。zoom / pan / 編集ボタンが使えます。
+        - img [ref=e56] [cursor=pointer]:
+          - generic [ref=e58]:
+            - generic [ref=e63]: Kosodate Map - Architecture (planned, staged rollout)
+            - generic [ref=e68]: Visitor
+            - generic [ref=e74]: Route 53
+            - generic [ref=e80]: ACM
+            - generic [ref=e86]: CloudFront
+            - generic [ref=e92]: S3 site
+            - generic [ref=e97]: "Subdirectories: /hokatsu (P1) /gakku (P3) /gakudo /juku /iju /jushi /column (P4)"
+            - generic [ref=e102]: Maptiler API
+            - generic [ref=e108]: DNS
+            - generic [ref=e113]: alias
+            - generic [ref=e119]: TLS
+            - generic [ref=e124]: HTML
+            - generic [ref=e130]: serve
+            - generic [ref=e136]: tile
+            - generic [ref=e142]: EventBridge
+            - generic [ref=e148]: Lambda hokatsu_ingest (P1)
+            - generic [ref=e154]: Lambda gakku_ingest (P3)
+            - generic [ref=e159]: City Open Data CSV/JSON
+            - generic [ref=e165]: DynamoDB
+            - generic [ref=e171]: CodeBuild rebuild
+            - generic [ref=e176]: trigger
+            - generic [ref=e182]: trigger
+            - generic [ref=e188]: fetch
+            - generic [ref=e193]: upsert
+            - generic [ref=e198]: rebuild
+            - generic [ref=e203]: Moving estimate JPY3-10k
+            - generic [ref=e208]: Real-estate appraisal JPY10-30k
+            - generic [ref=e213]: Mortgage consulting JPY5-30k
+            - generic [ref=e218]: Insurance / cram / sitter JPY2-15k
+            - generic [ref=e223]: Google AdSense
+            - generic [ref=e228]: Hokatsu users -> moving / insurance / sitter. Gakku users -> real-estate / mortgage / cram. Stage by lifecycle.
+        - paragraph [ref=e229]:
+          - text: "ソース:"
+          - link "/diagrams/kosodate-map/architecture.drawio" [ref=e230] [cursor=pointer]:
+            - /url: /diagrams/kosodate-map/architecture.drawio?v=20260505a
+          - text: （drawio で開けば編集可能）
+      - generic [ref=e231]:
+        - heading "A. なぜ統合か" [level=2] [ref=e232]
+        - list [ref=e233]:
+          - listitem [ref=e234]:
+            - strong [ref=e235]: ターゲット層完全重複
+            - text: ": 30〜40 代子育て世代はすべての領域を 1 人で意思決定する"
+          - listitem [ref=e236]:
+            - strong [ref=e237]: ライフサイクル連続性
+            - text: ": 保活 (0-3 歳) → 学区検討 (5-7 歳) → 不動産購入 → 中学進学 (10-12 歳) と長期間に渡る"
+          - listitem [ref=e238]:
+            - strong [ref=e239]: データ・UI・技術基盤共通
+            - text: ": 地図 UI / 自治体データ取込 / 検索機能はすべて同じ"
+          - listitem [ref=e240]:
+            - strong [ref=e241]: ドメインオーソリティ集中
+            - text: ": 1 サイトで月 10 万 PV のほうが、2 サイトで月 5 万 PV ずつより SEO で取りやすい"
+          - listitem [ref=e242]:
+            - strong [ref=e243]: 共通アフィリ案件
+            - text: ": 引越し / 住宅ローン / 学資保険 / 塾を段階的に提示できる"
+      - generic [ref=e244]:
+        - heading "B. 段階的展開プラン" [level=2] [ref=e245]
+        - table [ref=e246]:
+          - rowgroup [ref=e247]:
+            - row "Phase 期間 内容 収益目標" [ref=e248]:
+              - columnheader "Phase" [ref=e249]
+              - columnheader "期間" [ref=e250]
+              - columnheader "内容" [ref=e251]
+              - columnheader "収益目標" [ref=e252]
+            - row "1 0〜6 ヶ月 保活マップ立ち上げ（東京 23 区＋政令指定都市の保育園データ）+ 初期記事 30 本 月 ¥3〜5 万" [ref=e253]:
+              - cell "1" [ref=e254]
+              - cell "0〜6 ヶ月" [ref=e255]
+              - cell "保活マップ立ち上げ（東京 23 区＋政令指定都市の保育園データ）+ 初期記事 30 本" [ref=e256]
+              - cell "月 ¥3〜5 万" [ref=e257]
+            - row "2 6〜12 ヶ月 保活マップ深化（入園倍率 / 空き状況 / 競合分析記事） 月 ¥10〜20 万" [ref=e258]:
+              - cell "2" [ref=e259]
+              - cell "6〜12 ヶ月" [ref=e260]
+              - cell "保活マップ深化（入園倍率 / 空き状況 / 競合分析記事）" [ref=e261]
+              - cell "月 ¥10〜20 万" [ref=e262]
+            - row "3 12〜18 ヶ月 学区マップ追加（小中学校の進学実績・評判） 月 ¥25〜35 万" [ref=e263]:
+              - cell "3" [ref=e264]
+              - cell "12〜18 ヶ月" [ref=e265]
+              - cell "学区マップ追加（小中学校の進学実績・評判）" [ref=e266]
+              - cell "月 ¥25〜35 万" [ref=e267]
+            - row "4 18〜24 ヶ月 学童・塾・移住・物件マップを追加、複合収益化 月 ¥35〜50 万" [ref=e268]:
+              - cell "4" [ref=e269]
+              - cell "18〜24 ヶ月" [ref=e270]
+              - cell "学童・塾・移住・物件マップを追加、複合収益化" [ref=e271]
+              - cell "月 ¥35〜50 万" [ref=e272]
+      - generic [ref=e273]:
+        - heading "C. サイト構造（計画）" [level=2] [ref=e274]
+        - generic [ref=e275]: example.com/ ├── /hokatsu/ ← 保活マップ（Phase 1） ├── /gakku/ ← 学区マップ（Phase 3） ├── /gakudo/ ← 学童保育マップ（Phase 4） ├── /juku/ ← 塾・習い事マップ（Phase 4） ├── /iju/ ← 子育て移住マップ（Phase 4） ├── /jushi/ ← 物件・住宅情報 └── /column/ ← コラム・解説記事
+      - generic [ref=e276]:
+        - heading "D. ペルソナと主要収益源" [level=2] [ref=e277]
+        - paragraph [ref=e278]: "2 軸ペルソナで設計（A: 保活ママ、B: マイホーム検討の 30 代パパ）。共通アフィリ案件として 引越し・住宅ローン・学資保険・塾・家庭教師を段階的に提示します。"
+        - table [ref=e279]:
+          - rowgroup [ref=e280]:
+            - row "収益源 CV 単価 主なターゲット" [ref=e281]:
+              - columnheader "収益源" [ref=e282]
+              - columnheader "CV 単価" [ref=e283]
+              - columnheader "主なターゲット" [ref=e284]
+            - row "引越し一括見積 ¥3,000〜10,000 保活＋学区" [ref=e285]:
+              - cell "引越し一括見積" [ref=e286]
+              - cell "¥3,000〜10,000" [ref=e287]
+              - cell "保活＋学区" [ref=e288]
+            - row "不動産売買査定 ¥10,000〜30,000 学区" [ref=e289]:
+              - cell "不動産売買査定" [ref=e290]
+              - cell "¥10,000〜30,000" [ref=e291]
+              - cell "学区" [ref=e292]
+            - row "住宅ローン相談 ¥5,000〜30,000 学区＋不動産検討" [ref=e293]:
+              - cell "住宅ローン相談" [ref=e294]
+              - cell "¥5,000〜30,000" [ref=e295]
+              - cell "学区＋不動産検討" [ref=e296]
+            - row "学資保険 ¥3,000〜10,000 保活" [ref=e297]:
+              - cell "学資保険" [ref=e298]
+              - cell "¥3,000〜10,000" [ref=e299]
+              - cell "保活" [ref=e300]
+            - row "塾・家庭教師 ¥3,000〜15,000 学区＋塾検討" [ref=e301]:
+              - cell "塾・家庭教師" [ref=e302]
+              - cell "¥3,000〜15,000" [ref=e303]
+              - cell "学区＋塾検討" [ref=e304]
+            - row "ベビーシッター・家事代行 ¥2,000〜8,000 保活" [ref=e305]:
+              - cell "ベビーシッター・家事代行" [ref=e306]
+              - cell "¥2,000〜8,000" [ref=e307]
+              - cell "保活" [ref=e308]
+            - row "AdSense 等広告 PV 依存 全体" [ref=e309]:
+              - cell "AdSense 等広告" [ref=e310]
+              - cell "PV 依存" [ref=e311]
+              - cell "全体" [ref=e312]
+            - row "note 有料コンテンツ サブスク コミュニティ層" [ref=e313]:
+              - cell "note 有料コンテンツ" [ref=e314]
+              - cell "サブスク" [ref=e315]
+              - cell "コミュニティ層" [ref=e316]
+      - generic [ref=e317]:
+        - heading "採用判断のポイント" [level=2] [ref=e318]
+        - table [ref=e319]:
+          - rowgroup [ref=e320]:
+            - row "項目 採用 理由" [ref=e321]:
+              - columnheader "項目" [ref=e322]
+              - columnheader "採用" [ref=e323]
+              - columnheader "理由" [ref=e324]
+            - row "展開戦略 統合（同一ドメイン、サブディレクトリ） ドメインオーソリティ集中、データ・UI 共通化" [ref=e325]:
+              - cell "展開戦略" [ref=e326]
+              - cell "統合（同一ドメイン、サブディレクトリ）" [ref=e327]
+              - cell "ドメインオーソリティ集中、データ・UI 共通化" [ref=e328]
+            - row "静的化 Next.js Static Export 地図 UI 以外は SSG、ボット集客に強い" [ref=e329]:
+              - cell "静的化" [ref=e330]
+              - cell "Next.js Static Export" [ref=e331]
+              - cell "地図 UI 以外は SSG、ボット集客に強い" [ref=e332]
+            - row "地図 Maptiler API 無料枠から始められる、グランピングマップと共通化" [ref=e333]:
+              - cell "地図" [ref=e334]
+              - cell "Maptiler API" [ref=e335]
+              - cell "無料枠から始められる、グランピングマップと共通化" [ref=e336]
+            - row "データソース 自治体公開データ + 補助金検索のパイプラインを流用 既存の data_import を再利用、CodeBuild で月次更新" [ref=e337]:
+              - cell "データソース" [ref=e338]
+              - cell "自治体公開データ + 補助金検索のパイプラインを流用" [ref=e339]
+              - cell "既存の data_import を再利用、CodeBuild で月次更新" [ref=e340]
+            - row "収益化 段階提示型のアフィリ複合 ライフステージごとに最適 ASP を出し分け、長期 LTV 最大化" [ref=e341]:
+              - cell "収益化" [ref=e342]
+              - cell "段階提示型のアフィリ複合" [ref=e343]
+              - cell "ライフステージごとに最適 ASP を出し分け、長期 LTV 最大化" [ref=e344]
+            - row "共通化 グランピングマップと Terraform モジュール共有 運用負荷集約、新サブサイト追加が早い" [ref=e345]:
+              - cell "共通化" [ref=e346]
+              - cell "グランピングマップと Terraform モジュール共有" [ref=e347]
+              - cell "運用負荷集約、新サブサイト追加が早い" [ref=e348]
+      - generic [ref=e349]:
+        - heading "これからやる予定" [level=2] [ref=e350]
+        - list [ref=e351]:
+          - listitem [ref=e352]: ドメイン取得（候補比較で 1 つに絞り込み）
+          - listitem [ref=e353]: "Phase 1 MVP: 東京 23 区の保活マップ + 初期記事 30 本"
+          - listitem [ref=e354]: SEO アフィリエイト初期登録（A8 / もしも / afb / バリューコマース）
+          - listitem [ref=e355]: SNS（X）アカウント開設 + 発信開始（system_SNS運営の運用基盤を流用）
+      - generic [ref=e356]:
+        - heading "関連リンク" [level=2] [ref=e357]
+        - list [ref=e358]:
+          - listitem [ref=e359]:
+            - link "← Works 一覧へ戻る" [ref=e360] [cursor=pointer]:
+              - /url: /works.html
+          - listitem [ref=e361]:
+            - link "グランピング × キャンプ場マップ（共通技術基盤）" [ref=e362] [cursor=pointer]:
+              - /url: /projects/glamping-map.html
+  - contentinfo [ref=e363]:
+    - generic [ref=e364]: © 2026 iigtn — Built with Terraform & GitHub Actions
+    - generic [ref=e365]:
+      - link "解説書" [ref=e366] [cursor=pointer]:
+        - /url: /learn.html
+      - text: ·
+      - link "GitHub" [ref=e367] [cursor=pointer]:
+        - /url: https://github.com/iigtn/iigtn-platform
+      - text: ·
+      - link "プライバシーポリシー" [ref=e368] [cursor=pointer]:
+        - /url: /privacy.html

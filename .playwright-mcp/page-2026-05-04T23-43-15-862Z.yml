@@ -1,0 +1,294 @@
+- generic [active] [ref=e1]:
+  - link "本文へスキップ" [ref=e2] [cursor=pointer]:
+    - /url: "#main"
+  - banner [ref=e3]:
+    - navigation [ref=e4]:
+      - link "iigtn" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - img "iigtn" [ref=e6]
+      - list [ref=e7]:
+        - listitem [ref=e8]:
+          - link "About" [ref=e9] [cursor=pointer]:
+            - /url: /about.html
+        - listitem [ref=e10]:
+          - link "Skills" [ref=e11] [cursor=pointer]:
+            - /url: /skills.html
+        - listitem [ref=e12]:
+          - link "Works" [ref=e13] [cursor=pointer]:
+            - /url: /works.html
+        - listitem [ref=e14]:
+          - link "Blog" [ref=e15] [cursor=pointer]:
+            - /url: /blog/
+        - listitem [ref=e16]:
+          - link "Contact" [ref=e17] [cursor=pointer]:
+            - /url: /contact.html
+  - main [ref=e18]:
+    - generic [ref=e19]:
+      - paragraph [ref=e20]: プロジェクト解説 · 個人研究 / 内部運用
+      - heading "autoST — 自動売買リサーチ＆運用フレームワーク" [level=1] [ref=e21]
+      - paragraph [ref=e22]: autoST は、日本株 / 米国 ETF を対象に自動売買戦略を検証・運用する個人研究プロジェクトです。 Lambda + EventBridge + DynamoDB + S3 を Terraform で IaC 化し、ローカル PC で kabu STATION API と連携。20 を超える戦略を AI 共同レビューでバックテストし、最終的に 1545（米国 S&P500 ETF） + 200 日 MA + 月次キャッシュ確定型に収束しました。コードは内部運用のため非公開です。
+      - link "← Works に戻る" [ref=e24] [cursor=pointer]:
+        - /url: /works.html
+    - generic [ref=e25]:
+      - generic [ref=e26]:
+        - strong [ref=e27]: "注:"
+        - text: autoST は個人投資の研究・運用プロジェクトであり、投資助言ではありません。本ページは AWS サーバレス + IaC + 検証フローの
+        - strong [ref=e28]: 技術構成解説
+        - text: として書いています。バックテスト数値や戦略の詳細は 投資勧誘を意図しないため概要に留めます。
+      - generic [ref=e29]:
+        - heading "サマリ" [level=2] [ref=e30]
+        - table [ref=e31]:
+          - rowgroup [ref=e32]:
+            - row "プロジェクト autoST (個人投資の自動化リサーチ＆運用フレームワーク)" [ref=e33]:
+              - rowheader "プロジェクト" [ref=e34]
+              - cell "autoST (個人投資の自動化リサーチ＆運用フレームワーク)" [ref=e35]
+            - row "公開度 内部運用（コード非公開、本番運用中）" [ref=e36]:
+              - rowheader "公開度" [ref=e37]
+              - cell "内部運用（コード非公開、本番運用中）" [ref=e38]
+            - row "対象市場 日本株（kabu STATION 経由） / 米国 ETF" [ref=e39]:
+              - rowheader "対象市場" [ref=e40]
+              - cell "日本株（kabu STATION 経由） / 米国 ETF" [ref=e41]
+            - row "最終戦略 1545（米国 S&P500 ETF）+ 200 日 MA + 月次キャッシュ確定型" [ref=e42]:
+              - rowheader "最終戦略" [ref=e43]
+              - cell "1545（米国 S&P500 ETF）+ 200 日 MA + 月次キャッシュ確定型" [ref=e44]
+            - row "バックテスト 16 年 OOS で CAGR +26.7%、月勝率 63%（手数料・スリッページ込み）" [ref=e45]:
+              - rowheader "バックテスト" [ref=e46]
+              - cell "16 年 OOS で CAGR +26.7%、月勝率 63%（手数料・スリッページ込み）" [ref=e47]
+            - row "構成 Lambda (Python) + EventBridge + DynamoDB + S3 + Terraform + kabu STATION API" [ref=e48]:
+              - rowheader "構成" [ref=e49]
+              - cell "Lambda (Python) + EventBridge + DynamoDB + S3 + Terraform + kabu STATION API" [ref=e50]
+      - generic [ref=e51]:
+        - heading "全体アーキテクチャ" [level=2] [ref=e52]
+        - paragraph [ref=e53]:
+          - text: 構成図は drawio (AWS 公式アイコン v2026 系) で作成しています。下のビューアは
+          - code [ref=e54]: .drawio
+          - text: ファイルを 直接レンダリングしています。zoom / pan / 編集ボタンが使えます。
+        - img [ref=e57] [cursor=pointer]:
+          - generic [ref=e59]:
+            - generic [ref=e64]: autoST — AWS サーバレス × ローカル PC 連携
+            - generic [ref=e69]: A. 日次自動運転 (AWS 側)
+            - generic [ref=e75]:
+              - text: EventBridge
+              - text: cron (平日 8:45 JST)
+            - generic [ref=e81]:
+              - text: Lambda
+              - text: data_collector
+            - generic [ref=e86]:
+              - text: Yahoo Finance
+              - text: J-Quants API
+            - generic [ref=e92]:
+              - text: S3 (autoST-cache)
+              - text: Parquet 時系列
+            - generic [ref=e98]:
+              - text: Lambda
+              - text: strategy_runner
+            - generic [ref=e104]:
+              - text: DynamoDB
+              - text: positions / signals / backtests
+            - generic [ref=e110]:
+              - text: Lambda
+              - text: paper_trader
+            - generic [ref=e116]:
+              - text: SES
+              - text: 日次レポート
+            - generic [ref=e122]:
+              - text: IAM
+              - text: Lambda 実行 Role
+              - text: (最小権限)
+            - generic [ref=e127]: ① 起動
+            - generic [ref=e133]: ② fetch
+            - generic [ref=e138]: ③ Parquet保存
+            - generic [ref=e144]: ④ 起動 (cron)
+            - generic [ref=e150]: ⑤ read
+            - generic [ref=e155]: ⑥ put_item
+            - generic [ref=e161]: ⑦ 起動
+            - generic [ref=e167]: ⑧ get
+            - generic [ref=e172]: ⑨ 累積損益メール
+            - generic [ref=e177]: B. ローカル PC (発注実行)
+            - generic [ref=e182]:
+              - text: SNS / SQS
+              - text: シグナル通知
+            - generic [ref=e187]:
+              - text: 🖥 ローカル PC
+              - text: (常駐)
+              - text: Python ワーカー
+            - generic [ref=e192]:
+              - text: kabu STATION
+              - text: REST API
+              - text: (三菱UFJ eスマート)
+            - generic [ref=e198]: ① シグナル
+            - generic [ref=e204]: ② poll
+            - generic [ref=e209]: ③ POST 注文
+        - paragraph [ref=e210]:
+          - text: "ソース:"
+          - link "/diagrams/autost/architecture.drawio" [ref=e211] [cursor=pointer]:
+            - /url: /diagrams/autost/architecture.drawio
+          - text: （drawio で開けば編集可能）
+      - generic [ref=e212]:
+        - heading "A. 戦略の絞り込みプロセス（PDCA × AI 共同レビュー）" [level=2] [ref=e213]
+        - paragraph [ref=e214]: 20 を超える候補戦略をバックテストし、AI 共同レビュー（ChatGPT との往復ディスカッション）で 弱点と過学習を指摘してもらいながら絞り込みました。
+        - list [ref=e215]:
+          - listitem [ref=e216]:
+            - strong [ref=e217]: v1〜v5
+            - text: ": 日本株のスキャル・スイング戦略（VWAP 平均回帰 / RSI 二峰 / 上方修正サプライズ等）。手数料・スリッページ込みで現実的なリターンが取れる戦略を探索。"
+          - listitem [ref=e218]:
+            - strong [ref=e219]: v6〜v10
+            - text: ": morning_trader / event_pivot / 半自動運用への振替。kabu STATION の制約（取引時間・手数料体系）に合わせた最適化。"
+          - listitem [ref=e220]:
+            - strong [ref=e221]: v0.1〜v0.6 (スキャル PDCA)
+            - text: ": VWAP / 出来高ブレイクの組合せ。スリッページ + 手数料込みで全パターン赤字 → スキャル戦略は廃止判断。"
+          - listitem [ref=e222]:
+            - strong [ref=e223]: v10〜v11
+            - text: ": スイング 20 日高値ブレイク + イベント転換（上方修正の需給歪み）+ AI 判断層。月勝率と DD のトレードオフを再評価。"
+          - listitem [ref=e224]:
+            - strong [ref=e225]: 最終
+            - text: ": 米国 ETF (1545) + 200 日 MA で月初 Buy / 月末 Sell の"
+            - strong [ref=e226]: 月次 BuyHold
+            - text: に収束。複雑さを増やしても勝率が上がらないことが実証されたため。
+        - paragraph [ref=e227]: 「複雑さ ≠ 強さ」を実証したのが最大の学び。25 銘柄 + intraday 動的 exit のような高度な戦略を 5 周回しても、 単一 ETF + 200 日 MA + 月初/月末売買の方が長期成績は良かった。
+      - generic [ref=e228]:
+        - heading "B. 自動運転フロー（AWS サーバレス）" [level=2] [ref=e229]
+        - list [ref=e230]:
+          - listitem [ref=e231]:
+            - strong [ref=e232]: EventBridge
+            - text: ― JST 平日朝 8:45（米国時間夜 19:45）に発火 → 日次の前場前準備 Lambda を起動。
+          - listitem [ref=e233]:
+            - strong [ref=e234]: Lambda (data_collector)
+            - text: ― Yahoo Finance や J-Quants API から株価・出来高・市場ステータスを取得 → S3 (
+            - code [ref=e235]: autoST-cache
+            - text: ) に Parquet で保存。
+          - listitem [ref=e236]:
+            - strong [ref=e237]: Lambda (strategy_runner)
+            - text: ― S3 から最新データを読み、200 日 MA / シグナル / ポジション状態を計算 → DynamoDB (
+            - code [ref=e238]: autoST-positions
+            - text: ) に書き戻し。
+          - listitem [ref=e239]:
+            - strong [ref=e240]: Lambda (paper_trader)
+            - text: ― 仮想ポートフォリオで売買シミュ → 累積損益をメール（SES）で配信。
+          - listitem [ref=e241]:
+            - strong [ref=e242]: ローカル PC (kabu STATION)
+            - text: ― 実発注は kabu STATION の REST API 経由でローカル PC から実行（PC を起動しておく必要あり）。Lambda → ローカルへの通知は SQS / SNS Email を経由。
+      - generic [ref=e243]:
+        - heading "C. IaC — Terraform 全部" [level=2] [ref=e244]
+        - paragraph [ref=e245]: AWS リソースは Terraform で管理。state は専用 S3 バケットに DynamoDB Lock 付きで保管。アカウントは 個人 AWS 環境（伏字）。
+        - list [ref=e246]:
+          - listitem [ref=e247]:
+            - code [ref=e248]: main.tf
+            - text: — provider、共通設定、tags
+          - listitem [ref=e249]:
+            - code [ref=e250]: lambda.tf
+            - text: — Lambda Functions（data_collector / strategy_runner / paper_trader / event_watcher）+ Layer + 環境変数
+          - listitem [ref=e251]:
+            - code [ref=e252]: iam.tf
+            - text: — Lambda 実行 Role + 最小権限 Policy（DDB / S3 / SES / Secrets Manager のみ）
+          - listitem [ref=e253]:
+            - code [ref=e254]: dynamodb.tf
+            - text: —
+            - code [ref=e255]: positions
+            - text: +
+            - code [ref=e256]: signals
+            - text: +
+            - code [ref=e257]: backtest_results
+            - text: テーブル（On-Demand）
+          - listitem [ref=e258]:
+            - code [ref=e259]: s3.tf
+            - text: — Parquet キャッシュ・バックテスト結果バケット（Versioning + SSE-S3）
+          - listitem [ref=e260]:
+            - code [ref=e261]: eventbridge.tf
+            - text: — 日次/週次/月次のスケジューラ Rule
+      - generic [ref=e262]:
+        - heading "D. リスク対策" [level=2] [ref=e263]
+        - list [ref=e264]:
+          - listitem [ref=e265]:
+            - strong [ref=e266]: auto_guard
+            - text: ": VIX > 30 等のリスクオフ局面で全ポジションを自動クローズ → キャッシュ退避"
+          - listitem [ref=e267]:
+            - strong [ref=e268]: regime_filter
+            - text: ": 市場レジーム（強気・弱気・横ばい）に応じてポジションサイズを動的調整"
+          - listitem [ref=e269]:
+            - strong [ref=e270]: stress_scenarios
+            - text: ": コロナショック / リーマン / 1987 ブラックマンデー級の DD を再現する週次 stress test を CI で自動実行"
+          - listitem [ref=e271]:
+            - strong [ref=e272]: テスト
+            - text: ": 36 ケース pass、ChatGPT 共同レビューで Round 3 条件付 GO 判定"
+      - generic [ref=e273]:
+        - heading "採用判断のポイント" [level=2] [ref=e274]
+        - table [ref=e275]:
+          - rowgroup [ref=e276]:
+            - row "項目 採用 理由" [ref=e277]:
+              - columnheader "項目" [ref=e278]
+              - columnheader "採用" [ref=e279]
+              - columnheader "理由" [ref=e280]
+            - row "言語 Python 3.13 Pandas / NumPy / Matplotlib の生態系、データ分析の事実上の標準" [ref=e281]:
+              - cell "言語" [ref=e282]
+              - cell "Python 3.13" [ref=e283]
+              - cell "Pandas / NumPy / Matplotlib の生態系、データ分析の事実上の標準" [ref=e284]
+            - row "クラウド AWS (Lambda + EventBridge) 常時起動 EC2 不要、月数百円で完結。スケジュール実行が EventBridge で完結する" [ref=e285]:
+              - cell "クラウド" [ref=e286]
+              - cell "AWS (Lambda + EventBridge)" [ref=e287]
+              - cell "常時起動 EC2 不要、月数百円で完結。スケジュール実行が EventBridge で完結する" [ref=e288]
+            - row "データストア S3 (Parquet) + DynamoDB Parquet で時系列高速読み込み、DDB で状態管理を分離" [ref=e289]:
+              - cell "データストア" [ref=e290]
+              - cell "S3 (Parquet) + DynamoDB" [ref=e291]
+              - cell "Parquet で時系列高速読み込み、DDB で状態管理を分離" [ref=e292]
+            - row "発注実行 ローカル PC + kabu STATION 個人口座の API 制約上、ローカルから実発注。Lambda は判断層に専念" [ref=e293]:
+              - cell "発注実行" [ref=e294]
+              - cell "ローカル PC + kabu STATION" [ref=e295]
+              - cell "個人口座の API 制約上、ローカルから実発注。Lambda は判断層に専念" [ref=e296]
+            - row "IaC Terraform state を S3 backend に置き、複数環境（dev / prod）で再現性確保" [ref=e297]:
+              - cell "IaC" [ref=e298]
+              - cell "Terraform" [ref=e299]
+              - cell "state を S3 backend に置き、複数環境（dev / prod）で再現性確保" [ref=e300]
+            - row "レビュー ChatGPT（gpt-4o）共同 PDCA 戦略の盲点・過学習を指摘してもらい、人間 1 人では出せない速度で改善" [ref=e301]:
+              - cell "レビュー" [ref=e302]
+              - cell "ChatGPT（gpt-4o）共同 PDCA" [ref=e303]
+              - cell "戦略の盲点・過学習を指摘してもらい、人間 1 人では出せない速度で改善" [ref=e304]
+      - generic [ref=e305]:
+        - heading "運用上の工夫" [level=2] [ref=e306]
+        - list [ref=e307]:
+          - listitem [ref=e308]:
+            - strong [ref=e309]: 戦略のバージョニング
+            - text: ":"
+            - code [ref=e310]: v0.1
+            - text: 〜
+            - code [ref=e311]: v11
+            - text: までを git タグ + S3 prefix で物理分離。再現性のためのスナップショット。
+          - listitem [ref=e312]:
+            - strong [ref=e313]: バックテストの自動 PDCA
+            - text: ": ChatGPT に実行ログ + 結果を送り、改善案 → 実装 → 再実行を自動化。"
+          - listitem [ref=e314]:
+            - strong [ref=e315]: WFO（Walk Forward Optimization）
+            - text: ": 過学習回避のため、過去 X 年で学習 → 直近 1 年で検証する rolling window 評価を必須化。"
+          - listitem [ref=e316]:
+            - strong [ref=e317]: コスト監視
+            - text: ": Lambda 起動回数 + DDB 書き込みを CloudWatch Alarm で監視、想定超過時は SNS 通知。"
+      - generic [ref=e318]:
+        - heading "これからやる予定" [level=2] [ref=e319]
+        - list [ref=e320]:
+          - listitem [ref=e321]: 1545 月次 BuyHold をローカル PC + kabu STATION で本番ライブ稼働
+          - listitem [ref=e322]: v8 minute_collector で Yahoo Finance 1 分足を毎日 15:40 自動取得 → S3、口座開設後の実データ蓄積
+          - listitem [ref=e323]: 月次の損益・DD・取引履歴を可視化する内部ダッシュボード整備
+          - listitem [ref=e324]: AI 判断層（Logistic / RandomForest）の追加検討（v11）。Phase A の結果次第で着手可否を判断
+      - generic [ref=e325]:
+        - heading "関連リンク" [level=2] [ref=e326]
+        - list [ref=e327]:
+          - listitem [ref=e328]:
+            - link "← Works 一覧へ戻る" [ref=e329] [cursor=pointer]:
+              - /url: /works.html
+          - listitem [ref=e330]:
+            - link "About（管理人プロフィール）" [ref=e331] [cursor=pointer]:
+              - /url: /about.html
+          - listitem [ref=e332]:
+            - link "構築日誌（iigtn-platform 側の AWS 構成解説）" [ref=e333] [cursor=pointer]:
+              - /url: /blog/
+  - contentinfo [ref=e334]:
+    - generic [ref=e335]: © 2026 iigtn — Built with Terraform & GitHub Actions
+    - generic [ref=e336]:
+      - link "解説書" [ref=e337] [cursor=pointer]:
+        - /url: /learn.html
+      - text: ·
+      - link "GitHub" [ref=e338] [cursor=pointer]:
+        - /url: https://github.com/iigtn/iigtn-platform
+      - text: ·
+      - link "プライバシーポリシー" [ref=e339] [cursor=pointer]:
+        - /url: /privacy.html
