@@ -73,3 +73,6 @@ frontend/diagrams/embed/
 
 # ── Claude Code ────────────────────────────────
 .claude/settings.local.json
+
+# ── Playwright MCP snapshots (debug artifacts) ─
+.playwright-mcp/
