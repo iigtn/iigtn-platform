@@ -12,8 +12,6 @@
 | 技術スタック | AWS（S3・CloudFront・API Gateway・Lambda・DynamoDB・SES・Route 53・ACM・CloudWatch・SNS）/ Terraform / GitHub Actions OIDC |
 | ライセンス | MIT — [LICENSE](./LICENSE) |
 
-![iigtn.com プレビュー](./docs/screenshots/iigtn-preview-full.png)
-
 ---
 
 ## サイト内コンテンツ
