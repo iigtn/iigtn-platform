@@ -30,44 +30,11 @@
 
 ## アーキテクチャ
 
-**AWS 公式アイコン (v2026) で作成した drawio 構成図を [`frontend/diagrams/04-overall-architecture.drawio`](./frontend/diagrams/04-overall-architecture.drawio) に配置。GitHub 上のファイルをクリックすると、そのまま描画されます。**
+AWS 公式アイコン (v2026) で作成した構成図です。
 
-[![drawio で開く](https://img.shields.io/badge/drawio-AWS%20公式アイコン版を開く-blue?style=for-the-badge&logo=diagramsdotnet)](./frontend/diagrams/04-overall-architecture.drawio)
+![アーキテクチャ図 (AWS 公式アイコン v2026)](./docs/screenshots/architecture-aws.png)
 
-[ライブ版（解説書ページ内に AWS 公式アイコンで埋め込み描画）](https://www.iigtn.com/learn.html)
-
-以下は GitHub 上での即時プレビュー用の Mermaid 版です（同じ構成を簡略表記）:
-
-```mermaid
-flowchart LR
-    User["訪問者"]
-    DNS["Route 53 / Squarespace DNS"]
-    ACM["ACM (us-east-1)"]
-    CF["CloudFront<br/>(OAC + TLS)"]
-    S3[("S3 (private)")]
-    APIGW["API Gateway<br/>HTTP API"]
-    Lambda["Lambda<br/>Node.js 20"]
-    DDB[("DynamoDB")]
-    SES["SES"]
-    CW["CloudWatch<br/>Logs / Alarms"]
-    SNS["SNS Email"]
-
-    Dev["git push (main)"]
-    GHA["GitHub Actions<br/>OIDC"]
-    Role["IAM Role<br/>github-actions-deploy"]
-
-    User --> DNS --> CF
-    ACM -.-> CF
-    CF -->|"/* (静的)"| S3
-    CF -->|"/api/* (フォーム)"| APIGW --> Lambda
-    Lambda --> DDB
-    Lambda -.-> SES
-    Lambda --> CW --> SNS
-
-    Dev --> GHA -.->|AssumeRoleWithWebIdentity| Role
-    Role -.->|s3 sync + CF invalidation| S3
-    Role -.-> CF
-```
+ソース: [`frontend/diagrams/04-overall-architecture.drawio`](./frontend/diagrams/04-overall-architecture.drawio)（drawio で編集可能 / GitHub 上でクリックすると同じ構成が描画されます）
 
 ---
 
