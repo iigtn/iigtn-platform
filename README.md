@@ -1,188 +1,199 @@
-# iigtn.com — Serverless Portfolio Platform
+# iigtn-platform
 
-> AWS サーバレス構成で運用する、フリーランス・インフラエンジニアのポートフォリオ兼活動基盤。
+フリーランス・インフラエンジニア **iigtn** が設計・構築・運用する、AWS サーバレス構成のポートフォリオサイト本体のリポジトリです。
 
-| Domain | Stack | IaC | CI/CD | Status |
-|---|---|---|---|---|
-| `iigtn.com` | S3 + CloudFront + Lambda + DynamoDB + SES | Terraform | GitHub Actions (OIDC) | Live（個人運用 / 月次メトリクス公開中） |
+> サイト本体の動作と全構成コードを公開することで、技術選定・運用品質・コスト感の妥当性を第三者が検証可能な状態にしています。
+
+| 項目 | 内容 |
+|---|---|
+| 公開 URL | <https://www.iigtn.com> ・ <https://lab.iigtn.com> （同一コンテンツ） |
+| Apex (`iigtn.com`) | Squarespace で 301 リダイレクト → `www.iigtn.com` |
+| ステータス | Live（無人自動運用） |
+| 技術スタック | AWS（S3・CloudFront・API Gateway・Lambda・DynamoDB・SES・Route 53・ACM・CloudWatch・SNS）/ Terraform / GitHub Actions OIDC |
+| ライセンス | MIT — [LICENSE](./LICENSE) |
+
+![iigtn.com プレビュー](./docs/screenshots/iigtn-preview-full.png)
 
 ---
 
-## ドキュメントマップ
+## サイト内コンテンツ
 
-技術概要は本 README、それ以外は用途別に分割しています。
-
-| ファイル | 内容 |
+| カテゴリ | 公開ページ |
 |---|---|
-| [README.md](./README.md) | 構成図 / 採用理由 / 採用しなかった選択肢（本ファイル） |
-| [docs/motivation.md](./docs/motivation.md) | なぜこの構成にしたか — 個人の経験・仮説・揺らぎ |
-| [docs/cost.md](./docs/cost.md) | 月額コスト試算と最適化 |
-| [docs/metrics.md](./docs/metrics.md) | **実運用メトリクス（月次更新）** |
-| [docs/runbook.md](./docs/runbook.md) | 障害対応 + 実際に起きた / 再現した障害ログ |
-| [docs/lessons.md](./docs/lessons.md) | 失敗・妥協・技術的敗北・現在悩んでいること |
-| [docs/business.md](./docs/business.md) | クライアント案件への展開構想（前提条件付き） |
-| [docs/interview.md](./docs/interview.md) | 面接 Q&A（採用対策） |
+| プロフィール | [About](https://www.iigtn.com/about.html) ・ [Skills](https://www.iigtn.com/skills.html) |
+| 実績 | [Works](https://www.iigtn.com/works.html) （/projects/ 配下に各プロジェクトの構成解説 8 ページ） |
+| ブログ | [構築日誌（全 21 記事）](https://www.iigtn.com/blog/) ・ [AWS 基本サービス入門（全 15 記事）](https://www.iigtn.com/blog/aws-basics/) ・ [現場コマンドリファレンス（全 19 記事）](https://www.iigtn.com/blog/ref/) |
+| 解説書 | [このサイトの構築解説（採用評価向けの詳細版）](https://www.iigtn.com/learn.html) |
+| お問い合わせ | [Contact](https://www.iigtn.com/contact.html) |
 
 ---
 
 ## アーキテクチャ
 
+**AWS 公式アイコン (v2026) で作成した drawio 構成図を [`frontend/diagrams/04-overall-architecture.drawio`](./frontend/diagrams/04-overall-architecture.drawio) に配置。GitHub 上のファイルをクリックすると、そのまま描画されます。**
+
+[![drawio で開く](https://img.shields.io/badge/drawio-AWS%20公式アイコン版を開く-blue?style=for-the-badge&logo=diagramsdotnet)](./frontend/diagrams/04-overall-architecture.drawio)
+
+[ライブ版（解説書ページ内に AWS 公式アイコンで埋め込み描画）](https://www.iigtn.com/learn.html)
+
+以下は GitHub 上での即時プレビュー用の Mermaid 版です（同じ構成を簡略表記）:
+
 ```mermaid
-flowchart TD
-    User["🌐 訪問者"]
-    DNS["Squarespace DNS"]
-    ACM["ACM 証明書<br/>us-east-1"]
-    CF["CloudFront<br/>CDN + TLS終端"]
-    S3[("S3<br/>静的ファイル")]
+flowchart LR
+    User["訪問者"]
+    DNS["Route 53 / Squarespace DNS"]
+    ACM["ACM (us-east-1)"]
+    CF["CloudFront<br/>(OAC + TLS)"]
+    S3[("S3 (private)")]
     APIGW["API Gateway<br/>HTTP API"]
     Lambda["Lambda<br/>Node.js 20"]
     DDB[("DynamoDB")]
     SES["SES"]
-    CW["CloudWatch<br/>Logs + Alarms"]
-    SNS["SNS<br/>通知"]
+    CW["CloudWatch<br/>Logs / Alarms"]
+    SNS["SNS Email"]
 
-    Dev["👨‍💻 git push"]
-    GHA["GitHub Actions"]
-    OIDC["OIDC + IAM Role"]
+    Dev["git push (main)"]
+    GHA["GitHub Actions<br/>OIDC"]
+    Role["IAM Role<br/>github-actions-deploy"]
 
-    User --> DNS
-    DNS --> CF
+    User --> DNS --> CF
     ACM -.-> CF
-    CF -->|"/*"| S3
-    CF -->|"/api/*"| APIGW
-    APIGW --> Lambda
+    CF -->|"/* (静的)"| S3
+    CF -->|"/api/* (フォーム)"| APIGW --> Lambda
     Lambda --> DDB
     Lambda -.-> SES
-    Lambda --> CW
-    CW --> SNS
+    Lambda --> CW --> SNS
 
-    Dev --> GHA
-    GHA -.->|"OIDC AssumeRole"| OIDC
-    OIDC -.-> S3
-    OIDC -.-> CF
+    Dev --> GHA -.->|AssumeRoleWithWebIdentity| Role
+    Role -.->|s3 sync + CF invalidation| S3
+    Role -.-> CF
 ```
 
-> 詳細は [docs/iigtn/README.md](./docs/iigtn/README.md)（設計書 v5）参照。実運用解説は [https://lab.iigtn.com/learn.html](https://lab.iigtn.com/learn.html)。
+---
 
-### AWS 公式アイコン版
+## 採用技術と役割
 
-GitHub では Mermaid が直接描画されるため上図は Mermaid のみですが、**AWS 公式アイコン (aws4) を使った drawio 版** も用意してあります。
-
-| 図 | drawio ファイル |
-|---|---|
-| ① 訪問者がページを見る流れ | [frontend/diagrams/01-visitor-static.drawio](./frontend/diagrams/01-visitor-static.drawio) |
-| ② 問い合わせフォーム送信の流れ | [frontend/diagrams/02-form-flow.drawio](./frontend/diagrams/02-form-flow.drawio) |
-| ③ CI/CD デプロイの流れ | [frontend/diagrams/03-deploy-flow.drawio](./frontend/diagrams/03-deploy-flow.drawio) |
-| ④ 全体アーキテクチャ | [frontend/diagrams/04-overall-architecture.drawio](./frontend/diagrams/04-overall-architecture.drawio) |
-
-GitHub は `.drawio` ファイルをクリックすると自動で描画します。ローカル編集は [app.diagrams.net](https://app.diagrams.net/) で開けます。実運用の解説書 [https://lab.iigtn.com/learn.html](https://lab.iigtn.com/learn.html) では同じ図がインラインで表示されます（AWS 公式アイコン使用）。
+| レイヤー | サービス | 役割 |
+|---|---|---|
+| ドメイン | `iigtn.com`（apex）/ `www.iigtn.com` / `lab.iigtn.com` | apex は Squarespace で 301 → www、www / lab は CloudFront で同一コンテンツ配信 |
+| DNS | Route 53 + Squarespace DNS | `*.iigtn.com` のサブドメイン管理。apex は Squarespace 管理（Workspace バンドル制約） |
+| 配信 | CloudFront（OAC） | TLS 終端 / キャッシュ / ヘッダー / SPA リライト |
+| 証明書 | ACM (us-east-1) | `*.iigtn.com`、自動更新 |
+| 静的 | S3（Public Access Block 全 ON） | HTML / CSS / JS / 画像。CloudFront 経由のみ参照可能 |
+| API | API Gateway HTTP API | 問い合わせフォーム経路 |
+| 計算 | Lambda（Node.js 20 / arm64 / 256 MB） | フォーム処理（バリデーション / DDB 書き込み / SES 送信） |
+| データ | DynamoDB（On-Demand + PITR） | 問い合わせ履歴 |
+| メール | SES | フォーム送信先（DKIM / SPF / DMARC 構成） |
+| 監視 | CloudWatch + SNS | エラー / レイテンシアラーム → Email 通知 |
+| 認証 | IAM + OIDC（GitHub Actions） | 静的アクセスキーゼロ。push 時のみ短期クレデンシャル発行 |
+| IaC | Terraform | 全リソースをコード管理（S3 backend + DynamoDB Lock） |
+| CI/CD | GitHub Actions | `main` push → S3 sync + CloudFront invalidation 自動実行 |
+| アナリティクス | Google Analytics 4 (gtag.js) | PV / 流入経路 / 滞在時間の計測 |
 
 ---
 
-## サービスの役割と採用理由
+## 設計の柱
 
-| 層 | サービス | 役割 | 採用理由 |
-|---|---|---|---|
-| DNS | Route 53 | iigtn.com 解決 | Alias で安価、ヘルスチェック連携も可 |
-| 配信 | CloudFront | CDN + TLS 終端 | OAC で S3 を直接公開せずに済む（意図的な非公開設計）、SPA リライト対応 |
-| 証明書 | ACM (us-east-1) | TLS 1.2+ | CloudFront 用は us-east-1 必須 |
-| 静的 | S3 | HTML/JS/CSS/画像 | バージョニング+ライフサイクル |
-| API | API Gateway HTTP API | Lambda の入口 | REST より安価、フォーム規模に十分 |
-| 計算 | Lambda | 問い合わせ処理 | アイドル時ほぼ無料、自動スケール |
-| データ | DynamoDB | 問い合わせ履歴 | Lambda と相性良、PII を PK にしない設計 |
-| メール | SES | 送信 | DKIM/SPF/DMARC を Route53 で揃えられる |
-| 監視 | CloudWatch | Logs/Metrics/Alarm | Lambda/API GW から自動で出る部分を活用 |
-| 認証 | IAM (Role + OIDC) | 人/CI 権限分離 | GitHub Actions に静的キー無し |
-| IaC | Terraform | 全リソース管理 | 採用市場で評価が高い |
+### 1. セキュリティ最小権限
 
-詳細なコスト試算は [docs/cost.md](./docs/cost.md)、実運用値は [docs/metrics.md](./docs/metrics.md)。
+- **S3 を直接公開しない**: Public Access Block 全 ON、CloudFront の Origin Access Control 経由のみ
+- **静的アクセスキーを発行しない**: GitHub Actions は OIDC で `AssumeRoleWithWebIdentity`、有効期限つき短期クレデンシャル
+- **IAM 最小権限**: Lambda の権限は対象 DynamoDB テーブル ARN まで具体化、CloudFront 用 IAM は Distribution ID で限定
+- **全層暗号化**: S3（SSE-S3）/ DynamoDB（KMS）/ Terraform State（S3 暗号化 + DynamoDB Lock）/ TLS 1.2 以上
 
----
+### 2. 無人運用前提の自動化
 
-## 採用しなかった選択肢
+- ドメイン取得 → 証明書発行 → CloudFront 配信 → 問い合わせ受信 → ログ集約 → アラーム → メール通知 までが Terraform で完結
+- `main` ブランチへの push が唯一のデプロイトリガー（手作業の `aws s3 cp` 等は緊急時のみ）
+- CloudFront のキャッシュ無効化はワイルドカード `/*` 指定で反映漏れを防止
 
-### Amplify
-内部で同じ AWS リソースを使うが、抽象化が強くインフラ層がブラックボックス化する。**インフラエンジニアとしての設計力を可視化する目的** に対して逆効果。
+### 3. 設計判断の記録
 
-### Vercel
-Next.js を動かすだけなら最適だが、本プロジェクトの目的は **AWS の理解度を示すこと**。手段が目的と矛盾する。
-
-### ECS / Fargate
-コンテナ常駐が必要な API がない。最小構成でも常時 1,400 円/月発生し、VPC/ALB のレイヤー数も増える。年単位放置に向かない。
-
-### EC2
-月 600 円〜の常時課金、毎月の OS パッチ運用、バズ時の ALB+ASG 重装化が発生。EC2 力は別途 **検証用 EC2 を立てた記事** として訴求する方が効率的。
+- 各構成の採用理由・採用しなかった選択肢を [docs/](./docs) 配下にドキュメント化
+- 全 21 記事の構築日誌で「ハマりどころ・解決手順・学び」を一次記録として公開（[blog/](https://www.iigtn.com/blog/)）
 
 ---
 
-## セキュリティの 4 原則
+## 月額運用コスト
 
-> S3 直公開しない / 静的キーを発行しない / IAM 最小権限 / 全層暗号化
+実トラフィック・為替・無料枠で変動するため、**無風時 / 月間 PV 5,000 想定**の概算値です。詳細試算は [docs/cost.md](./docs/cost.md)、月次の実測値は [docs/metrics.md](./docs/metrics.md)。
 
-| 対策 | 効果 |
-|---|---|
-| S3 を CloudFront 経由のみに限定 (OAC) | 直 URL 流出を防ぐ意図的な設計 |
-| GitHub Actions OIDC + AssumeRole | アクセスキーを Secrets に置かない |
-| Lambda IAM 最小権限 | DynamoDB は特定テーブル ARN まで絞る |
-| API Gateway Throttling | フォームが DDoS 踏み台にならない |
-| DynamoDB KMS 暗号化 | 標準で AWS 管理キー |
-| Terraform State 暗号化 + Lock | State には機密情報が含まれる |
+| サービス | 月額（円・概算） |
+|---|---:|
+| Route 53 Hosted Zone | 約 75 |
+| CloudFront 配信（5 GB / 50k リクエスト） | 約 95 |
+| S3（1 GB + 数万リクエスト） | 約 6 |
+| Lambda + API Gateway（無料枠内） | 0 |
+| DynamoDB On-Demand（数十回 R/W） | < 5 |
+| SES（数百通） | < 5 |
+| CloudWatch Logs / Alarms / Budgets | 約 30 |
+| **合計目安** | **約 200 〜 300 円** |
 
-> ⚠️ 「サーバレスだから安全」という誤解は避ける。Lambda ランタイム・Node ランタイム・npm 依存・OSS の脆弱性 は当然存在する。OS レイヤーの管理が不要なだけで、**アプリ層の SCA（依存スキャン）と SAST は別途必須**。
-
----
-
-## クイックスタート（最初の 1 か月）
-
-| 週 | やること |
-|---|---|
-| W1 | Terraform bootstrap + Route53 + ACM + S3 + CloudFront |
-| W2 | サイト本体（Next.js / Astro）公開 |
-| W3 | GitHub Actions で自動 deploy + ADR 1 本目 |
-| W4 | Lambda + API GW + SES で問い合わせフォーム |
+> ⚠️ Lambda・API Gateway は無料枠を超えると従量課金。ACM は CloudFront 用は無料、Route 53 のクエリは月数千円規模になるトラフィックでは無視できなくなります。
 
 ---
 
 ## ディレクトリ構成
 
-```
+```text
 iigtn-platform/
-├── README.md
+├── README.md                          # 本ファイル
 ├── docs/
-│   ├── motivation.md
-│   ├── cost.md
-│   ├── metrics.md
-│   ├── runbook.md
-│   ├── lessons.md
-│   ├── business.md
-│   ├── interview.md
-│   ├── adr/
-│   └── postmortem/
-├── frontend/                       # Next.js or Astro
-├── backend/                        # Lambda 関数
-│   ├── functions/contact/
-│   └── shared/
-├── terraform/
-│   ├── bootstrap/                  # state バケットのみ手動
-│   ├── modules/
-│   │   ├── network_dns/
-│   │   ├── frontend_cdn/
-│   │   ├── backend_api/
-│   │   ├── messaging/
-│   │   ├── observability/
-│   │   └── ci_oidc/
-│   └── envs/{dev,prod}/
-└── .github/workflows/
-    ├── frontend-deploy.yml
-    ├── backend-deploy.yml
-    ├── terraform-plan.yml
-    └── terraform-apply.yml
+│   ├── motivation.md                  # 設計判断の背景
+│   ├── cost.md                        # 月額コスト試算
+│   ├── metrics.md                     # 実運用メトリクス（月次更新）
+│   ├── runbook.md                     # 障害対応手順
+│   ├── lessons.md                     # 失敗・妥協・学び
+│   ├── adr/                           # Architecture Decision Records
+│   ├── postmortem/                    # 障害振り返り
+│   └── screenshots/
+├── frontend/
+│   ├── *.html                         # トップ / About / Skills / Works / Contact / Privacy / Learn
+│   ├── projects/                      # 各プロジェクトの構成解説ページ
+│   ├── blog/                          # 構築日誌 + AWS 基本サービス入門 + 現場コマンドリファレンス
+│   ├── diagrams/                      # アーキテクチャ図（drawio + AWS 公式アイコン）
+│   ├── assets/                        # アイコン / ロゴ / SNS ヘッダー
+│   └── site.css
+├── backend/
+│   └── functions/                     # Lambda 関数
+└── terraform/
+    ├── modules/
+    │   ├── network_dns/               # Route 53 + ACM
+    │   ├── frontend_cdn/              # S3 + CloudFront + OAC
+    │   ├── backend_api/               # API Gateway + Lambda + DynamoDB
+    │   ├── messaging/                 # SES
+    │   ├── observability/             # CloudWatch + SNS + Budgets
+    │   └── ci_oidc/                   # GitHub Actions OIDC + IAM Role
+    ├── envs/{dev,prod}/
+    └── bootstrap/                     # State バケット初期化
 ```
 
 ---
 
-## License
-MIT — see [LICENSE](./LICENSE)
+## リポジトリ運用
 
-## Contact
-`https://iigtn.com/contact` から問い合わせ可。
+- **デプロイ**: `main` ブランチへの push をトリガに GitHub Actions が `aws s3 sync` + `aws cloudfront create-invalidation /*` を実行（OIDC 経由のキーレス認証）
+- **インフラ変更**: Terraform `modules/` 配下を変更 → `terraform plan` を PR で確認 → merge 後 `terraform apply`
+- **ドキュメント**: [docs/](./docs) は人手更新、構築日誌は [`frontend/blog/`](./frontend/blog/) に直接配置
+
+---
+
+## 関連ドキュメント
+
+| ドキュメント | 内容 |
+|---|---|
+| [docs/motivation.md](./docs/motivation.md) | この構成にした理由・揺らぎ・代替案を捨てた経緯 |
+| [docs/cost.md](./docs/cost.md) | 月額コスト試算と最適化ポイント |
+| [docs/metrics.md](./docs/metrics.md) | 実運用メトリクス（p95 / Hit 率 / Lambda Duration / Uptime / MTTD / MTTR） |
+| [docs/runbook.md](./docs/runbook.md) | 障害対応手順 |
+| [docs/lessons.md](./docs/lessons.md) | 構築・運用で得た学び・失敗 |
+| [docs/adr/](./docs/adr/) | Architecture Decision Records |
+| [docs/postmortem/](./docs/postmortem/) | 障害ポストモーテム |
+| [構築日誌（全 21 記事）](https://www.iigtn.com/blog/) | このサイトをゼロから構築した過程の一次記録 |
+| [解説書](https://www.iigtn.com/learn.html) | 採用評価向けの詳細解説（drawio 図インライン表示） |
+
+---
+
+## お問い合わせ
+
+業務委託・技術相談・コードレビュー依頼などは <https://www.iigtn.com/contact.html> または `contact@iigtn.com` までお気軽にどうぞ。
