@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Works — iigtn / 実績・制作物</title>
-  <meta name="description" content="フリーランス・インフラエンジニア iigtn の制作・構築実績。AWS サーバレス + Terraform で運用中のサイト (hojokin.iigtn.com / hojinka.com / ai-erabikata.com / hcl-guide.com) と SaaS LP (getdocchain.com) など。">
+  <meta name="description" content="フリーランス・インフラエンジニア iigtn の制作・構築実績。AWS サーバレス + Terraform で運用中のサイト (hojokin.iigtn.com / hojinka.com / ai-erabikata.com / hcl-guide.com / glamping-map.com / kosodate-area.com) と SaaS LP (getdocchain.com) など。">
   <meta name="author" content="iigtn">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://lab.iigtn.com/works.html">
@@ -198,6 +198,57 @@
         </article>
       </a>
 
+      <a href="/projects/glamping-map.html" class="work-card-link">
+        <article class="work-card">
+          <div class="work-meta">2026 / 個人 / 公開稼働中 · glamping-map.com</div>
+          <h3>グランピング × キャンプ場マップ — Next.js 15 × AWS サーバレス地理データ基盤 →</h3>
+          <p class="work-summary">
+            全国 47 都道府県・約 4,800 施設のグランピング / キャンプ場を地図 UI と条件絞り込みで検索できる Web メディア。
+            Next.js 15 (App Router, Static Export) を S3 + CloudFront (OAC) で配信し、DynamoDB に施設マスタを格納。
+            EventBridge → Lambda が月次で Rakuten Travel + OpenStreetMap Overpass + Wikidata から取り込み、
+            問い合わせは API Gateway + Lambda + SES、Secrets Manager / CloudWatch / IAM (GitHub OIDC) まで含めて
+            すべて Terraform で IaC 化。月額 $2〜5 で運用中です。
+          </p>
+          <ul class="skill-tags">
+            <li class="skill-tag">Next.js 15</li>
+            <li class="skill-tag">TypeScript</li>
+            <li class="skill-tag">Tailwind CSS</li>
+            <li class="skill-tag">Leaflet + OSM</li>
+            <li class="skill-tag">S3 + CloudFront (OAC)</li>
+            <li class="skill-tag">DynamoDB</li>
+            <li class="skill-tag">Lambda + API Gateway</li>
+            <li class="skill-tag">EventBridge</li>
+            <li class="skill-tag">SES + Secrets Manager</li>
+            <li class="skill-tag">Terraform</li>
+            <li class="skill-tag">GitHub Actions OIDC</li>
+          </ul>
+        </article>
+      </a>
+
+      <a href="/projects/kosodate-map.html" class="work-card-link">
+        <article class="work-card">
+          <div class="work-meta">2026 / 個人 / 公開稼働中 · kosodate-area.com</div>
+          <h3>子育てマップ — Next.js × AWS サーバレス保活・学区可視化基盤 →</h3>
+          <p class="work-summary">
+            全国 47 都道府県・約 27,000 の保育施設（認可・認定こども園・地域型・認証）と約 28,000 校の公立小・中学校を
+            地図で検索できる子育て世代向けメディア。Next.js (App Router, Static Export) を S3 + CloudFront (OAC) で配信、
+            DynamoDB に施設マスタ、Lambda + EventBridge で自治体公開データを取込。サブディレクトリ展開
+            (<code>/hokatsu/</code> 保活、<code>/gakku/</code> 学区、<code>/jushi/</code> 住居) で段階拡張する設計、
+            全リソース Terraform IaC で運用中です。
+          </p>
+          <ul class="skill-tags">
+            <li class="skill-tag">Next.js (App Router)</li>
+            <li class="skill-tag">TypeScript</li>
+            <li class="skill-tag">S3 + CloudFront (OAC)</li>
+            <li class="skill-tag">DynamoDB</li>
+            <li class="skill-tag">Lambda + EventBridge</li>
+            <li class="skill-tag">Route 53 + ACM</li>
+            <li class="skill-tag">Terraform</li>
+            <li class="skill-tag">GitHub Actions OIDC</li>
+          </ul>
+        </article>
+      </a>
+
       <a href="/blog/" class="work-card-link">
         <article class="work-card">
           <div class="work-meta">2026-04-26 / 全 21 記事 / 完結</div>
@@ -223,49 +274,6 @@
     <h2>Coming Soon</h2>
 
     <div class="works-list">
-
-      <a href="/projects/glamping-map.html" class="work-card-link">
-        <article class="work-card">
-          <div class="work-meta">構想中 / 立ち上げ準備中</div>
-          <h3>グランピング × キャンプ場マップ — Maptiler × AWS サーバレス地理データ基盤 →</h3>
-          <p class="work-summary">
-            全国の施設地理データを Next.js (Static Export) + S3 + CloudFront (OAC) で配信、DynamoDB に施設マスタを
-            格納する構成計画。EventBridge から月 1 で起動する Lambda が外部 API を取り込み、URL 死活監視 Lambda が
-            404/500 を検知して SES で通知。地図 UI は Maptiler API、Phase 2 で AWS WAF 追加予定。子育てマップと
-            Terraform モジュール共通化を想定しています。
-          </p>
-          <ul class="skill-tags">
-            <li class="skill-tag">構想中</li>
-            <li class="skill-tag">Next.js Static Export</li>
-            <li class="skill-tag">S3 + CloudFront (OAC)</li>
-            <li class="skill-tag">EventBridge + Lambda</li>
-            <li class="skill-tag">DynamoDB</li>
-            <li class="skill-tag">Maptiler API</li>
-            <li class="skill-tag">Terraform</li>
-          </ul>
-        </article>
-      </a>
-
-      <a href="/projects/kosodate-map.html" class="work-card-link">
-        <article class="work-card">
-          <div class="work-meta">構想中 / 立ち上げ準備中</div>
-          <h3>子育てマップ — サブディレクトリ展開型の地理データ基盤 →</h3>
-          <p class="work-summary">
-            保活 → 学区 → 学童 → 塾と段階的にサブディレクトリで展開する地理データ可視化メディアの構成計画。
-            Next.js (Static Export) + S3 + CloudFront + DynamoDB + Lambda + Maptiler API を、グランピングマップと
-            共通の Terraform モジュールで立ち上げ。データ取込は補助金検索の <code>data_import</code> パイプラインを流用、
-            CodeBuild で月次再ビルドする想定です。
-          </p>
-          <ul class="skill-tags">
-            <li class="skill-tag">構想中</li>
-            <li class="skill-tag">Next.js Static Export</li>
-            <li class="skill-tag">S3 + CloudFront</li>
-            <li class="skill-tag">DynamoDB</li>
-            <li class="skill-tag">Lambda + CodeBuild</li>
-            <li class="skill-tag">Terraform モジュール共通化</li>
-          </ul>
-        </article>
-      </a>
 
       <article class="work-card">
         <div class="work-meta">準備中</div>

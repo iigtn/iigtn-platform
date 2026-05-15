@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>子育てマップ 構成解説 — 保活＋学区＋学童＋塾の統合可視化 | iigtn</title>
-  <meta name="description" content="子育てマップ（保活マップ＋学区マップ統合型）の構成計画。30〜40 代の子育て世代向けに、保育園・学校・学童・塾・住宅情報を地図 UI で一括可視化。Next.js + AWS サーバレス + 自治体データ取込パイプラインで段階展開する設計。">
+  <title>子育てマップ 構成解説 — kosodate-area.com / 保活・学区可視化メディア | iigtn</title>
+  <meta name="description" content="kosodate-area.com の構成解説。全国 47 都道府県・約 27,000 保育施設・約 28,000 校をカバーする保活・学区マップ。Next.js (App Router, Static Export) + S3 + CloudFront (OAC) + DynamoDB + Lambda + EventBridge を Terraform IaC で運用中。">
   <meta name="author" content="iigtn">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://www.iigtn.com/projects/kosodate-map.html">
-  <meta property="og:title" content="子育てマップ 構成解説 — 保活＋学区＋学童＋塾の統合可視化">
-  <meta property="og:description" content="保活 → 学区 → 学童 → 塾とライフステージ 5〜10 年に渡って使われる、地理データ可視化メディアの構成計画。">
+  <meta property="og:title" content="子育てマップ 構成解説 — kosodate-area.com">
+  <meta property="og:description" content="全国 47 都道府県の保育施設・公立小中学校を地図で可視化する子育て世代向けメディアの AWS サーバレス構成。">
   <meta property="og:type" content="article">
   <meta property="og:url" content="https://www.iigtn.com/projects/kosodate-map.html">
   <meta property="og:site_name" content="iigtn">
@@ -17,7 +17,7 @@
   <meta property="og:locale" content="ja_JP">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="子育てマップ 構成解説">
-  <meta name="twitter:description" content="保活＋学区＋学童＋塾を統合する地理データ可視化メディアの構成計画。">
+  <meta name="twitter:description" content="保活＋学区＋住居を統合する地理データ可視化メディアの AWS サーバレス構成。">
   <meta name="twitter:image" content="https://www.iigtn.com/assets/icon.svg">
   <link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
   <link rel="apple-touch-icon" href="/assets/icon.svg">
@@ -54,37 +54,36 @@
 <main id="main">
 
   <header class="page-header">
-    <p class="h-meta">プロジェクト解説 · 構想中（立ち上げ準備中）</p>
-    <h1>子育てマップ — サブディレクトリ展開型の地理データ基盤</h1>
+    <p class="h-meta">プロジェクト解説 · 公開稼働中 · <a href="https://kosodate-area.com/" target="_blank" rel="noopener">kosodate-area.com</a></p>
+    <h1>子育てマップ — Next.js × AWS サーバレス保活・学区可視化基盤</h1>
     <p class="lead">
-      保活 → 学区 → 学童 → 塾と段階的にサブディレクトリで展開する地理データ可視化メディアの構成計画です。
-      Next.js (Static Export) + S3 + CloudFront + DynamoDB + Lambda + Maptiler API を、グランピングマップと共通の
-      Terraform モジュールで立ち上げ。データ取込は補助金検索の <code>data_import</code> パイプラインを流用し、
-      CodeBuild で月次再ビルドする想定です。
+      全国 47 都道府県・約 27,000 の保育施設（認可保育園・認定こども園・地域型保育・認証保育所）と
+      約 28,000 校の公立小・中学校を地図で検索できる、子育て世代向け Web メディア。
+      Next.js (App Router, Static Export) を S3 + CloudFront (OAC) で配信し、DynamoDB に施設マスタを格納、
+      Lambda + EventBridge で自治体公開データを取込み。サブディレクトリ展開（<code>/hokatsu/</code> 保活、
+      <code>/gakku/</code> 学区、<code>/jushi/</code> 住居）でライフステージ横断のクロス導線を構築しています。
     </p>
     <div class="h-cta">
+      <a class="btn btn-primary" href="https://kosodate-area.com/" target="_blank" rel="noopener">サイトを見る →</a>
       <a class="btn btn-ghost" href="/works.html">← Works に戻る</a>
     </div>
   </header>
 
   <section class="page-section">
 
-    <div class="h-callout">
-      <strong>注:</strong> 現在は構想決定 + 立ち上げ準備の段階で、本番ドメインはまだ取得していません。
-      グランピングマップと技術基盤を共通化する想定で構成を設計済み。
-    </div>
-
     <div class="h-section">
       <h2>サマリ</h2>
       <table>
-        <tr><th>プロジェクト</th><td>子育てマップ（仮）— 保活＋学区＋学童＋塾の統合可視化</td></tr>
-        <tr><th>ステータス</th><td>構想決定、立ち上げ準備中（ドメイン未取得）</td></tr>
-        <tr><th>ドメイン候補</th><td>kosodate-area.jp / mama-area.com / kosodate-map.jp / area-kosodate.jp / ie-kosodate.com</td></tr>
-        <tr><th>立ち上げ順序</th><td>保活マップ先行 → 学区マップ追加 → 学童 / 塾 / 移住 / 物件</td></tr>
-        <tr><th>月額運用費</th><td>1,000 〜 10,000 円（無風時はもっと低め、データ更新頻度で変動）</td></tr>
-        <tr><th>構成方針</th><td>Next.js (Static Export) + S3 + CloudFront + DynamoDB + Lambda + Maptiler API（グランピングマップと共通）</td></tr>
+        <tr><th>プロジェクト</th><td><a href="https://kosodate-area.com/" target="_blank" rel="noopener">kosodate-area.com</a></td></tr>
+        <tr><th>ステータス</th><td>公開稼働中（保活マップ＋学区マップ＋住居情報）</td></tr>
+        <tr><th>掲載施設数</th><td>保育施設 約 27,000 / 公立小・中学校 約 28,000</td></tr>
+        <tr><th>カバレッジ</th><td>47 都道府県、市区町村単位で絞り込み可能</td></tr>
+        <tr><th>サブディレクトリ</th><td><code>/hokatsu/</code>（保活）・<code>/gakku/</code>（学区）・<code>/jushi/</code>（住居）・<code>/column/</code>（コラム）</td></tr>
+        <tr><th>月額運用費</th><td>$2 〜 $10（静的ページ数が多くデータ更新頻度で変動）+ ドメイン更新料</td></tr>
+        <tr><th>構成方針</th><td>Next.js (App Router, Static Export) + S3 + CloudFront (OAC) + DynamoDB + Lambda + Terraform フル IaC</td></tr>
       </table>
     </div>
+
     <div class="h-section">
       <h2>全体アーキテクチャ</h2>
       <p>
@@ -101,7 +100,20 @@
     </div>
 
     <div class="h-section">
-      <h2>A. なぜ統合か</h2>
+      <h2>A. AWS 構成</h2>
+      <table>
+        <tr><th>カテゴリ</th><th>AWS サービス</th><th>役割</th></tr>
+        <tr><td>配信</td><td>CloudFront + S3</td><td>静的サイト配信（OAC で S3 直接アクセス遮断）</td></tr>
+        <tr><td>ドメイン / TLS</td><td>Route 53 + ACM</td><td><code>kosodate-area.com</code> + TLS 証明書</td></tr>
+        <tr><td>データレイヤ</td><td>DynamoDB</td><td>保育施設・学校・市区町村マスタ格納</td></tr>
+        <tr><td>データ取込</td><td>EventBridge + Lambda</td><td>自治体公開データを定期取込み、DynamoDB に upsert</td></tr>
+        <tr><td>認可</td><td>IAM (GitHub OIDC)</td><td>CI から短命クレデンシャルでデプロイ</td></tr>
+        <tr><td>観測</td><td>CloudWatch Logs / Alarms</td><td>Lambda・配信のログ集約</td></tr>
+      </table>
+    </div>
+
+    <div class="h-section">
+      <h2>B. なぜ統合か（ドメイン戦略）</h2>
       <ol>
         <li><strong>ターゲット層完全重複</strong>: 30〜40 代子育て世代はすべての領域を 1 人で意思決定する</li>
         <li><strong>ライフサイクル連続性</strong>: 保活 (0-3 歳) → 学区検討 (5-7 歳) → 中学進学 (10-12 歳) と長期間に渡る</li>
@@ -111,54 +123,43 @@
     </div>
 
     <div class="h-section">
-      <h2>B. 段階的展開プラン</h2>
-      <table>
-        <tr><th>Phase</th><th>期間</th><th>内容</th></tr>
-        <tr><td>1</td><td>0〜6 ヶ月</td><td>保活マップ立ち上げ（東京 23 区＋政令指定都市の保育園データ）+ 初期記事 30 本</td></tr>
-        <tr><td>2</td><td>6〜12 ヶ月</td><td>保活マップ深化（入園倍率 / 空き状況 / 競合分析記事）</td></tr>
-        <tr><td>3</td><td>12〜18 ヶ月</td><td>学区マップ追加（小中学校の進学実績・評判）</td></tr>
-        <tr><td>4</td><td>18〜24 ヶ月</td><td>学童・塾・移住・物件マップを追加</td></tr>
-      </table>
-    </div>
-
-    <div class="h-section">
-      <h2>C. サイト構造（計画）</h2>
+      <h2>C. サイト構造（現状）</h2>
       <pre style="background: var(--c-surface-2); padding: 0.8rem 1rem; border-radius: 6px; font-size: 0.85rem; overflow-x: auto;">
-example.com/
-├── /hokatsu/    ← 保活マップ（Phase 1）
-├── /gakku/      ← 学区マップ（Phase 3）
-├── /gakudo/     ← 学童保育マップ（Phase 4）
-├── /juku/       ← 塾・習い事マップ（Phase 4）
-├── /iju/        ← 子育て移住マップ（Phase 4）
-├── /jushi/      ← 物件・住宅情報
-└── /column/     ← コラム・解説記事</pre>
+kosodate-area.com/
+├── /hokatsu/{都道府県}/{市区町村}/  ← 保活マップ（公開中）
+├── /gakku/{都道府県}/{市区町村}/    ← 学区マップ（公開中）
+├── /jushi/{都道府県}/{市区町村}/    ← 住居・住み替え情報（公開中）
+└── /column/                         ← コラム・解説記事</pre>
+      <p class="h-meta">市区町村単位 × 都道府県単位の静的ページが大量に生成される構造。SSG なので CloudFront キャッシュで配信完結。</p>
     </div>
 
     <div class="h-section">
-      <h2>採用判断のポイント</h2>
+      <h2>D. 採用判断のポイント</h2>
       <table>
         <tr><th>項目</th><th>採用</th><th>理由</th></tr>
         <tr><td>展開戦略</td><td>統合（同一ドメイン、サブディレクトリ）</td><td>ドメインオーソリティ集中、データ・UI 共通化</td></tr>
-        <tr><td>静的化</td><td>Next.js Static Export</td><td>地図 UI 以外は SSG、ボット集客に強い</td></tr>
-        <tr><td>地図</td><td>Maptiler API</td><td>無料枠から始められる、グランピングマップと共通化</td></tr>
-        <tr><td>データソース</td><td>自治体公開データ + 補助金検索のパイプラインを流用</td><td>既存の data_import を再利用、CodeBuild で月次更新</td></tr>
-        <tr><td>共通化</td><td>グランピングマップと Terraform モジュール共有</td><td>運用負荷集約、新サブサイト追加が早い</td></tr>
+        <tr><td>静的化</td><td>Next.js (App Router, Static Export)</td><td>市区町村粒度の大量ページを CloudFront キャッシュで配信、サーバ常時稼働なし</td></tr>
+        <tr><td>データソース</td><td>自治体公開データ（WAM NET ほか）</td><td>無償・継続的に更新、API キー不要</td></tr>
+        <tr><td>データ取込</td><td>Lambda + EventBridge</td><td>定期取込み、人手なし</td></tr>
+        <tr><td>共通化</td><td>グランピングマップと Terraform モジュール共有</td><td>運用負荷集約、地理データ基盤の再利用</td></tr>
       </table>
     </div>
 
     <div class="h-section">
-      <h2>これからやる予定</h2>
+      <h2>E. セキュリティ・コンプライアンス</h2>
       <ul>
-        <li>ドメイン取得（候補比較で 1 つに絞り込み）</li>
-        <li>Phase 1 MVP: 東京 23 区の保活マップ + 初期記事 30 本</li>
-        <li>Terraform モジュールをグランピングマップと共通化</li>
-        <li>自治体データ取込パイプラインの実装（補助金検索の data_import を流用）</li>
+        <li><strong>HTTPS only</strong> — ACM 発行の TLS 証明書 + CloudFront で強制</li>
+        <li><strong>S3 直接公開なし</strong> — CloudFront Origin Access Control (OAC) で S3 を private に</li>
+        <li><strong>長期 AWS キー不使用</strong> — GitHub Actions は OIDC で短命クレデンシャル取得</li>
+        <li><strong>最小権限 IAM</strong> — Lambda は関数ごとに必要最小のロール</li>
+        <li><strong>個人情報の収集なし</strong> — 公開データのみを扱い、ユーザー固有情報は保持しない</li>
       </ul>
     </div>
 
     <div class="h-section">
       <h2>関連リンク</h2>
       <ul>
+        <li><a href="https://kosodate-area.com/" target="_blank" rel="noopener">kosodate-area.com（公開サイト）</a></li>
         <li><a href="/works.html">← Works 一覧へ戻る</a></li>
         <li><a href="/projects/glamping-map.html">グランピング × キャンプ場マップ（共通技術基盤）</a></li>
       </ul>
