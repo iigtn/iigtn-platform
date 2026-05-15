@@ -9,7 +9,7 @@
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://www.iigtn.com/projects/ai-erabikata.html">
   <meta property="og:title" content="AI えらびかた 構成解説 — タスク別・業界別 AI 比較レビューメディア">
-  <meta property="og:description" content="Next.js + AWS Amplify Hosting で組んだ SEO + アフィリエイト型コンテンツメディアの構成解説。">
+  <meta property="og:description" content="Next.js + AWS Amplify Hosting で組んだ SEO 型コンテンツメディアの構成解説。">
   <meta property="og:type" content="article">
   <meta property="og:url" content="https://www.iigtn.com/projects/ai-erabikata.html">
   <meta property="og:site_name" content="iigtn">
@@ -22,9 +22,6 @@
   <link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
   <link rel="apple-touch-icon" href="/assets/icon.svg">
   <link rel="stylesheet" href="/site.css?v=20260506-rwd">
-
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7533093647574923" crossorigin="anonymous"></script>
-  <meta name="google-adsense-account" content="ca-pub-7533093647574923">
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-3K7CXNEVC8"></script>
   <script>
@@ -62,7 +59,7 @@
     <p class="lead">
       <code>ai-erabikata.com</code> は、ChatGPT / Claude / Gemini 等の主要 AI を「タスク別・業界別の使い分け」で
       解説する SEO メディアです。記事 30 本 + 比較ツール「AI セレクター」+ 構造化データ + PWA + ダークモード
-      まで実装。AWS Amplify Hosting で Next.js を SSG 配信、A8.net・楽天・Amazon アソシエイトでアフィリ収益化中。
+      まで実装。AWS Amplify Hosting で Next.js を SSG 配信しています。
     </p>
     <div class="h-cta">
       <a class="btn btn-primary" href="https://ai-erabikata.com/" target="_blank" rel="noopener">本番サイトを開く →</a>
@@ -80,8 +77,8 @@
         <tr><th>公開 URL</th><td><a href="https://ai-erabikata.com/" target="_blank" rel="noopener">https://ai-erabikata.com/</a></td></tr>
         <tr><th>用途</th><td>主要 AI のタスク別・業界別比較記事 + AI セレクター（質問応答型レコメンドツール）</td></tr>
         <tr><th>コンテンツ規模</th><td>記事 30 本 + 比較ツール 1 + 法律/運営ページ 4 + 動的 sitemap (36 URL)</td></tr>
-        <tr><th>構成</th><td>Next.js (App Router) + AWS Amplify Hosting + Route 53 + ACM + GA4 + AdSense</td></tr>
-        <tr><th>収益モデル</th><td>A8.net / 楽天 / Amazon アソシエイト + AdSense 広告</td></tr>
+        <tr><th>構成</th><td>Next.js (App Router) + AWS Amplify Hosting + Route 53 + ACM</td></tr>
+        <tr><th>運用形態</th><td>main ブランチ push → Amplify webhook で自動ビルド・デプロイ</td></tr>
       </table>
     </div>
     <div class="h-section">
@@ -98,7 +95,6 @@
         （drawio で開けば編集可能）
       </p>
     </div>
-
 
     <div class="h-section">
       <h2>A. 訪問者の閲覧フロー</h2>
@@ -128,25 +124,23 @@
     <div class="h-section">
       <h2>C. 比較ツール「AI セレクター」</h2>
       <p>
-        集客フックの 1 つとして、<a href="https://ai-erabikata.com/tools/ai-selector" target="_blank" rel="noopener">/tools/ai-selector</a> に
+        <a href="https://ai-erabikata.com/tools/ai-selector" target="_blank" rel="noopener">/tools/ai-selector</a> に
         質問応答型のレコメンドツールを実装しています。
       </p>
       <ul>
         <li>5〜7 問の質問に答えると、用途・予算・優先度から ChatGPT / Claude / Gemini の中で「あなたに合う AI」を推奨</li>
-        <li>クライアントサイドのみで完結（Lambda 不要、CloudFront キャッシュで完結）</li>
-        <li>結果ページから関連レビュー記事 + アフィリリンクへ誘導</li>
+        <li>クライアントサイドのみで完結（Lambda 不要、CloudFront キャッシュで応答完結）</li>
+        <li>結果ページから関連記事へ動線</li>
       </ul>
     </div>
 
     <div class="h-section">
-      <h2>D. SEO + 計測 + 収益化</h2>
+      <h2>D. SEO + 計測</h2>
       <ul>
         <li><strong>構造化データ (JSON-LD)</strong>: Article / FAQPage（記事末尾の用語解説） / BreadcrumbList / WebSite を全記事に埋め込み</li>
         <li><strong>動的 sitemap.xml</strong>: 記事数の増加に追従。記事 30 + 静的 6 = 36 URL</li>
-        <li><strong>RSS フィード</strong>: <code>/rss.xml</code> で記事更新を配信、note や Feedly 取り込みに対応</li>
-        <li><strong>GA4 計測</strong>: <code>G-XXXXXXXXX</code>（ID は伏字）でユーザー行動分析</li>
-        <li><strong>AdSense 申請済み</strong>: <code>ads.txt</code> + meta + script 配置、審査依頼中</li>
-        <li><strong>アフィリエイト</strong>: A8.net (ZENCHORD1 / Languise / PLAUD NOTE / Notta / DMM 生成 AI CAMP / Doraverse) + 楽天 (Microsoft 365) + Amazon アソシエイト</li>
+        <li><strong>RSS フィード</strong>: <code>/rss.xml</code> で記事更新を配信、Feedly 等の取り込みに対応</li>
+        <li><strong>GA4 計測</strong>: ユーザー行動分析のためのタグを全ページに実装</li>
         <li><strong>記事ページの読了支援</strong>: パンくず / 目次 (TOC) / 関連記事 / シェアボタン / 読書プログレスバー / スクロールトップ</li>
       </ul>
     </div>
@@ -159,7 +153,6 @@
         <tr><td>ホスティング</td><td>AWS Amplify Hosting</td><td>Next.js ネイティブ対応、push 即デプロイ、CloudFront ベースで日本配信も速い</td></tr>
         <tr><td>DNS / TLS</td><td>Route 53 + ACM (us-east-1)</td><td>www / apex 両方を 1 証明書でカバー、自動更新</td></tr>
         <tr><td>計測</td><td>GA4</td><td>無料、Search Console と統合、EE-A-T 計測の事実上の標準</td></tr>
-        <tr><td>収益化</td><td>AdSense + 複数 ASP</td><td>記事クラスタごとに最適 ASP を出し分け、リスク分散</td></tr>
         <tr><td>SEO 軸</td><td>2 軸絞り込み（業界 × タスク）</td><td>レッドオーシャン回避、ロングテールに振る</td></tr>
       </table>
     </div>
@@ -178,10 +171,9 @@
     <div class="h-section">
       <h2>これからやる予定</h2>
       <ul>
-        <li>記事を月 8〜12 本ペースで継続投下（KW クラスタ C1〜C5 の偏りを毎月リバランス）</li>
+        <li>記事の継続投下と KW クラスタの偏り見直し</li>
         <li>競合 KW の上位記事リライト・内部リンク強化</li>
-        <li>DocChain（自社 SaaS）と連携する記事クラスタを追加（エンジニア × AI 活用）</li>
-        <li>AdSense 審査通過後の広告配置 A/B テスト</li>
+        <li>サイト内検索とフィルタ UI の改善</li>
       </ul>
     </div>
 
@@ -209,7 +201,6 @@
     <a href="/privacy.html">プライバシーポリシー</a>
   </div>
 </footer>
-
 
 <!-- drawio inline viewer (renders all <div class="mxgraph">) -->
 <script src="https://viewer.diagrams.net/js/viewer-static.min.js"></script>

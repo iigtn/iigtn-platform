@@ -9,7 +9,7 @@
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://www.iigtn.com/projects/glamping-map.html">
   <meta property="og:title" content="グランピング × キャンプ場マップ 構成解説">
-  <meta property="og:description" content="地図 UI 特化のアフィリエイトメディアの AWS サーバレス構成計画。">
+  <meta property="og:description" content="地図 UI 特化の地理データ可視化メディアの AWS サーバレス構成計画。">
   <meta property="og:type" content="article">
   <meta property="og:url" content="https://www.iigtn.com/projects/glamping-map.html">
   <meta property="og:site_name" content="iigtn">
@@ -17,14 +17,11 @@
   <meta property="og:locale" content="ja_JP">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="グランピング × キャンプ場マップ 構成解説">
-  <meta name="twitter:description" content="地図 UI 特化のアフィリエイトメディアの AWS サーバレス構成計画。">
+  <meta name="twitter:description" content="地図 UI 特化の地理データ可視化メディアの AWS サーバレス構成計画。">
   <meta name="twitter:image" content="https://www.iigtn.com/assets/icon.svg">
   <link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
   <link rel="apple-touch-icon" href="/assets/icon.svg">
   <link rel="stylesheet" href="/site.css?v=20260506-rwd">
-
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7533093647574923" crossorigin="anonymous"></script>
-  <meta name="google-adsense-account" content="ca-pub-7533093647574923">
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-3K7CXNEVC8"></script>
   <script>
@@ -60,8 +57,7 @@
     <p class="h-meta">プロジェクト解説 · 構想中（立ち上げ準備中）</p>
     <h1>グランピング × キャンプ場マップ</h1>
     <p class="lead">
-      日本全国のグランピング施設・キャンプ場を地図 UI で可視化し、予約サイトへ送客するアフィリエイトメディアの
-      構成計画です。グランピング (高単価) を主軸にしつつ、一般キャンプ場 (数勝負) も網羅。
+      日本全国のグランピング施設・キャンプ場を地図 UI で可視化する地理データ可視化メディアの構成計画です。
       子育てマップと技術基盤を共通化する想定で、Next.js (Static Export) + S3 + CloudFront + DynamoDB +
       Lambda の AWS サーバレス構成を設計済みです。
     </p>
@@ -83,8 +79,7 @@
         <tr><th>プロジェクト</th><td>グランピング × キャンプ場マップ（仮）</td></tr>
         <tr><th>ステータス</th><td>構想決定、立ち上げ準備中（ドメイン未取得）</td></tr>
         <tr><th>ドメイン候補</th><td>glamping-map.jp / glamp-camp.com / glamping-japan.com / camp-map.jp / glcamp.jp</td></tr>
-        <tr><th>収益モデル</th><td>楽天トラベル / じゃらん / 独自プログラム アフィリ + AdSense</td></tr>
-        <tr><th>目標 (24 ヶ月後)</th><td>MRR ¥20〜50 万 / 月間 PV 5〜10 万 / 月額運用費 ¥1,000〜10,000 / 粗利 95% 超</td></tr>
+        <tr><th>月額運用費</th><td>1,000 〜 10,000 円（無風時はもっと低め、施設データ更新頻度で変動）</td></tr>
         <tr><th>構成方針</th><td>Next.js (Static Export) + S3 + CloudFront + DynamoDB + Lambda + Maptiler API</td></tr>
         <tr><th>共通化</th><td>子育てマップと Terraform モジュールを共有、同一 AWS アカウント、タグでプロジェクト分離</td></tr>
       </table>
@@ -104,19 +99,8 @@
       </p>
     </div>
 
-
     <div class="h-section">
-      <h2>A. なぜグランピング特化か</h2>
-      <ul>
-        <li><strong>一般キャンプ場のみだと収益薄い</strong>: 楽天/じゃらんアフィリ報酬率 1〜2%、1 泊 ¥5,000〜10,000 × 1% で CV 単価 ¥50〜100。月数百件でも月収 ¥5 万円程度に頭打ち。</li>
-        <li><strong>グランピング特化なら高単価</strong>: 1 泊 ¥20,000〜50,000 × 1.5% で CV 単価 ¥300〜750。独自プログラムなら 5〜10% で ¥1,000〜5,000。月 50 件で月収 ¥5〜25 万円。</li>
-        <li><strong>市場の追い風</strong>: コロナ後の継続需要、ファミリー / カップル層の拡大、インバウンド需要、まだ大手寡占ではない。</li>
-        <li><strong>ハイブリッド戦略</strong>: グランピング (高単価) + 一般キャンプ場 (ロングテール集客) で複合収益化。</li>
-      </ul>
-    </div>
-
-    <div class="h-section">
-      <h2>B. 全体アーキテクチャ（計画）</h2>
+      <h2>A. 全体アーキテクチャ（計画）</h2>
       <ul>
         <li><strong>配信レイヤー</strong>: Route53 (Hosted Zone) + ACM (us-east-1) + CloudFront (HTTP/3、価格クラス：日本＋一部アジア) + S3 (静的サイト + 画像オリジン、Public Access Block + OAC)</li>
         <li><strong>データレイヤー</strong>: DynamoDB (オンデマンド、PK: <code>施設タイプ#都道府県</code> / SK: <code>施設ID</code> / GSI1: 緯度経度クラスタ、PITR 有効)</li>
@@ -129,7 +113,7 @@
     </div>
 
     <div class="h-section">
-      <h2>C. データ取込パイプライン</h2>
+      <h2>B. データ取込パイプライン</h2>
       <ol>
         <li><strong>EventBridge</strong> が月 1 回 cron で発火</li>
         <li><strong>Lambda (ingest)</strong> が楽天トラベル API を叩いて施設マスタを取得 → DynamoDB に upsert</li>
@@ -150,7 +134,6 @@
         <tr><td>データ</td><td>DynamoDB オンデマンド</td><td>初期はオンデマンドで様子見、安定したらプロビジョン課金へ切替検討</td></tr>
         <tr><td>共通化</td><td>子育てマップと Terraform モジュール共有</td><td>同一 AWS アカウントでタグ分離、運用負荷集約</td></tr>
         <tr><td>監視</td><td>段階導入</td><td>Phase 0〜1 は最小、Phase 2 で WAF + 監視拡張</td></tr>
-        <tr><td>収益化</td><td>楽天 + じゃらん + 独自プログラム複合</td><td>単一 ASP 依存リスクを避ける、独自報酬で単価上振れを狙う</td></tr>
       </table>
     </div>
 
@@ -159,7 +142,7 @@
       <ul>
         <li>ドメイン取得（候補比較で 1 つに絞り込み）</li>
         <li>Phase 0: 構想固め + ChatGPT 検証（実施済）</li>
-        <li>Phase 1: MVP 構築（地図 UI + 主要 50 施設のデータ + アフィリ link）</li>
+        <li>Phase 1: MVP 構築（地図 UI + 主要 50 施設のデータ）</li>
         <li>Phase 2: 全国カバー + WAF / 監視拡張 + SEO 育成</li>
       </ul>
     </div>
@@ -186,7 +169,6 @@
     <a href="/privacy.html">プライバシーポリシー</a>
   </div>
 </footer>
-
 
 <!-- drawio inline viewer (renders all <div class="mxgraph">) -->
 <script src="https://viewer.diagrams.net/js/viewer-static.min.js"></script>
