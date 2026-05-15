@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>hcl-guide.com 構成解説 — Terraform / HCL 学習ガイド | iigtn</title>
+  <meta name="description" content="hcl-guide.com（Terraform / HCL 初学者ガイド・全 27 章）の構成解説。素 HTML/CSS + S3 + CloudFront (OAC) + ACM + Route 53 を Terraform 二段構成 (bootstrap + site) で立ち上げる手順を解説。">
+  <meta name="author" content="iigtn">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://www.iigtn.com/projects/hcl-guide.html">
+  <meta property="og:title" content="hcl-guide.com 構成解説 — Terraform / HCL 学習ガイド">
+  <meta property="og:description" content="Terraform / HCL の 27 章学習サイト。S3+CloudFront+ACM+Route53 を Terraform で IaC 化、bootstrap + site の 2 段構成。">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://www.iigtn.com/projects/hcl-guide.html">
+  <meta property="og:site_name" content="iigtn">
+  <meta property="og:image" content="https://www.iigtn.com/assets/icon.svg">
+  <meta property="og:locale" content="ja_JP">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="hcl-guide.com 構成解説">
+  <meta name="twitter:description" content="Terraform / HCL 学習サイトの AWS 静的配信 + IaC 二段構成解説。">
+  <meta name="twitter:image" content="https://www.iigtn.com/assets/icon.svg">
+  <link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+  <link rel="apple-touch-icon" href="/assets/icon.svg">
+  <link rel="stylesheet" href="/site.css?v=20260506-rwd">
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-3K7CXNEVC8"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-3K7CXNEVC8');
+  </script>
+</head>
+<body>
+
+<a href="#main" class="skip-link">本文へスキップ</a>
+
+<header class="site-header">
+  <nav class="nav">
+    <a href="/" class="logo" aria-label="iigtn">
+      <img src="/assets/logo.svg" alt="iigtn" height="32">
+    </a>
+    <ul>
+      <li><a href="/about.html">About</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/works.html" class="active">Works</a></li>
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main id="main">
+
+  <header class="page-header">
+    <p class="h-meta">プロジェクト解説 · 公開稼働中</p>
+    <h1>hcl-guide.com — Terraform / HCL 学習ガイド</h1>
+    <p class="lead">
+      <code>hcl-guide.com</code> は、Terraform / HCL を実務で使える粒度まで体系的に学べる日本語の学習サイトです。
+      GitHub × Terraform 運用（7 章）/ HCL 言語（9 章）/ AWS リソース（11 章）の計 27 章。素 HTML/CSS の静的サイトを
+      AWS S3 + CloudFront (OAC) + ACM + Route 53 で配信し、Terraform を二段構成 (bootstrap + site) で立ち上げています。
+    </p>
+    <div class="h-cta">
+      <a class="btn btn-primary" href="https://hcl-guide.com/" target="_blank" rel="noopener">本番サイトを開く →</a>
+      <a class="btn btn-ghost" href="/works.html">← Works に戻る</a>
+    </div>
+  </header>
+
+  <section class="page-section">
+
+    <div class="h-section">
+      <h2>サマリ</h2>
+      <table>
+        <tr><th>プロジェクト</th><td>hcl-guide.com (Terraform / HCL 学習ガイド)</td></tr>
+        <tr><th>公開 URL</th><td><a href="https://hcl-guide.com/" target="_blank" rel="noopener">https://hcl-guide.com/</a></td></tr>
+        <tr><th>用途</th><td>Terraform / HCL を実務粒度まで体系的に学べる日本語学習サイト（全 27 章）</td></tr>
+        <tr><th>構成</th><td>素 HTML/CSS + S3 (private) + CloudFront (OAC) + ACM (us-east-1) + Route 53</td></tr>
+        <tr><th>IaC</th><td>Terraform 二段構成（bootstrap = state バケット + DynamoDB lock / site = 配信リソース全部）</td></tr>
+        <tr><th>運用形態</th><td><code>terraform apply</code> 一発で全リソース立ち上げ、コンテンツ更新は <code>aws s3 sync</code> + CloudFront invalidation</td></tr>
+        <tr><th>月額運用費</th><td>数百円〜千円台（CloudFront 配信 + Route53 zone + Terraform state 用 S3/DDB）</td></tr>
+      </table>
+    </div>
+
+    <div class="h-section">
+      <h2>全体アーキテクチャ</h2>
+      <p>
+        構成図は drawio (AWS 公式アイコン v2026 系) で作成しています。下のビューアは <code>.drawio</code> ファイルを
+        直接レンダリングしています。zoom / pan / 編集ボタンが使えます。
+      </p>
+      <div class="diagram-wrap">
+        <div class="mxgraph" style="max-width:100%;" data-mxgraph='{"highlight":"#0000ff","nav":true,"resize":true,"toolbar":"zoom","edit":"_blank","url":"/diagrams/hcl-guide/architecture.drawio?v=20260508a"}'></div>
+      </div>
+      <p class="h-meta">
+        ソース: <a href="/diagrams/hcl-guide/architecture.drawio?v=20260508a">/diagrams/hcl-guide/architecture.drawio</a>
+        （drawio で開けば編集可能）
+      </p>
+    </div>
+
+    <div class="h-section">
+      <h2>A. 訪問者の閲覧フロー</h2>
+      <ol>
+        <li><strong>DNS</strong> ― ドメイン <code>hcl-guide.com</code> を Route 53 hosted zone で管理。apex の A/AAAA を CloudFront alias に設定。</li>
+        <li><strong>ACM (us-east-1)</strong> ― <code>hcl-guide.com</code> の証明書を発行・DNS 検証・自動更新。</li>
+        <li><strong>CloudFront</strong> ― TLS 終端 + キャッシュ。Origin Access Control で S3 直アクセス禁止。</li>
+        <li><strong>S3 (private)</strong> ― <code>public/</code> 配下の HTML/CSS/JS を配置。Public Access Block 全 true、CloudFront 経由のみ参照可能。</li>
+      </ol>
+    </div>
+
+    <div class="h-section">
+      <h2>B. コンテンツ構成（27 章）</h2>
+      <table>
+        <tr><th>セクション</th><th>パス</th><th>章数</th></tr>
+        <tr><td>GitHub × Terraform 運用</td><td><code>/github/</code></td><td>7 章</td></tr>
+        <tr><td>HCL 言語</td><td><code>/hcl/</code></td><td>9 章</td></tr>
+        <tr><td>AWS リソース</td><td><code>/aws/</code></td><td>11 章</td></tr>
+        <tr><td>Azure</td><td><code>/azure.html</code></td><td>Coming Soon</td></tr>
+        <tr><td>GCP</td><td><code>/gcp.html</code></td><td>Coming Soon</td></tr>
+      </table>
+      <p>
+        各章は素 HTML で記述。共通 CSS (<code>assets/style.css</code>) と簡易 JS (<code>assets/app.js</code>) で
+        タブ切替や目次生成を実装し、ビルドツールやランタイム JS フレームワークは使っていません。
+      </p>
+    </div>
+
+    <div class="h-section">
+      <h2>C. Terraform 二段構成 (bootstrap + site)</h2>
+      <p>
+        Terraform の鶏卵問題（state 保存先の S3 バケット自体を Terraform で作りたい）を回避するため、
+        構成を 2 段に分けています。
+      </p>
+      <ol>
+        <li>
+          <strong><code>terraform/bootstrap/</code></strong> ― state バケット（S3）と DynamoDB ロックテーブルを作る。
+          state はローカル管理 (<code>terraform.tfstate</code>)、<code>prevent_destroy</code> で誤削除を防止。
+        </li>
+        <li>
+          <strong><code>terraform/site/</code></strong> ― ACM 証明書・S3・CloudFront・Route 53 alias・コンテンツアップロードまでを一気に作成。
+          state は bootstrap で作った S3 バケットに格納、DynamoDB Lock で並行 apply を防止。
+        </li>
+      </ol>
+      <p>
+        初回 apply 時に ACM 証明書の DNS 検証で 5〜15 分待つことがある以外は、<code>terraform apply</code> 一発で完結します。
+      </p>
+    </div>
+
+    <div class="h-section">
+      <h2>D. デプロイフロー</h2>
+      <ul>
+        <li><strong>大規模な構成変更</strong>: <code>terraform/site</code> で <code>terraform apply</code>。ファイルも含めて Terraform 管理</li>
+        <li><strong>コンテンツの軽微な更新</strong>: <code>aws s3 sync public/ s3://...bucket... --delete</code> で高速反映（state は更新されない点に注意）</li>
+        <li><strong>キャッシュ無効化</strong>: <code>aws cloudfront create-invalidation --paths "/*"</code> でワイルドカード一括</li>
+      </ul>
+    </div>
+
+    <div class="h-section">
+      <h2>採用判断のポイント</h2>
+      <table>
+        <tr><th>項目</th><th>採用</th><th>理由</th></tr>
+        <tr><td>フロント</td><td>素 HTML/CSS + Vanilla JS</td><td>学習コンテンツの可読性とロード速度を最優先。ビルド工程を入れない</td></tr>
+        <tr><td>ホスティング</td><td>S3 + CloudFront (OAC)</td><td>iigtn-platform / hojinka.com と同一パターンで運用統一</td></tr>
+        <tr><td>IaC 構成</td><td>Terraform bootstrap + site の 2 段</td><td>state の鶏卵問題を構造的に解決</td></tr>
+        <tr><td>state ロック</td><td>S3 backend + DynamoDB Lock</td><td>複数環境からの並行 apply 防止、最小コスト</td></tr>
+        <tr><td>destroy 安全性</td><td><code>prevent_destroy</code> on bootstrap</td><td>state バケットを誤って消すと復旧不可なので構造的に防止</td></tr>
+        <tr><td>コンテンツ更新</td><td>S3 sync 直流し OK</td><td>軽微な更新は Terraform 経由しなくてよい設計</td></tr>
+      </table>
+    </div>
+
+    <div class="h-section">
+      <h2>運用上の工夫</h2>
+      <ul>
+        <li><strong>章構成は静的タブ</strong>: ランディング (<code>index.html</code>) で 5 タブ（GitHub/HCL/AWS/Azure/GCP）に分岐、JS は <code>localStorage</code> でアクティブタブ記憶のみ</li>
+        <li><strong>OAC の Bucket Policy 条件</strong>: <code>AWS:SourceArn</code> で CloudFront Distribution ARN を厳密一致させ、他 Distribution からの誤参照を防止</li>
+        <li><strong>destroy 順序</strong>: site → bootstrap の順。bootstrap は <code>prevent_destroy</code> を一旦外す必要があり、これが「本気で消すための儀式」になる</li>
+      </ul>
+    </div>
+
+    <div class="h-section">
+      <h2>これからやる予定</h2>
+      <ul>
+        <li>Azure リソース章（10 章程度）を追加</li>
+        <li>GCP リソース章を追加</li>
+        <li>各章末に Terraform コード例の <code>terraform fmt</code> + <code>terraform validate</code> を CI で自動チェック</li>
+        <li>GitHub Actions OIDC を入れて手動 apply から自動 apply に移行（現状はローカル apply のみ）</li>
+      </ul>
+    </div>
+
+    <div class="h-section">
+      <h2>関連リンク</h2>
+      <ul>
+        <li><a href="https://hcl-guide.com/" target="_blank" rel="noopener">本番サイト hcl-guide.com</a></li>
+        <li><a href="/works.html">← Works 一覧へ戻る</a></li>
+        <li><a href="/learn.html">iigtn-platform 解説書（同じ S3+CF パターンの詳解）</a></li>
+      </ul>
+    </div>
+
+  </section>
+
+</main>
+
+<footer>
+  <div>© 2026 iigtn — Built with Terraform &amp; GitHub Actions</div>
+  <div>
+    <a href="/learn.html">解説書</a>
+    &nbsp;·&nbsp;
+    <a href="https://github.com/iigtn/iigtn-platform">GitHub</a>
+    &nbsp;·&nbsp;
+    <a href="/privacy.html">プライバシーポリシー</a>
+  </div>
+</footer>
+
+<!-- drawio inline viewer (renders all <div class="mxgraph">) -->
+<script src="https://viewer.diagrams.net/js/viewer-static.min.js"></script>
+
+</body>
+</html>
