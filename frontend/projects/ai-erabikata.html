@@ -55,11 +55,13 @@
 
   <header class="page-header">
     <p class="h-meta">プロジェクト解説 · 公開稼働中</p>
-    <h1>AI えらびかた — タスク別・業界別 AI 比較レビューメディア</h1>
+    <h1>AI えらびかた — Next.js × AWS Amplify Hosting メディア基盤</h1>
     <p class="lead">
-      <code>ai-erabikata.com</code> は、ChatGPT / Claude / Gemini 等の主要 AI を「タスク別・業界別の使い分け」で
-      解説する SEO メディアです。記事 30 本 + 比較ツール「AI セレクター」+ 構造化データ + PWA + ダークモード
-      まで実装。AWS Amplify Hosting で Next.js を SSG 配信しています。
+      <code>ai-erabikata.com</code> は、AWS Amplify Hosting (CloudFront ベース CDN + 自動 HTTPS + プレビュー環境) で
+      Next.js (App Router) を SSG 配信する Web メディア基盤です。Route 53 + ACM (us-east-1) で apex + www を 1 証明書で
+      カバーし、<code>main</code> ブランチへの push が webhook で自動ビルド・デプロイにつながります。コンテンツ層は
+      ChatGPT / Claude / Gemini 等の比較記事 30 本と「AI セレクター」ですが、本ページは構成（インフラ + フロント）に
+      絞って解説します。
     </p>
     <div class="h-cta">
       <a class="btn btn-primary" href="https://ai-erabikata.com/" target="_blank" rel="noopener">本番サイトを開く →</a>

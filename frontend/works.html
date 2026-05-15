@@ -66,10 +66,11 @@
       <a href="/projects/hojokin-db.html" class="work-card-link">
         <article class="work-card">
           <div class="work-meta">2026 / 個人 / 公開稼働中 · hojokin.iigtn.com</div>
-          <h3>hojokin-db — 補助金検索データベース →</h3>
+          <h3>hojokin-db — AWS サーバレス × 自動更新型データベースサイト →</h3>
           <p class="work-summary">
-            業種・地域・種別で絞り込める日本の補助金/助成金検索サイト。Next.js 16 (static export) + S3 + CloudFront (OAC) でフロントを配信、DynamoDB に補助金データを格納し、
-            Lambda + EventBridge + Amazon Bedrock の自動クロール&amp;AI 整形 → CodeBuild の自動再ビルドで毎日更新する仕組みを構築しています。
+            Next.js 16 (SSG) を S3 + CloudFront (OAC) で配信し、DynamoDB に補助金データを格納する構成。
+            EventBridge から起動する Lambda + Amazon Bedrock で毎日 02:00 にソース巡回 → AI 整形、03:00 に CodeBuild で
+            DDB→JSON→<code>next build</code>→S3 sync→CloudFront <code>/*</code> 無効化までを無人で回します。
             Terraform で 25 リソース全部を IaC 化、月額 5,500〜10,500 円で運用中です。
           </p>
           <ul class="skill-tags">
@@ -90,19 +91,21 @@
       <a href="/projects/ai-erabikata.html" class="work-card-link">
         <article class="work-card">
           <div class="work-meta">2026 / 個人 / 公開稼働中 · ai-erabikata.com</div>
-          <h3>AI えらびかた — タスク別・業界別 AI 比較レビューメディア →</h3>
+          <h3>AI えらびかた — Next.js × AWS Amplify Hosting メディア基盤 →</h3>
           <p class="work-summary">
-            主要 AI (ChatGPT / Claude / Gemini 等) をタスク・業界別に解説する SEO メディアを構築しています。
-            記事 30 本と比較ツール「AI セレクター」を備え、構造化データ (Article / FAQPage / BreadcrumbList)・
-            PWA・ダークモード・読書プログレスバー・動的 sitemap など、メディアサイトに必要な機能を実装済みです。
+            AWS Amplify Hosting（CloudFront ベース CDN + 自動 HTTPS + プレビュー環境）で Next.js (App Router) を
+            SSG 配信する Web メディア基盤。Route 53 + ACM (us-east-1) で apex + www を 1 証明書でカバー、
+            <code>main</code> ブランチへの push が webhook で自動ビルド・デプロイにつながります。
+            構造化データ (Article / FAQPage / BreadcrumbList)・動的 sitemap・PWA manifest・ImageResponse の OGP
+            動的生成までフロント側で完結させた構成です。
           </p>
           <ul class="skill-tags">
-            <li class="skill-tag">Next.js</li>
+            <li class="skill-tag">Next.js (App Router)</li>
             <li class="skill-tag">TypeScript</li>
+            <li class="skill-tag">AWS Amplify Hosting</li>
+            <li class="skill-tag">Route 53 + ACM</li>
             <li class="skill-tag">構造化データ (JSON-LD)</li>
-            <li class="skill-tag">SEO</li>
             <li class="skill-tag">PWA</li>
-            <li class="skill-tag">AWS Amplify</li>
           </ul>
         </article>
       </a>
@@ -130,12 +133,13 @@
       <a href="/projects/hojinka.html" class="work-card-link">
         <article class="work-card">
           <div class="work-meta">2026 / 個人 / 公開稼働中 · hojinka.com</div>
-          <h3>hojinka.com — フリーランス → 法人化 ナレッジ＆比較メディア →</h3>
+          <h3>hojinka.com — 静的サイト × OIDC 自動デプロイ基盤 →</h3>
           <p class="work-summary">
-            フリーランスから法人化までの 6 ステージ (開業届・確定申告・案件獲得・法人化判断・会社設立・法人運営)
-            を横断する比較メディアを運営しています。法人化シミュレーターを Vanilla JS で実装し、税負担と
-            社会保険料を試算可能。AWS S3 + CloudFront (OAC) + ACM + Route 53 で配信し、GitHub Actions OIDC
-            で静的キーレスの自動デプロイを実装しています。
+            AWS S3 (private) + CloudFront (OAC) + ACM + Route 53 で配信する静的メディア基盤。
+            GitHub Actions OIDC で <code>AssumeRoleWithWebIdentity</code> による静的キーレス自動デプロイを実装し、
+            <code>main</code> ブランチ push のみで S3 sync + CloudFront 無効化までを完結させています。
+            法人化シミュレーターは Vanilla JS でブラウザ完結、サーバ・API なしで対話的なツールを提供。
+            全リソースを Terraform で IaC 化しています。
           </p>
           <ul class="skill-tags">
             <li class="skill-tag">HTML/CSS</li>
@@ -175,12 +179,12 @@
       <a href="/projects/docchain.html" class="work-card-link">
         <article class="work-card">
           <div class="work-meta">2026 / 個人 / LP 稼働中・事前登録受付 · getdocchain.com</div>
-          <h3>DocChain — SI 業界向け 設計書連鎖生成 AI（LP）→</h3>
+          <h3>DocChain LP — Next.js Static × API Gateway/Lambda/DynamoDB 統合 →</h3>
           <p class="work-summary">
-            上流工程 (要件定義書) から下流工程 (基本設計書 → 詳細設計書 → テスト仕様書) を AI が自動生成する
-            SaaS の Landing Page を構築しています。Next.js (Static Export) + Lambda + API Gateway + DynamoDB +
-            SES + CloudFront で事前登録を受付中。本体はモデルカスケード (4o-mini / 4o) と Anthropic Prompt
-            Caching で API 原価 89% 削減を狙う設計です。
+            Next.js (Static Export) の静的 LP を S3 + CloudFront で配信し、CloudFront の Origin Behavior で
+            <code>/api/*</code> を API Gateway → Lambda → DynamoDB → SES へ振り分ける構成。同一ドメイン内で静的配信と
+            動的 API を共存させ、CORS や別ドメイン管理の手間を回避しています。Route 53 + ACM (us-east-1) で
+            apex + www を 1 証明書でカバーし、事前登録 → DDB 保存 → SES 自動返信までの一連を実機検証済み。
           </p>
           <ul class="skill-tags">
             <li class="skill-tag">Next.js (Static Export)</li>
@@ -223,16 +227,21 @@
       <a href="/projects/glamping-map.html" class="work-card-link">
         <article class="work-card">
           <div class="work-meta">構想中 / 立ち上げ準備中</div>
-          <h3>グランピング × キャンプ場マップ →</h3>
+          <h3>グランピング × キャンプ場マップ — Maptiler × AWS サーバレス地理データ基盤 →</h3>
           <p class="work-summary">
-            日本全国のグランピング施設・キャンプ場を地図 UI で可視化する地理データ可視化
-            メディア。子育てマップと
-            技術基盤を共通化する想定です。
+            全国の施設地理データを Next.js (Static Export) + S3 + CloudFront (OAC) で配信、DynamoDB に施設マスタを
+            格納する構成計画。EventBridge から月 1 で起動する Lambda が外部 API を取り込み、URL 死活監視 Lambda が
+            404/500 を検知して SES で通知。地図 UI は Maptiler API、Phase 2 で AWS WAF 追加予定。子育てマップと
+            Terraform モジュール共通化を想定しています。
           </p>
           <ul class="skill-tags">
             <li class="skill-tag">構想中</li>
-            <li class="skill-tag">地図 UI</li>
-            
+            <li class="skill-tag">Next.js Static Export</li>
+            <li class="skill-tag">S3 + CloudFront (OAC)</li>
+            <li class="skill-tag">EventBridge + Lambda</li>
+            <li class="skill-tag">DynamoDB</li>
+            <li class="skill-tag">Maptiler API</li>
+            <li class="skill-tag">Terraform</li>
           </ul>
         </article>
       </a>
@@ -240,16 +249,20 @@
       <a href="/projects/kosodate-map.html" class="work-card-link">
         <article class="work-card">
           <div class="work-meta">構想中 / 立ち上げ準備中</div>
-          <h3>子育てマップ — 保活＋学区＋学童＋塾の統合可視化 →</h3>
+          <h3>子育てマップ — サブディレクトリ展開型の地理データ基盤 →</h3>
           <p class="work-summary">
-            保活マップから入って学区マップ・学童・塾までライフステージ 5〜10 年に渡って使われる、子育て
-            世代向け地理データ可視化メディア。同一ドメインのサブディレクトリ展開で、保活 → 学区 → 学童 → 塾
-            と段階的に拡張する計画です。
+            保活 → 学区 → 学童 → 塾と段階的にサブディレクトリで展開する地理データ可視化メディアの構成計画。
+            Next.js (Static Export) + S3 + CloudFront + DynamoDB + Lambda + Maptiler API を、グランピングマップと
+            共通の Terraform モジュールで立ち上げ。データ取込は補助金検索の <code>data_import</code> パイプラインを流用、
+            CodeBuild で月次再ビルドする想定です。
           </p>
           <ul class="skill-tags">
             <li class="skill-tag">構想中</li>
-            <li class="skill-tag">地図 UI</li>
-            <li class="skill-tag">子育て世代</li>
+            <li class="skill-tag">Next.js Static Export</li>
+            <li class="skill-tag">S3 + CloudFront</li>
+            <li class="skill-tag">DynamoDB</li>
+            <li class="skill-tag">Lambda + CodeBuild</li>
+            <li class="skill-tag">Terraform モジュール共通化</li>
           </ul>
         </article>
       </a>

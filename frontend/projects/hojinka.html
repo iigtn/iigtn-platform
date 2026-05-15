@@ -55,12 +55,13 @@
 
   <header class="page-header">
     <p class="h-meta">プロジェクト解説 · 公開稼働中</p>
-    <h1>hojinka.com — フリーランス→法人化 ナレッジ＆比較メディア</h1>
+    <h1>hojinka.com — 静的サイト × OIDC 自動デプロイ基盤</h1>
     <p class="lead">
-      <code>hojinka.com</code> は、開業届・確定申告・案件獲得・法人化判断・会社設立・法人運営という、
-      フリーランスからマイクロ法人までのライフサイクルを 6 ステージで横断する比較メディアです。
-      法人化シミュレーターを Vanilla JS で実装し、税負担と社会保険料を試算可能。
-      静的サイトを AWS で配信、IaC + OIDC デプロイで運用しています。
+      <code>hojinka.com</code> は、AWS S3 (private) + CloudFront (OAC) + ACM + Route 53 で配信する静的メディア基盤です。
+      GitHub Actions OIDC で <code>AssumeRoleWithWebIdentity</code> による静的キーレス自動デプロイを実装し、
+      <code>main</code> ブランチ push のみで S3 sync + CloudFront 無効化まで完結します。コンテンツ層は
+      フリーランス → マイクロ法人化までのライフサイクルを 6 ステージで横断する比較メディアと、Vanilla JS の
+      法人化シミュレーターですが、本ページは構成（インフラ + IaC + デプロイ経路）に絞って解説します。
     </p>
     <div class="h-cta">
       <a class="btn btn-primary" href="https://hojinka.com/" target="_blank" rel="noopener">本番サイトを開く →</a>

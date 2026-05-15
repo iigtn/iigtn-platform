@@ -55,11 +55,12 @@
 
   <header class="page-header">
     <p class="h-meta">プロジェクト解説 · 構想中（立ち上げ準備中）</p>
-    <h1>グランピング × キャンプ場マップ</h1>
+    <h1>グランピング × キャンプ場マップ — Maptiler × AWS サーバレス地理データ基盤</h1>
     <p class="lead">
-      日本全国のグランピング施設・キャンプ場を地図 UI で可視化する地理データ可視化メディアの構成計画です。
-      子育てマップと技術基盤を共通化する想定で、Next.js (Static Export) + S3 + CloudFront + DynamoDB +
-      Lambda の AWS サーバレス構成を設計済みです。
+      全国の施設地理データを Next.js (Static Export) + S3 + CloudFront (OAC) で配信、DynamoDB に施設マスタを格納する
+      構成計画です。EventBridge から月 1 で起動する Lambda が外部 API を取り込み、URL 死活監視 Lambda が 404/500 検知時に
+      SES でアラート。地図 UI は Maptiler API、Phase 2 で AWS WAF を追加予定。子育てマップと Terraform モジュール
+      共通化を想定しています。
     </p>
     <div class="h-cta">
       <a class="btn btn-ghost" href="/works.html">← Works に戻る</a>
