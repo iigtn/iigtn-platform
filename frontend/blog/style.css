@@ -275,3 +275,58 @@ article.post::before, .blog-index::before {
   .site-header { background: rgba(19, 26, 35, 0.85); }
   .post-body th { background: #1c2532; }
 }
+
+/* ── Responsive: tablet ─────────────────────── */
+@media (max-width: 720px) {
+  article.post {
+    padding: 1.8rem 1rem 3rem;
+  }
+  .blog-index {
+    padding: 1.8rem 1rem 3rem;
+  }
+  .post-body h2 { font-size: 1.2rem; margin: 2rem 0 0.7rem; }
+  .post-body h3 { font-size: 1.05rem; margin: 1.4rem 0 0.5rem; }
+  .post-body pre {
+    padding: 0.7rem 0.8rem;
+    font-size: 0.8rem;
+  }
+  /* Tables overflow horizontally on narrow screens — scroll instead of breaking layout */
+  .post-body table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+  .post-body th, .post-body td { padding: 0.4rem 0.55rem; }
+  .post-glossary {
+    padding: 1.1rem 1.1rem;
+    margin-top: 2rem;
+  }
+  .post-list-index li {
+    padding: 0.85rem 1rem;
+  }
+}
+
+/* ── Responsive: phone ──────────────────────── */
+@media (max-width: 480px) {
+  body { line-height: 1.75; font-size: 15px; }
+  article.post {
+    padding: 1.4rem 0.85rem 2.5rem;
+  }
+  .blog-index {
+    padding: 1.4rem 0.85rem 2.5rem;
+  }
+  .post-body pre {
+    font-size: 0.75rem;
+    padding: 0.6rem 0.7rem;
+  }
+  .post-body code { word-break: break-word; }
+  .post-body table { font-size: 0.8rem; }
+  .post-footer {
+    flex-direction: column;
+    gap: 0.6rem;
+    align-items: flex-start;
+  }
+  .blog-index h1 { font-size: 1.4rem; }
+}

@@ -21,10 +21,7 @@
   <meta name="twitter:image" content="https://www.iigtn.com/assets/icon.svg">
   <link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
   <link rel="apple-touch-icon" href="/assets/icon.svg">
-  <link rel="stylesheet" href="/site.css?v=20260505e">
-
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7533093647574923" crossorigin="anonymous"></script>
-  <meta name="google-adsense-account" content="ca-pub-7533093647574923">
+  <link rel="stylesheet" href="/site.css?v=20260506-rwd">
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-3K7CXNEVC8"></script>
   <script>
@@ -83,7 +80,7 @@
         <tr><th>ステータス</th><td>構想決定、立ち上げ準備中（ドメイン未取得）</td></tr>
         <tr><th>ドメイン候補</th><td>kosodate-area.jp / mama-area.com / kosodate-map.jp / area-kosodate.jp / ie-kosodate.com</td></tr>
         <tr><th>立ち上げ順序</th><td>保活マップ先行 → 学区マップ追加 → 学童 / 塾 / 移住 / 物件</td></tr>
-        <tr><th>目標 (24 ヶ月後)</th><td>MRR ¥35〜50 万 / 月間 PV 10〜15 万 / 月額運用費 ¥1,000〜10,000 / 粗利 95% 超</td></tr>
+        <tr><th>月額運用費</th><td>1,000 〜 10,000 円（無風時はもっと低め、データ更新頻度で変動）</td></tr>
         <tr><th>構成方針</th><td>Next.js (Static Export) + S3 + CloudFront + DynamoDB + Lambda + Maptiler API（グランピングマップと共通）</td></tr>
       </table>
     </div>
@@ -102,26 +99,24 @@
       </p>
     </div>
 
-
     <div class="h-section">
       <h2>A. なぜ統合か</h2>
       <ol>
         <li><strong>ターゲット層完全重複</strong>: 30〜40 代子育て世代はすべての領域を 1 人で意思決定する</li>
-        <li><strong>ライフサイクル連続性</strong>: 保活 (0-3 歳) → 学区検討 (5-7 歳) → 不動産購入 → 中学進学 (10-12 歳) と長期間に渡る</li>
+        <li><strong>ライフサイクル連続性</strong>: 保活 (0-3 歳) → 学区検討 (5-7 歳) → 中学進学 (10-12 歳) と長期間に渡る</li>
         <li><strong>データ・UI・技術基盤共通</strong>: 地図 UI / 自治体データ取込 / 検索機能はすべて同じ</li>
         <li><strong>ドメインオーソリティ集中</strong>: 1 サイトで月 10 万 PV のほうが、2 サイトで月 5 万 PV ずつより SEO で取りやすい</li>
-        <li><strong>共通アフィリ案件</strong>: 引越し / 住宅ローン / 学資保険 / 塾を段階的に提示できる</li>
       </ol>
     </div>
 
     <div class="h-section">
       <h2>B. 段階的展開プラン</h2>
       <table>
-        <tr><th>Phase</th><th>期間</th><th>内容</th><th>収益目標</th></tr>
-        <tr><td>1</td><td>0〜6 ヶ月</td><td>保活マップ立ち上げ（東京 23 区＋政令指定都市の保育園データ）+ 初期記事 30 本</td><td>月 ¥3〜5 万</td></tr>
-        <tr><td>2</td><td>6〜12 ヶ月</td><td>保活マップ深化（入園倍率 / 空き状況 / 競合分析記事）</td><td>月 ¥10〜20 万</td></tr>
-        <tr><td>3</td><td>12〜18 ヶ月</td><td>学区マップ追加（小中学校の進学実績・評判）</td><td>月 ¥25〜35 万</td></tr>
-        <tr><td>4</td><td>18〜24 ヶ月</td><td>学童・塾・移住・物件マップを追加、複合収益化</td><td>月 ¥35〜50 万</td></tr>
+        <tr><th>Phase</th><th>期間</th><th>内容</th></tr>
+        <tr><td>1</td><td>0〜6 ヶ月</td><td>保活マップ立ち上げ（東京 23 区＋政令指定都市の保育園データ）+ 初期記事 30 本</td></tr>
+        <tr><td>2</td><td>6〜12 ヶ月</td><td>保活マップ深化（入園倍率 / 空き状況 / 競合分析記事）</td></tr>
+        <tr><td>3</td><td>12〜18 ヶ月</td><td>学区マップ追加（小中学校の進学実績・評判）</td></tr>
+        <tr><td>4</td><td>18〜24 ヶ月</td><td>学童・塾・移住・物件マップを追加</td></tr>
       </table>
     </div>
 
@@ -139,25 +134,6 @@ example.com/
     </div>
 
     <div class="h-section">
-      <h2>D. ペルソナと主要収益源</h2>
-      <p>
-        2 軸ペルソナで設計（A: 保活ママ、B: マイホーム検討の 30 代パパ）。共通アフィリ案件として
-        引越し・住宅ローン・学資保険・塾・家庭教師を段階的に提示します。
-      </p>
-      <table>
-        <tr><th>収益源</th><th>CV 単価</th><th>主なターゲット</th></tr>
-        <tr><td>引越し一括見積</td><td>¥3,000〜10,000</td><td>保活＋学区</td></tr>
-        <tr><td>不動産売買査定</td><td>¥10,000〜30,000</td><td>学区</td></tr>
-        <tr><td>住宅ローン相談</td><td>¥5,000〜30,000</td><td>学区＋不動産検討</td></tr>
-        <tr><td>学資保険</td><td>¥3,000〜10,000</td><td>保活</td></tr>
-        <tr><td>塾・家庭教師</td><td>¥3,000〜15,000</td><td>学区＋塾検討</td></tr>
-        <tr><td>ベビーシッター・家事代行</td><td>¥2,000〜8,000</td><td>保活</td></tr>
-        <tr><td>AdSense 等広告</td><td>PV 依存</td><td>全体</td></tr>
-        <tr><td>note 有料コンテンツ</td><td>サブスク</td><td>コミュニティ層</td></tr>
-      </table>
-    </div>
-
-    <div class="h-section">
       <h2>採用判断のポイント</h2>
       <table>
         <tr><th>項目</th><th>採用</th><th>理由</th></tr>
@@ -165,7 +141,6 @@ example.com/
         <tr><td>静的化</td><td>Next.js Static Export</td><td>地図 UI 以外は SSG、ボット集客に強い</td></tr>
         <tr><td>地図</td><td>Maptiler API</td><td>無料枠から始められる、グランピングマップと共通化</td></tr>
         <tr><td>データソース</td><td>自治体公開データ + 補助金検索のパイプラインを流用</td><td>既存の data_import を再利用、CodeBuild で月次更新</td></tr>
-        <tr><td>収益化</td><td>段階提示型のアフィリ複合</td><td>ライフステージごとに最適 ASP を出し分け、長期 LTV 最大化</td></tr>
         <tr><td>共通化</td><td>グランピングマップと Terraform モジュール共有</td><td>運用負荷集約、新サブサイト追加が早い</td></tr>
       </table>
     </div>
@@ -175,8 +150,8 @@ example.com/
       <ul>
         <li>ドメイン取得（候補比較で 1 つに絞り込み）</li>
         <li>Phase 1 MVP: 東京 23 区の保活マップ + 初期記事 30 本</li>
-        <li>SEO アフィリエイト初期登録（A8 / もしも / afb / バリューコマース）</li>
-        <li>SNS（X）アカウント開設 + 発信開始（system_SNS運営の運用基盤を流用）</li>
+        <li>Terraform モジュールをグランピングマップと共通化</li>
+        <li>自治体データ取込パイプラインの実装（補助金検索の data_import を流用）</li>
       </ul>
     </div>
 
@@ -202,7 +177,6 @@ example.com/
     <a href="/privacy.html">プライバシーポリシー</a>
   </div>
 </footer>
-
 
 <!-- drawio inline viewer (renders all <div class="mxgraph">) -->
 <script src="https://viewer.diagrams.net/js/viewer-static.min.js"></script>

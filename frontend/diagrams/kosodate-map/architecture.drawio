@@ -96,26 +96,6 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <mxCell id="aff1" value="Moving estimate JPY3-10k" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff8e1;strokeColor=#ffa726;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="600" y="420" width="180" height="40" as="geometry" />
-        </mxCell>
-        <mxCell id="aff2" value="Real-estate appraisal JPY10-30k" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff8e1;strokeColor=#ffa726;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="600" y="470" width="180" height="40" as="geometry" />
-        </mxCell>
-        <mxCell id="aff3" value="Mortgage consulting JPY5-30k" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff8e1;strokeColor=#ffa726;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="600" y="520" width="180" height="40" as="geometry" />
-        </mxCell>
-        <mxCell id="aff4" value="Insurance / cram / sitter JPY2-15k" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff8e1;strokeColor=#ffa726;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="600" y="570" width="180" height="40" as="geometry" />
-        </mxCell>
-        <mxCell id="adsense" value="Google AdSense" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff8e1;strokeColor=#ffa726;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="600" y="620" width="180" height="40" as="geometry" />
-        </mxCell>
-
-        <mxCell id="seg" value="Hokatsu users -&gt; moving / insurance / sitter. Gakku users -&gt; real-estate / mortgage / cram. Stage by lifecycle." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e3f2fd;strokeColor=#1565c0;fontSize=10;align=left;spacing=8;" vertex="1" parent="1">
-          <mxGeometry x="800" y="470" width="200" height="120" as="geometry" />
-        </mxCell>
-
       </root>
     </mxGraphModel>
   </diagram>

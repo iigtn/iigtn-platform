@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Works — iigtn / 実績・制作物</title>
-  <meta name="description" content="フリーランス・インフラエンジニア iigtn の制作・構築実績。AWS サーバレス + Terraform で運用中のメディア (hojokin.iigtn.com / hojinka.com / ai-erabikata.com) と SaaS LP (getdocchain.com)、自動売買リサーチ (autoST) など。">
+  <meta name="description" content="フリーランス・インフラエンジニア iigtn の制作・構築実績。AWS サーバレス + Terraform で運用中のメディア (hojokin.iigtn.com / hojinka.com / ai-erabikata.com) と SaaS LP (getdocchain.com) など。">
   <meta name="author" content="iigtn">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://lab.iigtn.com/works.html">
@@ -21,11 +21,7 @@
   <meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
   <link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
   <link rel="apple-touch-icon" href="/assets/icon.svg">
-  <link rel="stylesheet" href="/site.css?v=20260505e">
-
-  <!-- Google AdSense -->
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7533093647574923" crossorigin="anonymous"></script>
-  <meta name="google-adsense-account" content="ca-pub-7533093647574923">
+  <link rel="stylesheet" href="/site.css?v=20260506-rwd">
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-3K7CXNEVC8"></script>
   <script>
@@ -97,8 +93,8 @@
           <h3>AI えらびかた — タスク別・業界別 AI 比較レビューメディア →</h3>
           <p class="work-summary">
             主要 AI (ChatGPT / Claude / Gemini 等) をタスク・業界別に解説する SEO メディアを構築しています。
-            記事 30 本と比較ツール「AI セレクター」を備え、GA4 計測と AdSense 審査を完了。アフィリエイト
-            (A8.net / 楽天 / Amazon) で収益化し、構造化データ・PWA・ダークモード・読書プログレスも実装済みです。
+            記事 30 本と比較ツール「AI セレクター」を備え、構造化データ (Article / FAQPage / BreadcrumbList)・
+            PWA・ダークモード・読書プログレスバー・動的 sitemap など、メディアサイトに必要な機能を実装済みです。
           </p>
           <ul class="skill-tags">
             <li class="skill-tag">Next.js</li>
@@ -106,9 +102,7 @@
             <li class="skill-tag">構造化データ (JSON-LD)</li>
             <li class="skill-tag">SEO</li>
             <li class="skill-tag">PWA</li>
-            <li class="skill-tag">GA4</li>
-            <li class="skill-tag">AdSense</li>
-            <li class="skill-tag">アフィリエイト統合</li>
+            <li class="skill-tag">AWS Amplify</li>
           </ul>
         </article>
       </a>
@@ -202,36 +196,6 @@
   </section>
 
   <section class="page-section reveal">
-    <h2>個人研究プロジェクト</h2>
-
-    <div class="works-list">
-
-      <a href="/projects/autost.html" class="work-card-link">
-        <article class="work-card">
-          <div class="work-meta">2026 / 個人研究 / 内部運用</div>
-          <h3>autoST — 自動売買リサーチ＆運用フレームワーク →</h3>
-          <p class="work-summary">
-            日本株 / 米国 ETF を対象にした自動売買戦略の検証＆運用フレームワーク。Lambda + EventBridge +
-            DynamoDB + S3 を Terraform で IaC 化し、ローカル PC は kabu STATION API と連携。20 を超える戦略
-            を AI 共同レビューでバックテストし、最終的に 1545 (米国 S&amp;P500 ETF) + 200 日 MA + 月次キャッシュ
-            確定型に収束。16 年 OOS で CAGR +26.7%、月勝率 63% を達成しています。
-          </p>
-          <ul class="skill-tags">
-            <li class="skill-tag">Python</li>
-            <li class="skill-tag">Lambda + EventBridge</li>
-            <li class="skill-tag">DynamoDB</li>
-            <li class="skill-tag">Terraform</li>
-            <li class="skill-tag">Backtesting</li>
-            <li class="skill-tag">kabu STATION API</li>
-            <li class="skill-tag">PDCA × ChatGPT</li>
-          </ul>
-        </article>
-      </a>
-
-    </div>
-  </section>
-
-  <section class="page-section reveal">
     <h2>Coming Soon</h2>
 
     <div class="works-list">
@@ -241,14 +205,14 @@
           <div class="work-meta">構想中 / 立ち上げ準備中</div>
           <h3>グランピング × キャンプ場マップ →</h3>
           <p class="work-summary">
-            日本全国のグランピング施設・キャンプ場を地図 UI で可視化し、予約サイトへ送客するアフィリエイト
-            メディア。グランピング (高単価) を主軸にしつつ、一般キャンプ場 (数勝負) も網羅。子育てマップと
+            日本全国のグランピング施設・キャンプ場を地図 UI で可視化する地理データ可視化
+            メディア。子育てマップと
             技術基盤を共通化する想定です。
           </p>
           <ul class="skill-tags">
             <li class="skill-tag">構想中</li>
             <li class="skill-tag">地図 UI</li>
-            <li class="skill-tag">アフィリエイト</li>
+            
           </ul>
         </article>
       </a>

@@ -21,12 +21,7 @@
   <meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
   <link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
   <link rel="apple-touch-icon" href="/assets/icon.svg">
-  <link rel="stylesheet" href="/site.css?v=20260505e">
-
-  <!-- Google AdSense (審査中はサイト所有権確認用、承認後は広告配信用) -->
-  <!-- ※ AdSense 申請後に取得した ca-pub-XXXX を環境変数で本物の publisher ID に置換すること -->
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7533093647574923" crossorigin="anonymous"></script>
-  <meta name="google-adsense-account" content="ca-pub-7533093647574923">
+  <link rel="stylesheet" href="/site.css?v=20260506-rwd">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -189,6 +184,44 @@
       </div>
 
     </div>
+  </section>
+
+  <!-- ─── 注目記事（採用評価向け） ──────────────── -->
+  <section class="page-section reveal">
+    <h2>注目記事</h2>
+    <p class="lead">構築日誌 22 本から、採用評価・案件相談で特に深掘りしている回をピックアップ。</p>
+
+    <div class="summary-grid">
+
+      <a href="/blog/22-docchain-launch.html" class="summary-card-link">
+        <article class="summary-card">
+          <h3>🚀 個人開発 SaaS『DocChain』を作って公開した話</h3>
+          <p>SI 業界向け設計書連鎖生成 SaaS を AWS + Vercel ハイブリッドで本番公開。アーキ判断・コスト最適化・ベータ告知設計まで全公開。</p>
+          <span class="more">記事を読む →</span>
+        </article>
+      </a>
+
+      <a href="/blog/12-github-oidc.html" class="summary-card-link">
+        <article class="summary-card">
+          <h3>🔁 GitHub Actions OIDC の仕組み</h3>
+          <p>JWT で AWS を静的キーレス操作する CI/CD 設計。長期アクセスキーを Secrets に置かない実装と、IAM Role の trust policy 設計。</p>
+          <span class="more">記事を読む →</span>
+        </article>
+      </a>
+
+      <a href="/blog/17-cloudwatch-sns.html" class="summary-card-link">
+        <article class="summary-card">
+          <h3>🔔 CloudWatch Alarms + SNS でアラート構築</h3>
+          <p>サーバレス構成で「壊れたら気付ける」運用を組むための、Alarms / Metric Filter / SNS Email 通知の設計パターン。</p>
+          <span class="more">記事を読む →</span>
+        </article>
+      </a>
+
+    </div>
+
+    <p style="margin-top:1.5em;text-align:center;">
+      <a href="/blog/" class="btn btn-ghost">構築日誌 22 本の一覧を見る →</a>
+    </p>
   </section>
 
 </main>

@@ -37,14 +37,6 @@
           <mxGeometry x="1010" y="170" width="120" height="40" as="geometry" />
         </mxCell>
 
-        <mxCell id="ads" value="AdSense&#xa;ca-pub-XXXXXXXXXXX" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff8e1;strokeColor=#ffa726;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="1010" y="230" width="120" height="40" as="geometry" />
-        </mxCell>
-
-        <mxCell id="aff" value="A8.net / 楽天 / Amazon&#xa;アフィリエイト" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff8e1;strokeColor=#ffa726;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="1010" y="290" width="120" height="40" as="geometry" />
-        </mxCell>
-
         <mxCell id="aedge1" value="① DNS" style="endArrow=classic;html=1;fontSize=10;" edge="1" parent="1" source="user" target="r53">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
@@ -58,12 +50,6 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="aedge5" value="計測" style="endArrow=classic;dashed=1;html=1;fontSize=10;" edge="1" parent="1" source="ssg" target="ga">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="aedge6" value="広告" style="endArrow=classic;dashed=1;html=1;fontSize=10;" edge="1" parent="1" source="ssg" target="ads">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="aedge7" value="リンク" style="endArrow=classic;dashed=1;html=1;fontSize=10;" edge="1" parent="1" source="ssg" target="aff">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
