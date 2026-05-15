@@ -53,10 +53,12 @@
 
   <header class="page-header">
     <p class="h-meta">プロジェクト解説 · 2026-04-26 公開稼働中</p>
-    <h1>hojokin-db — 補助金検索データベース</h1>
+    <h1>hojokin-db — AWS サーバレス × 自動更新型データベースサイト</h1>
     <p class="lead">
-      <code>hojokin.iigtn.com</code> がどう動いているかをモジュール単位で解説するページです。
-      AWS のフル解説ではなく、<strong>「個人で AWS サーバレス + IaC + 自動更新 + AI 整形まで運用している」</strong>事実が伝わる粒度に絞っています。
+      <code>hojokin.iigtn.com</code> は、Next.js 16 (SSG) を S3 + CloudFront (OAC) で配信し、DynamoDB に補助金データを格納する
+      AWS サーバレス構成のデータベースサイトです。EventBridge → Lambda + Amazon Bedrock で毎日 02:00 にソース巡回 → AI 整形、
+      03:00 に CodeBuild で DDB→JSON→<code>next build</code>→S3 sync→CloudFront 無効化までを無人運用しています。
+      Terraform で 25 リソース全て IaC 化。本ページは構成と運用フローをモジュール単位で解説します。
     </p>
     <div class="h-cta">
       <a class="btn btn-primary" href="https://hojokin.iigtn.com/" target="_blank" rel="noopener">本番サイトを開く →</a>

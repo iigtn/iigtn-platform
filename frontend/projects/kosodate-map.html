@@ -55,11 +55,12 @@
 
   <header class="page-header">
     <p class="h-meta">プロジェクト解説 · 構想中（立ち上げ準備中）</p>
-    <h1>子育てマップ — 保活＋学区＋学童＋塾の統合可視化</h1>
+    <h1>子育てマップ — サブディレクトリ展開型の地理データ基盤</h1>
     <p class="lead">
-      30〜40 代の子育て世代向けに、保育園・学校・学童・塾・住宅情報を地図 UI で一括可視化する
-      地理データ可視化メディアの構成計画です。ライフステージに応じて長期間（5〜10 年）使われるサイトを目指し、
-      同一ドメインのサブディレクトリ展開で保活 → 学区 → 学童 → 塾と段階的に拡張します。
+      保活 → 学区 → 学童 → 塾と段階的にサブディレクトリで展開する地理データ可視化メディアの構成計画です。
+      Next.js (Static Export) + S3 + CloudFront + DynamoDB + Lambda + Maptiler API を、グランピングマップと共通の
+      Terraform モジュールで立ち上げ。データ取込は補助金検索の <code>data_import</code> パイプラインを流用し、
+      CodeBuild で月次再ビルドする想定です。
     </p>
     <div class="h-cta">
       <a class="btn btn-ghost" href="/works.html">← Works に戻る</a>

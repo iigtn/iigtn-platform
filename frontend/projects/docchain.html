@@ -55,12 +55,13 @@
 
   <header class="page-header">
     <p class="h-meta">プロジェクト解説 · LP 稼働中・事前登録受付中</p>
-    <h1>DocChain — SI 業界向け 設計書連鎖生成 AI（LP）</h1>
+    <h1>DocChain LP — Next.js Static × API Gateway / Lambda / DynamoDB 統合</h1>
     <p class="lead">
-      <code>getdocchain.com</code> は、上流工程 (要件定義書) から下流工程 (基本設計書 → 詳細設計書 → テスト仕様書) を
-      AI が自動生成する SaaS の Landing Page。事前登録を受け付ける LP を AWS サーバレスで構築し、ベータ提供
-      (2026/9 予定) に向けて開発中です。本体は OpenAI / Anthropic API のカスケード + Prompt Caching で
-      API 原価 89% 削減を狙う設計です。
+      <code>getdocchain.com</code> は、Next.js (Static Export) の静的 LP を S3 + CloudFront で配信し、
+      CloudFront の Origin Behavior で <code>/api/*</code> を API Gateway → Lambda → DynamoDB → SES へ振り分ける構成です。
+      同一ドメイン内で静的配信と動的 API を共存させ、CORS や別ドメイン管理の手間を回避しています。
+      コンテンツとしては SaaS の事前登録 LP（本体は SI 業界向け設計書連鎖生成 AI、ベータ提供 2026/9 予定）ですが、
+      本ページは構成（LP 配信 + 事前登録 API + 本体側のホスティング想定）に絞って解説します。
     </p>
     <div class="h-cta">
       <a class="btn btn-primary" href="https://getdocchain.com/" target="_blank" rel="noopener">LP を開く →</a>
