@@ -100,7 +100,7 @@ chatgpt --prompt "1 番目の指摘を具体化して" --conversation iigtn_desi
 <tr><th>ラウンド</th><th>バージョン</th><th>テーマ</th></tr>
 <tr><td>R1</td><td>v1 → v2</td><td>運用視点の追加</td></tr>
 <tr><td>R2</td><td>v2 → v3</td><td>文書役割の分離と事実訂正</td></tr>
-<tr><td>R3</td><td>v3 → v4</td><td>実運用データと泥臭さ</td></tr>
+<tr><td>R3</td><td>v3 → v4</td><td>実運用データの計測と過剰主張の訂正</td></tr>
 <tr><td>R4</td><td>v4 で合意</td><td>ポートフォリオとして十分と判定</td></tr>
 <tr><td>R5</td><td>実装後の確認</td><td>実装を踏まえた最終チェック</td></tr>
 </table>
@@ -148,15 +148,13 @@ chatgpt --prompt "1 番目の指摘を具体化して" --conversation iigtn_desi
 <tr><td><code>interview.md</code></td><td>面接 Q&A</td></tr>
 </table>
 
-<h2>R3 (v3 → v4) — 実運用データと泥臭さ</h2>
+<h2>R3 (v3 → v4) — 実運用データの計測と過剰主張の訂正</h2>
 
 <p>v3 はファイル分離で読みやすくなりましたが、もう一段、レビューで突っ込まれました:</p>
 
 <ul>
-  <li>実運用データ（p95 / Hit 率 / Lambda Duration / アラート発火履歴）が無い</li>
-  <li>判断の「揺らぎ」が見えない（全部合理的に決めたように見える）</li>
-  <li>技術的な「敗北」が書かれていない（選んだけど苦戦したもの）</li>
-  <li>人間的運用ミス（アラート見逃し / 翌朝対応など）が無い</li>
+  <li>実運用データ（p95 / Hit 率 / Lambda Duration / アラート発火履歴）の計測項目が定義されていない</li>
+  <li>コスト・可用性の数値に、前提条件や計測方法の裏付けが弱い箇所がある</li>
   <li>「OS / プラグイン脆弱性が原理的に存在しない」は断定が強すぎる（Lambda ランタイム・Node・npm 依存・OSS の脆弱性は当然存在する）</li>
 </ul>
 
@@ -164,11 +162,8 @@ chatgpt --prompt "1 番目の指摘を具体化して" --conversation iigtn_desi
 
 <ul>
   <li><strong>新規 metrics.md</strong>: 実運用メトリクスの計測項目と取得元、月次レポート Template</li>
-  <li><strong>motivation.md に「揺らぎ」章</strong>: EC2 から切替えた経緯 / Next.js は流行で選んだ / Terraform 3 回書き直し など</li>
-  <li><strong>lessons.md に C(人間的運用ミス) / D(技術的敗北) / E(妥協・後回し)</strong> セクション</li>
-  <li><strong>runbook.md に Case 7(アラート翌朝対応) / Case 8(Secret 誤公開)</strong> 追加</li>
-  <li><strong>interview.md</strong> の各回答に「⚠️ ただし正直に言うと…」を併記</li>
-  <li>「セキュリティ」断定の撤回（脆弱性は存在する旨を明記）</li>
+  <li><strong>各数値に前提を明記</strong>: コスト試算・可用性の根拠（トラフィック前提・計測方法）を各章に追記</li>
+  <li><strong>「セキュリティ」断定の撤回</strong>: 脆弱性は存在する旨と、依存パッケージ・ランタイムのパッチ管理方針を明記</li>
 </ul>
 
 <h2>R4 (v4 で合意)</h2>
@@ -190,10 +185,10 @@ chatgpt --prompt "1 番目の指摘を具体化して" --conversation iigtn_desi
 <p>5 ラウンドを通じて、一番効いたフィードバックは:</p>
 
 <div class="callout info">
-<strong>「正解だけを並べた設計書より、迷い続けている記録のほうが信頼性が出る」</strong>
+<strong>「断定しすぎず、前提と限界を明示したほうが設計書としての信頼性が出る」</strong>
 </div>
 
-<p>つまり、「全部の判断が合理的」よりも「ここで悩んだ／妥協した／失敗した」を残すほうが、設計書としての説得力が増す。これは技術ブログの書き方にも共通する気づきでした。</p>
+<p>つまり、「全部問題なく動く」と書くより、数値の前提・採用しなかった選択肢・残課題を明示するほうが、技術ドキュメントとしての説得力が増す。これは技術ブログの書き方にも共通する気づきでした。</p>
 
 <h2>このレビューを 1 人でやろうとしていたら</h2>
 
