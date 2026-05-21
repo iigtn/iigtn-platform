@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>② ChatGPT と 6 ラウンドの設計レビュー — 設計書を v1 から v5 まで磨いた話 | iigtn 構築日誌</title>
-<meta name="description" content="AWS サーバレスポートフォリオの設計書を、ChatGPT と 6 ラウンドの相互レビューで段階的に磨き込んだ記録。テンプレ感の排除・実運用データの追加・現場感の注入・採用評価視点の取り込みまで。">
+<title>② ChatGPT と 5 ラウンドの設計レビュー — 設計書を v1 から v4 まで磨いた話 | iigtn 構築日誌</title>
+<meta name="description" content="AWS サーバレスポートフォリオの設計書を、ChatGPT と 5 ラウンドの相互レビューで段階的に磨き込んだ記録。テンプレ感の排除・実運用データの追加・採用評価視点の取り込みまで。">
 <meta name="author" content="iigtn">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://lab.iigtn.com/blog/02-design-review.html">
-<meta property="og:title" content="② ChatGPT と 6 ラウンドの設計レビュー — 設計書を v1 から v5 まで磨いた話">
-<meta property="og:description" content="AWS サーバレスポートフォリオの設計書を、ChatGPT と 6 ラウンドの相互レビューで段階的に磨き込んだ記録。テンプレ感の排除・実運用データの追加・現場感の注入・採用評価視点の取り込みまで。">
+<meta property="og:title" content="② ChatGPT と 5 ラウンドの設計レビュー — 設計書を v1 から v4 まで磨いた話">
+<meta property="og:description" content="AWS サーバレスポートフォリオの設計書を、ChatGPT と 5 ラウンドの相互レビューで段階的に磨き込んだ記録。テンプレ感の排除・実運用データの追加・採用評価視点の取り込みまで。">
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://lab.iigtn.com/blog/02-design-review.html">
 <meta property="og:site_name" content="iigtn">
@@ -18,16 +18,16 @@
 <meta property="article:author" content="iigtn">
 <meta property="article:published_time" content="2026-04-26T00:00:00+09:00">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="② ChatGPT と 6 ラウンドの設計レビュー — 設計書を v1 から v5 まで磨いた話">
-<meta name="twitter:description" content="AWS サーバレスポートフォリオの設計書を、ChatGPT と 6 ラウンドの相互レビューで段階的に磨き込んだ記録。テンプレ感の排除・実運用データの追加・現場感の注入・採用評価視点の取り込みまで。">
+<meta name="twitter:title" content="② ChatGPT と 5 ラウンドの設計レビュー — 設計書を v1 から v4 まで磨いた話">
+<meta name="twitter:description" content="AWS サーバレスポートフォリオの設計書を、ChatGPT と 5 ラウンドの相互レビューで段階的に磨き込んだ記録。テンプレ感の排除・実運用データの追加・採用評価視点の取り込みまで。">
 <meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
 <link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "BlogPosting",
-  "headline": "② ChatGPT と 6 ラウンドの設計レビュー — 設計書を v1 から v5 まで磨いた話",
-  "description": "AWS サーバレスポートフォリオの設計書を、ChatGPT と 6 ラウンドの相互レビューで段階的に磨き込んだ記録。テンプレ感の排除・実運用データの追加・現場感の注入・採用評価視点の取り込みまで。",
+  "headline": "② ChatGPT と 5 ラウンドの設計レビュー — 設計書を v1 から v4 まで磨いた話",
+  "description": "AWS サーバレスポートフォリオの設計書を、ChatGPT と 5 ラウンドの相互レビューで段階的に磨き込んだ記録。テンプレ感の排除・実運用データの追加・採用評価視点の取り込みまで。",
   "datePublished": "2026-04-26",
   "author": { "@type": "Person", "name": "iigtn", "url": "https://lab.iigtn.com/" },
   "publisher": { "@type": "Person", "name": "iigtn" },
@@ -69,14 +69,14 @@
 <article class="post">
 <header class="post-header">
   <p class="post-meta">2026-04-25 · 構築日誌 #02</p>
-  <h1>ChatGPT と 6 ラウンドの設計レビュー — 設計書を v1 から v5 まで磨いた話</h1>
+  <h1>ChatGPT と 5 ラウンドの設計レビュー — 設計書を v1 から v4 まで磨いた話</h1>
 </header>
 
 <div class="post-body">
 
 <p>構築を始める前に、まず <strong>設計書を作ってからコードを書く</strong> 方針を取りました。AWS サーバレスは最初の構成判断が運用コストにそのまま跳ね返るので、雑に始めると後悔します。</p>
 
-<p>ただし設計書を 1 人で書くと自己満で終わりがちです。そこで <strong>ChatGPT (gpt-4o) を相互レビュアーに使い、6 ラウンドの設計レビュー</strong> を回しました。本記事はその記録です。</p>
+<p>ただし設計書を 1 人で書くと自己満で終わりがちです。そこで <strong>ChatGPT (gpt-4o) を相互レビュアーに使い、5 ラウンドの設計レビュー</strong> を回しました。本記事はその記録です。</p>
 
 <h2>レビューに使ったツール</h2>
 
@@ -91,6 +91,19 @@ chatgpt --prompt "1 番目の指摘を具体化して" --conversation iigtn_desi
 </code></pre>
 
 <p>これで「設計書 v1 を渡す → R1 レビュー → 反映 → v2 → R2 レビュー → …」のループが回ります。</p>
+
+<h2>5 ラウンドの全体像</h2>
+
+<p>結論から言うと、設計書はこのレビューを通じて次のように磨き込まれました:</p>
+
+<table>
+<tr><th>ラウンド</th><th>バージョン</th><th>テーマ</th></tr>
+<tr><td>R1</td><td>v1 → v2</td><td>運用視点の追加</td></tr>
+<tr><td>R2</td><td>v2 → v3</td><td>文書役割の分離と事実訂正</td></tr>
+<tr><td>R3</td><td>v3 → v4</td><td>実運用データと泥臭さ</td></tr>
+<tr><td>R4</td><td>v4 で合意</td><td>ポートフォリオとして十分と判定</td></tr>
+<tr><td>R5</td><td>実装後の確認</td><td>実装を踏まえた最終チェック</td></tr>
+</table>
 
 <h2>R1 (v1 → v2) — 運用視点の追加</h2>
 
@@ -110,26 +123,9 @@ chatgpt --prompt "1 番目の指摘を具体化して" --conversation iigtn_desi
   <li><strong>ビジネス応用</strong>: クライアント案件への展開構想</li>
 </ul>
 
-<h2>R2 (v2 → v3) — 個人ストーリーと現場感</h2>
+<h2>R2 (v2 → v3) — 文書役割の分離と事実訂正</h2>
 
-<p>v2 は分量が増えて読み応えが出ましたが、次のレビューで違う角度から指摘されました:</p>
-
-<div class="callout warn">
-「優秀なテンプレをなぞった人で止まっている。<strong>あなたの意思・ストーリー・実際のトラブル経験</strong> が見えない」
-</div>
-
-<p>そこで v3 では:</p>
-
-<ul>
-  <li><strong>Personal Motivation 章</strong>: なぜこの構成にしたかの個人的な背景（ただし「実体験を fabricate しない」方針で、雛形＋編集可能なプレースホルダーで対応）</li>
-  <li><strong>実障害事例集 (Incident Logs)</strong>: 意図的に再現する障害も含めて、Case 1〜N で記録するテンプレ</li>
-  <li><strong>サービス視点の品質目標</strong>: Core Web Vitals / CVR / SEO の数値目標</li>
-  <li><strong>Lessons & Open Questions</strong>: 失敗・反省・現在悩んでいることを書く章</li>
-</ul>
-
-<h2>R3 (v3 → v4) — 文書役割の分離と事実訂正</h2>
-
-<p>v3 は内容が分厚くなりすぎて、1 つのファイルで「技術ドキュメント / 営業資料 / 面接対策 / キャリア戦略」が混在する状態に。R3 で次の指摘:</p>
+<p>v2 は内容が分厚くなりすぎて、1 つのファイルで「技術ドキュメント / 営業資料 / 面接対策 / キャリア戦略」が混在する状態に。R2 で次の指摘:</p>
 
 <ul>
   <li>README として読むとノイズ過多</li>
@@ -139,7 +135,7 @@ chatgpt --prompt "1 番目の指摘を具体化して" --conversation iigtn_desi
   <li>WAF 動的 ON/OFF やマルチリージョンの構想が「盛りすぎ」感を醸す</li>
 </ul>
 
-<p>v4 では <strong>1 つの大きなファイルを 7 ファイルに分割</strong> しました:</p>
+<p>v3 では <strong>1 つの大きなファイルを 7 ファイルに分割</strong> しました:</p>
 
 <table>
 <tr><th>ファイル</th><th>役割</th></tr>
@@ -152,9 +148,9 @@ chatgpt --prompt "1 番目の指摘を具体化して" --conversation iigtn_desi
 <tr><td><code>interview.md</code></td><td>面接 Q&A</td></tr>
 </table>
 
-<h2>R4 (v4 → v5) — 実運用データと泥臭さ</h2>
+<h2>R3 (v3 → v4) — 実運用データと泥臭さ</h2>
 
-<p>v4 はファイル分離で読みやすくなりましたが、もう一段、レビューで突っ込まれました:</p>
+<p>v3 はファイル分離で読みやすくなりましたが、もう一段、レビューで突っ込まれました:</p>
 
 <ul>
   <li>実運用データ（p95 / Hit 率 / Lambda Duration / アラート発火履歴）が無い</li>
@@ -164,7 +160,7 @@ chatgpt --prompt "1 番目の指摘を具体化して" --conversation iigtn_desi
   <li>「OS / プラグイン脆弱性が原理的に存在しない」は断定が強すぎる（Lambda ランタイム・Node・npm 依存・OSS の脆弱性は当然存在する）</li>
 </ul>
 
-<p>v5 では:</p>
+<p>v4 では:</p>
 
 <ul>
   <li><strong>新規 metrics.md</strong>: 実運用メトリクスの計測項目と取得元、月次レポート Template</li>
@@ -175,23 +171,23 @@ chatgpt --prompt "1 番目の指摘を具体化して" --conversation iigtn_desi
   <li>「セキュリティ」断定の撤回（脆弱性は存在する旨を明記）</li>
 </ul>
 
-<h2>R5 (v5 で合意)</h2>
+<h2>R4 (v4 で合意)</h2>
 
-<p>R5 のレビューで、ChatGPT は <strong>「合意」</strong> と判定しました:</p>
+<p>R4 のレビューで、ChatGPT は <strong>「合意」</strong> と判定しました:</p>
 
 <div class="callout good">
 「ドキュメント全体が非常に詳細で、フリーランス・インフラエンジニアのポートフォリオとして求められる要件を満たしている。採用や案件獲得に向けた様々な視点（技術、コスト、ビジネス、面接対策）がカバーされている。過去のフィードバックを適切に反映し、細部にわたる改善が行われている」
 </div>
 
-<p>5 ラウンドのレビューで、設計書は <strong>「優秀なテンプレ」から「この人だから作れた設計書」</strong> へと変わったと言えるレベルになりました。</p>
+<p>4 ラウンドのレビューで、設計書は <strong>「優秀なテンプレ」から「この人だから作れた設計書」</strong> へと変わったと言えるレベルになりました。</p>
 
-<h2>R6 (実装後の確認)</h2>
+<h2>R5 (実装後の確認)</h2>
 
 <p>実装が一段落した時点で、もう 1 ラウンド、ChatGPT に「これで本当に十分か」を確認しました。これも合意。設計フェーズはここで終了し、実装フェーズに入りました。</p>
 
 <h2>レビューで一番効いた指摘</h2>
 
-<p>6 ラウンドを通じて、一番効いたフィードバックは:</p>
+<p>5 ラウンドを通じて、一番効いたフィードバックは:</p>
 
 <div class="callout info">
 <strong>「正解だけを並べた設計書より、迷い続けている記録のほうが信頼性が出る」</strong>
