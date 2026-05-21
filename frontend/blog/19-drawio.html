@@ -93,7 +93,7 @@
 <tr><th>長所</th><th>短所</th></tr>
 <tr><td>編集が楽</td><td>見栄えが地味</td></tr>
 <tr><td>テキストなので diff が綺麗</td><td>複雑な構造を表現できない</td></tr>
-<tr><td>レンダリング不要</td><td>採用評価で「設計能力をアピール」できない</td></tr>
+<tr><td>レンダリング不要</td><td>構成の全体像や設計意図を視覚的に伝えにくい</td></tr>
 </table>
 
 <p>軽量だけど、ポートフォリオサイトに載せるには弱い。</p>
@@ -129,7 +129,7 @@
 
 <ul>
   <li>AWS 公式の aws4 アイコンセット（最新 2025 リリース）が使える</li>
-  <li>採用評価で「ちゃんと AWS Architecture Diagram を描けてる」アピール</li>
+  <li>標準的な AWS Architecture Diagram の体裁で、構成を正確に共有できる</li>
   <li>個別アイコンに公式の色（CloudFront 紫 / S3 緑 / Lambda 橙）が付く</li>
 </ul>
 
@@ -213,7 +213,7 @@ $payload_attr = $payload -replace "'", '&amp;#39;'
 <table>
 <tr><th>場所</th><th>使うフォーマット</th><th>理由</th></tr>
 <tr><td>GitHub README.md</td><td>Mermaid</td><td>GitHub が native 描画、軽量</td></tr>
-<tr><td>本サイト解説書 (learn.html)</td><td>drawio (aws4 アイコン)</td><td>採用評価でリッチに見せたい</td></tr>
+<tr><td>本サイト解説書 (learn.html)</td><td>drawio (aws4 アイコン)</td><td>構成と設計意図を正確に伝えたい</td></tr>
 <tr><td>本ブログ各記事</td><td>テーブル + 適宜 Mermaid</td><td>記事の本文と diff 友好性を優先</td></tr>
 <tr><td>外部公開する設計書</td><td>drawio + SVG エクスポート</td><td>クライアントへの提示物</td></tr>
 </table>
@@ -231,17 +231,17 @@ $payload_attr = $payload -replace "'", '&amp;#39;'
 
 <p>これらの .drawio ファイルは GitHub 上でクリックすると <strong>GitHub が自動で描画</strong> してくれます（GitHub は drawio ネイティブサポート）。app.diagrams.net で開けば GUI で編集も可能。</p>
 
-<h2>「採用評価」での効果</h2>
+<h2>フォーマットごとに伝わるもの</h2>
 
-<p>アーキテクチャ図の質は採用評価に直結します:</p>
+<p>アーキテクチャ図は、フォーマットによって伝えられる情報量が変わります:</p>
 
 <ul>
-  <li><strong>ASCII art</strong>: 「最低限の説明をしている人」</li>
-  <li><strong>Mermaid</strong>: 「コード化志向の人」「diff 管理を意識する人」</li>
-  <li><strong>drawio + AWS 公式アイコン</strong>: 「設計書を書く文化がある人」「クライアント提案資料を作れる人」</li>
+  <li><strong>ASCII art</strong>: 最低限の構成は伝わるが、関係性までは読み取りにくい</li>
+  <li><strong>Mermaid</strong>: 関係性が明確で、コード管理・diff に強い</li>
+  <li><strong>drawio + AWS 公式アイコン</strong>: 構成・配置・サービス種別まで正確に伝わり、クライアント提示にもそのまま使える</li>
 </ul>
 
-<p>個人サイトでも 3 つ使い分けると、技術力の幅が見える設計になります。</p>
+<p>用途に応じて 3 つを使い分けると、場面ごとに過不足なく構成を共有できます。</p>
 
 <h2>次の記事</h2>
 
