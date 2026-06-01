@@ -58,6 +58,38 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "this" {
   }
 }
 
+# ─── (2-4) Lifecycle ──────────────────────────────────────────────────────────
+# Versioning が有効だと、上書き・削除で旧バージョン / DeleteMarker が無限に
+# 残り、Tier1 リクエスト数とストレージが膨らむ。デプロイ用バケットなので
+# ロールバック用に 30 日分だけ残せば十分。
+# - noncurrent_version_expiration: 旧バージョンを 30 日で削除
+# - abort_incomplete_multipart_upload: 失敗した分割アップロードを 7 日で破棄
+# - expired_object_delete_marker: 中身が消えた DeleteMarker を片付ける
+resource "aws_s3_bucket_lifecycle_configuration" "this" {
+  bucket = aws_s3_bucket.this.id
+
+  rule {
+    id     = "expire-noncurrent-versions"
+    status = "Enabled"
+
+    filter {}
+
+    noncurrent_version_expiration {
+      noncurrent_days = 30
+    }
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+
+    expiration {
+      expired_object_delete_marker = true
+    }
+  }
+
+  depends_on = [aws_s3_bucket_versioning.this]
+}
+
 # ==============================================================================
 # Section 3: CloudFront Origin Access Control (OAC)
 # ------------------------------------------------------------------------------
