@@ -66,11 +66,14 @@ jobs:
 
       # ── Step 4: S3 へ完全ミラー sync ──────────────────────────────────
       # --delete: ローカルに無いファイルを S3 側から削除
+      # --size-only: mtime ドリフト (gdrive 同期 / CI checkout) による不要 PUT を防ぐ
       # メタデータ系ファイル (.git, README) は除外
+      # サイズ変化のないファイルは再アップロードしないため、Tier1 PUT が大幅に減る
       - name: Deploy to S3
         run: |
           aws s3 sync ./${{ env.SITE_DIR }}/ s3://${{ env.S3_BUCKET }}/ \
             --delete \
+            --size-only \
             --exclude ".git/*" \
             --exclude "*.md" \
             --exclude ".gitignore" \
@@ -79,17 +82,15 @@ jobs:
       # ── Step 5: CloudFront のキャッシュを無効化 ────────────────────────
       # /* は wildcard で 1 path カウント。全ページ確実に更新される。
       # 月 1,000 paths 無料枠内（リリース 1,000 回まで実質無料）。
+      # wait は実行しない: 完了まで 1-3 分かかり CI 課金時間を圧迫する。
+      # invalidation 自体は非同期に CloudFront 側で進む。
       - name: Invalidate CloudFront
         run: |
           INV_ID=$(aws cloudfront create-invalidation \
             --distribution-id ${{ env.CF_DISTRIBUTION_ID }} \
             --paths "/*" \
             --query 'Invalidation.Id' --output text)
-          echo "Invalidation ID: $INV_ID"
-          aws cloudfront wait invalidation-completed \
-            --distribution-id ${{ env.CF_DISTRIBUTION_ID }} \
-            --id "$INV_ID"
-          echo "✅ Invalidation $INV_ID completed"
+          echo "Invalidation ID: $INV_ID (running in background)"
 
       # ── Step 6: 動作確認 ──────────────────────────────────────────────
       - name: Verify deployment
