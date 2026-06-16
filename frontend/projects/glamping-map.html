@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>グランピング × キャンプ場マップ 構成解説 | iigtn</title>
-  <meta name="description" content="グランピング特化＋一般キャンプ場のハイブリッド地理データ可視化メディアの構成計画。Next.js (Static Export) + S3 + CloudFront + DynamoDB + Lambda + Maptiler + 楽天トラベル API を組合せた AWS サーバレス構成を設計版で公開。">
+  <title>グランピング × キャンプ場マップ 構成解説 — Next.js 15 × AWS サーバレス地理データ基盤 | iigtn</title>
+  <meta name="description" content="glamping-map.com の構成解説。全国 47 都道府県・約 4,800 施設のグランピング / キャンプ場を Next.js 15 (App Router, Static Export) + S3 + CloudFront (OAC) + DynamoDB + Lambda + EventBridge + SES で配信。Terraform IaC・GitHub Actions OIDC で月額 $2〜5 運用。">
   <meta name="author" content="iigtn">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://www.iigtn.com/projects/glamping-map.html">
-  <meta property="og:title" content="グランピング × キャンプ場マップ 構成解説">
-  <meta property="og:description" content="地図 UI 特化の地理データ可視化メディアの AWS サーバレス構成計画。">
+  <meta property="og:title" content="グランピング × キャンプ場マップ 構成解説 — glamping-map.com">
+  <meta property="og:description" content="全国 4,800 施設をカバーする地図 UI 特化メディアの AWS サーバレス構成。Next.js 15 × S3 + CloudFront × DynamoDB × Lambda × Terraform で月額 $2〜5 運用中。">
   <meta property="og:type" content="article">
   <meta property="og:url" content="https://www.iigtn.com/projects/glamping-map.html">
   <meta property="og:site_name" content="iigtn">
@@ -17,7 +17,7 @@
   <meta property="og:locale" content="ja_JP">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="グランピング × キャンプ場マップ 構成解説">
-  <meta name="twitter:description" content="地図 UI 特化の地理データ可視化メディアの AWS サーバレス構成計画。">
+  <meta name="twitter:description" content="全国 4,800 施設をカバーする地図 UI 特化メディアの AWS サーバレス構成。">
   <meta name="twitter:image" content="https://www.iigtn.com/assets/icon.svg">
   <link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
   <link rel="apple-touch-icon" href="/assets/icon.svg">
@@ -54,37 +54,36 @@
 <main id="main">
 
   <header class="page-header">
-    <p class="h-meta">プロジェクト解説 · 構想中（立ち上げ準備中）</p>
-    <h1>グランピング × キャンプ場マップ — Maptiler × AWS サーバレス地理データ基盤</h1>
+    <p class="h-meta">プロジェクト解説 · 公開稼働中 · <a href="https://glamping-map.com/" target="_blank" rel="noopener">glamping-map.com</a></p>
+    <h1>グランピング × キャンプ場マップ — Next.js 15 × AWS サーバレス地理データ基盤</h1>
     <p class="lead">
-      全国の施設地理データを Next.js (Static Export) + S3 + CloudFront (OAC) で配信、DynamoDB に施設マスタを格納する
-      構成計画です。EventBridge から月 1 で起動する Lambda が外部 API を取り込み、URL 死活監視 Lambda が 404/500 検知時に
-      SES でアラート。地図 UI は Maptiler API、Phase 2 で AWS WAF を追加予定。子育てマップと Terraform モジュール
-      共通化を想定しています。
+      全国 47 都道府県・約 4,800 施設のグランピング / キャンプ場を、地図 UI と条件絞り込みで検索できる Web メディア。
+      Next.js 15 (App Router, Static Export) を S3 + CloudFront (OAC) で配信し、DynamoDB に施設マスタを格納。
+      EventBridge → Lambda が月次で Rakuten Travel + OpenStreetMap Overpass + Wikidata からデータを取込み、
+      問い合わせは API Gateway + Lambda + SES、Secrets Manager / CloudWatch / IAM (GitHub OIDC) まで含めて
+      すべて Terraform で IaC 化しています。
     </p>
     <div class="h-cta">
+      <a class="btn btn-primary" href="https://glamping-map.com/" target="_blank" rel="noopener">サイトを見る →</a>
       <a class="btn btn-ghost" href="/works.html">← Works に戻る</a>
     </div>
   </header>
 
   <section class="page-section">
 
-    <div class="h-callout">
-      <strong>注:</strong> 現在は構想決定 + 立ち上げ準備の段階で、本番ドメインはまだ取得していません。
-      AWS 構成図と実行計画は ChatGPT 共同レビューを経て確定済み（Yes, with Caution 判定）。
-    </div>
-
     <div class="h-section">
       <h2>サマリ</h2>
       <table>
-        <tr><th>プロジェクト</th><td>グランピング × キャンプ場マップ（仮）</td></tr>
-        <tr><th>ステータス</th><td>構想決定、立ち上げ準備中（ドメイン未取得）</td></tr>
-        <tr><th>ドメイン候補</th><td>glamping-map.jp / glamp-camp.com / glamping-japan.com / camp-map.jp / glcamp.jp</td></tr>
-        <tr><th>月額運用費</th><td>1,000 〜 10,000 円（無風時はもっと低め、施設データ更新頻度で変動）</td></tr>
-        <tr><th>構成方針</th><td>Next.js (Static Export) + S3 + CloudFront + DynamoDB + Lambda + Maptiler API</td></tr>
-        <tr><th>共通化</th><td>子育てマップと Terraform モジュールを共有、同一 AWS アカウント、タグでプロジェクト分離</td></tr>
+        <tr><th>プロジェクト</th><td><a href="https://glamping-map.com/" target="_blank" rel="noopener">glamping-map.com</a></td></tr>
+        <tr><th>ステータス</th><td>公開稼働中</td></tr>
+        <tr><th>掲載施設数</th><td>約 4,800 件（グランピング 約 2,200 / キャンプ場 約 2,000 / 公的データ補完含む）</td></tr>
+        <tr><th>カバレッジ</th><td>47 都道府県、特集記事 28 本（ガイド系 7 / ランキング系 21）</td></tr>
+        <tr><th>静的ページ数</th><td>約 4,170（施設詳細 + 都道府県 + 記事 + 索引）</td></tr>
+        <tr><th>月額運用費</th><td>$2 〜 $5（約 ¥300 〜 ¥800）+ ドメイン更新料 ¥1,800/年</td></tr>
+        <tr><th>構成方針</th><td>Next.js 15 (App Router, Static Export) + S3 + CloudFront (OAC) + DynamoDB + Lambda + Terraform フル IaC</td></tr>
       </table>
     </div>
+
     <div class="h-section">
       <h2>全体アーキテクチャ</h2>
       <p>
@@ -92,65 +91,113 @@
         直接レンダリングしています。zoom / pan / 編集ボタンが使えます。
       </p>
       <div class="diagram-wrap">
-        <div class="mxgraph" style="max-width:100%;" data-mxgraph='{"highlight":"#0000ff","nav":true,"resize":true,"toolbar":"zoom","edit":"_blank","url":"/diagrams/glamping-map/architecture.drawio?v=20260505a"}'></div>
+        <div class="mxgraph" style="max-width:100%;" data-mxgraph='{"highlight":"#0000ff","nav":true,"resize":true,"toolbar":"zoom","edit":"_blank","url":"/diagrams/glamping-map/architecture.drawio?v=20260515d"}'></div>
       </div>
       <p class="h-meta">
-        ソース: <a href="/diagrams/glamping-map/architecture.drawio?v=20260505a">/diagrams/glamping-map/architecture.drawio</a>
+        ソース: <a href="/diagrams/glamping-map/architecture.drawio?v=20260515d">/diagrams/glamping-map/architecture.drawio</a>
         （drawio で開けば編集可能）
       </p>
     </div>
 
     <div class="h-section">
-      <h2>A. 全体アーキテクチャ（計画）</h2>
-      <ul>
-        <li><strong>配信レイヤー</strong>: Route53 (Hosted Zone) + ACM (us-east-1) + CloudFront (HTTP/3、価格クラス：日本＋一部アジア) + S3 (静的サイト + 画像オリジン、Public Access Block + OAC)</li>
-        <li><strong>データレイヤー</strong>: DynamoDB (オンデマンド、PK: <code>施設タイプ#都道府県</code> / SK: <code>施設ID</code> / GSI1: 緯度経度クラスタ、PITR 有効)</li>
-        <li><strong>データ取込</strong>: EventBridge (月 1 cron) + Lambda (楽天トラベル API 取込 / URL 死活監視) + Secrets Manager (API キー保管)</li>
-        <li><strong>地図 UI</strong>: Maptiler API（外部・無料枠から開始）+ Next.js コンポーネント (Leaflet or MapLibre GL JS)</li>
-        <li><strong>問い合わせ</strong>: API Gateway + Lambda (problem-form 受付) + SES (管理者通知)</li>
-        <li><strong>監視</strong>: CloudWatch Logs / Alarms + SNS (コスト・エラー通知)</li>
-        <li><strong>セキュリティ (Phase 2)</strong>: AWS WAF Managed Rules（アクセス急増時に追加）</li>
-      </ul>
-    </div>
-
-    <div class="h-section">
-      <h2>B. データ取込パイプライン</h2>
-      <ol>
-        <li><strong>EventBridge</strong> が月 1 回 cron で発火</li>
-        <li><strong>Lambda (ingest)</strong> が楽天トラベル API を叩いて施設マスタを取得 → DynamoDB に upsert</li>
-        <li><strong>Lambda (monitor)</strong> が各施設の URL 死活を HTTP HEAD で確認、404/500 検知時は SES でアラート</li>
-        <li><strong>GitHub Actions</strong> が新規施設追加時に DDB を読み出し → <code>next build</code> で SSG 再生成 → S3 同期</li>
-      </ol>
-      <p>
-        手動メンテはレッドフラグ。月 1 回の Lambda 実行で完結する設計を厳格に守る。
-      </p>
-    </div>
-
-    <div class="h-section">
-      <h2>採用判断のポイント</h2>
+      <h2>A. AWS 構成</h2>
       <table>
-        <tr><th>項目</th><th>採用</th><th>理由</th></tr>
-        <tr><td>静的化</td><td>Next.js Static Export</td><td>SSR / ISR は使わない。CloudFront キャッシュで応答完結、コスト最小化</td></tr>
-        <tr><td>地図</td><td>Maptiler API（外部）</td><td>Mapbox より安い、無料枠あり、自前タイル運用は維持コスト過大</td></tr>
-        <tr><td>データ</td><td>DynamoDB オンデマンド</td><td>初期はオンデマンドで様子見、安定したらプロビジョン課金へ切替検討</td></tr>
-        <tr><td>共通化</td><td>子育てマップと Terraform モジュール共有</td><td>同一 AWS アカウントでタグ分離、運用負荷集約</td></tr>
-        <tr><td>監視</td><td>段階導入</td><td>Phase 0〜1 は最小、Phase 2 で WAF + 監視拡張</td></tr>
+        <tr><th>カテゴリ</th><th>AWS サービス</th><th>役割</th></tr>
+        <tr><td>配信</td><td>CloudFront + S3</td><td>静的サイト配信（OAC で S3 直接アクセス遮断）</td></tr>
+        <tr><td>ドメイン / TLS</td><td>Route 53 + ACM</td><td><code>glamping-map.com</code> + TLS 証明書</td></tr>
+        <tr><td>問合せフォーム</td><td>API Gateway (HTTP API) + Lambda + SES</td><td>受信 → メール通知</td></tr>
+        <tr><td>データ取込</td><td>EventBridge + Lambda + DynamoDB</td><td>月次バッチで Rakuten / OSM から取得・upsert</td></tr>
+        <tr><td>ヘルスチェック</td><td>EventBridge + Lambda + CloudWatch</td><td>月次でサイト疎通確認</td></tr>
+        <tr><td>シークレット</td><td>Secrets Manager</td><td>API キー・通知メールアドレス保管</td></tr>
+        <tr><td>認可</td><td>IAM (GitHub OIDC)</td><td>CI から短命クレデンシャルでデプロイ</td></tr>
+        <tr><td>観測</td><td>CloudWatch Logs / Alarms</td><td>全 Lambda + API Gateway のログ集約</td></tr>
       </table>
     </div>
 
     <div class="h-section">
-      <h2>これからやる予定</h2>
+      <h2>B. データフロー</h2>
+      <h3>公開サイト (read path)</h3>
+      <ol>
+        <li>ユーザー → Route 53 (DNS) → CloudFront (CDN)</li>
+        <li>CloudFront → S3 (HTML/CSS/JS/画像 = Next.js Static Export 出力物)</li>
+      </ol>
+      <h3>問合せフォーム (write path)</h3>
+      <ol>
+        <li>ブラウザ → CloudFront 配下の <code>/api/contact</code> → API Gateway (HTTP API)</li>
+        <li>API Gateway → Lambda (<code>contact</code>) → Secrets Manager (送信先取得)</li>
+        <li>Lambda → SES → 通知メール</li>
+      </ol>
+      <h3>データ取込 + デプロイ</h3>
+      <ol>
+        <li>EventBridge (月次 cron) → Lambda (<code>ingest</code>)</li>
+        <li>Lambda → Rakuten Travel API + OpenStreetMap Overpass API</li>
+        <li>Lambda → DynamoDB に upsert（約 4,800 items）</li>
+        <li>GitHub Actions (push to <code>main</code>) → DynamoDB を scan → Next.js build</li>
+        <li><code>aws s3 sync out/ s3://...</code> → CloudFront キャッシュ無効化</li>
+      </ol>
+    </div>
+
+    <div class="h-section">
+      <h2>C. 技術スタック</h2>
+      <table>
+        <tr><th>レイヤ</th><th>技術</th></tr>
+        <tr><td>フロントエンド</td><td>Next.js 15 (App Router, Static Export), TypeScript, Tailwind CSS</td></tr>
+        <tr><td>地図 UI</td><td>Leaflet + OpenStreetMap タイル</td></tr>
+        <tr><td>バックエンド</td><td>Node.js 20 + AWS SDK v3 (Lambda, DynamoDB, SES, Secrets Manager)</td></tr>
+        <tr><td>インフラ</td><td>Terraform（modules: <code>site</code> / <code>lambda-stack</code> / <code>iam-deploy</code> / <code>monitor</code>）</td></tr>
+        <tr><td>CI / CD</td><td>GitHub Actions（OIDC で AWS にデプロイ、長期 secret なし）</td></tr>
+        <tr><td>品質</td><td>Biome (lint + format), tsc (型検査)</td></tr>
+        <tr><td>観測</td><td>GA4 + Google Search Console + CloudWatch</td></tr>
+      </table>
+    </div>
+
+    <div class="h-section">
+      <h2>D. データソース</h2>
+      <table>
+        <tr><th>ソース</th><th>ライセンス / 利用条件</th><th>用途</th></tr>
+        <tr><td>Rakuten Travel OpenAPI v2</td><td>楽天 Web Service 利用規約（API キー要登録）</td><td>施設名・住所・写真・料金・レビュー</td></tr>
+        <tr><td>OpenStreetMap (Overpass API)</td><td>© OpenStreetMap contributors, ODbL</td><td>公的キャンプ場・座標補完</td></tr>
+        <tr><td>Wikidata</td><td>CC0</td><td>施設説明補完</td></tr>
+      </table>
+      <p class="h-meta">帰属表記はサイト内 <a href="https://glamping-map.com/about/" target="_blank" rel="noopener">/about/</a> に明記。</p>
+    </div>
+
+    <div class="h-section">
+      <h2>E. 月額運用費（実績）</h2>
+      <table>
+        <tr><th>AWS サービス</th><th>内訳</th><th>月額目安</th></tr>
+        <tr><td>Route 53</td><td>Hosted zone × 1</td><td>$0.50</td></tr>
+        <tr><td>S3</td><td>約 150 MB 標準ストレージ + リクエスト</td><td>$0.10 〜 $0.30</td></tr>
+        <tr><td>CloudFront</td><td>配信（Asia エッジ、低トラフィック）</td><td>$0.50 〜 $2.00</td></tr>
+        <tr><td>Lambda</td><td>3 関数 × 月数十回実行</td><td>$0.00（無料枠内）</td></tr>
+        <tr><td>API Gateway</td><td>HTTP API 月数件</td><td>$0.00（無料枠内）</td></tr>
+        <tr><td>DynamoDB</td><td>On-Demand, 約 4,800 items, 月次書込中心</td><td>$0.10 〜 $0.50</td></tr>
+        <tr><td>EventBridge</td><td>スケジュールルール × 2</td><td>$0.00（無料枠内）</td></tr>
+        <tr><td>Secrets Manager</td><td>secret × 2</td><td>$0.80</td></tr>
+        <tr><td>CloudWatch Logs</td><td>retention 14 日, 軽負荷</td><td>$0.10 〜 $0.50</td></tr>
+        <tr><td>ACM</td><td>証明書（CloudFront 用）</td><td>$0.00（無料）</td></tr>
+        <tr><th>合計</th><th></th><th>$2 〜 $5 / 月（約 ¥300 〜 ¥800）</th></tr>
+      </table>
+    </div>
+
+    <div class="h-section">
+      <h2>F. セキュリティ・コンプライアンス</h2>
       <ul>
-        <li>ドメイン取得（候補比較で 1 つに絞り込み）</li>
-        <li>Phase 0: 構想固め + ChatGPT 検証（実施済）</li>
-        <li>Phase 1: MVP 構築（地図 UI + 主要 50 施設のデータ）</li>
-        <li>Phase 2: 全国カバー + WAF / 監視拡張 + SEO 育成</li>
+        <li><strong>HTTPS only</strong> — ACM 発行の TLS 証明書 + CloudFront で強制</li>
+        <li><strong>S3 直接公開なし</strong> — CloudFront Origin Access Control (OAC) で S3 を private に</li>
+        <li><strong>長期 AWS キー不使用</strong> — GitHub Actions は OIDC で短命クレデンシャル取得</li>
+        <li><strong>シークレット集約管理</strong> — API キー・通知先メールは Secrets Manager</li>
+        <li><strong>最小権限 IAM</strong> — Lambda は関数ごとに必要最小のロール</li>
+        <li><strong>個人情報の最小保持</strong> — 問合せフォームは SES 送信のみ、永続化なし</li>
       </ul>
     </div>
 
     <div class="h-section">
       <h2>関連リンク</h2>
       <ul>
+        <li><a href="https://glamping-map.com/" target="_blank" rel="noopener">glamping-map.com（公開サイト）</a></li>
+        <li><a href="https://glamping-map.com/articles/" target="_blank" rel="noopener">特集記事一覧</a></li>
+        <li><a href="https://glamping-map.com/sitemap.xml" target="_blank" rel="noopener">sitemap.xml</a></li>
         <li><a href="/works.html">← Works 一覧へ戻る</a></li>
         <li><a href="/projects/kosodate-map.html">子育てマップ（共通技術基盤）</a></li>
       </ul>

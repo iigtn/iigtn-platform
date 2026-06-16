@@ -244,10 +244,10 @@ resource "aws_acm_certificate_validation" "this" {
 <tr><td>Route53 月額</td><td>$0.50</td><td>$0（不要）</td></tr>
 <tr><td>既存メール影響</td><td>大（NS 切替リスク）</td><td>無</td></tr>
 <tr><td>サブドメインの追加</td><td>Terraform で完結</td><td>Squarespace で 1 個ずつ手動</td></tr>
-<tr><td>採用評価訴求</td><td>「全部 AWS で揃えた」</td><td>「外部 DNS と連携できる」（実は実務的）</td></tr>
+<tr><td>実務での汎用性</td><td>全部 AWS 前提</td><td>外部 DNS と連携できる（実案件向き）</td></tr>
 </table>
 
-<p>意外なメリットとして、<strong>「外部 DNS プロバイダと AWS を連携させた経験」</strong> は採用評価では実は強い。実案件では「DNS は移管できないお客様」が普通なので、CNAME 連携の経験は価値があります。</p>
+<p>意外なメリットとして、<strong>「外部 DNS プロバイダと AWS を連携させた経験」</strong> は実務で効きます。実案件では「DNS は移管できないお客様」が普通なので、CNAME 連携で対応できることには実用上の価値があります。</p>
 
 <h2>Cloud Shell で全プロジェクト探索</h2>
 
