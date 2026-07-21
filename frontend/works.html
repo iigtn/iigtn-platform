@@ -21,7 +21,8 @@
   <meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
   <link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
   <link rel="apple-touch-icon" href="/assets/icon.svg">
-  <link rel="stylesheet" href="/site.css?v=20260506-rwd">
+  <meta name="theme-color" content="#0d1321">
+  <link rel="stylesheet" href="/site.css?v=20260721-dark">
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-3K7CXNEVC8"></script>
   <script>
@@ -45,7 +46,7 @@
       <li><a href="/about.html">About</a></li>
       <li><a href="/skills.html">Skills</a></li>
       <li><a href="/works.html" class="active">Works</a></li>
-      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/learn.html">解説書</a></li>
       <li><a href="/contact.html">Contact</a></li>
     </ul>
   </nav>
@@ -55,7 +56,7 @@
 
   <header class="page-header">
     <h1>Works</h1>
-    <p class="lead">これまでの主な制作・構築物。匿名化したケーススタディとして、技術選定の判断記録 (ADR) と運用記録 (post-mortem) も合わせて公開していきます。</p>
+    <p class="lead">公開稼働中の運営サイト・案件を中心に、これまでの制作・構築物をまとめています。各カードから採用構成の詳細ページへ移動できます。</p>
   </header>
 
   <section class="page-section reveal">
@@ -161,7 +162,7 @@
             このサイト本体。AWS サーバレス + Terraform + GitHub Actions OIDC でゼロから設計・構築。
             フロント (S3 + CloudFront + OAC) / API (API Gateway + Lambda + DynamoDB) /
             通知 (SES) / 監視 (CloudWatch + SNS + Budgets) / 静的キーレス CI/CD まで一通りカバー。
-            全コードと設計判断は解説書および構築日誌で公開しています。
+            全コードと設計判断は解説書として公開しています。
           </p>
           <ul class="skill-tags">
             <li class="skill-tag">AWS</li>
@@ -248,44 +249,6 @@
           </ul>
         </article>
       </a>
-
-      <a href="/blog/" class="work-card-link">
-        <article class="work-card">
-          <div class="work-meta">2026-04-26 / 全 21 記事 / 完結</div>
-          <h3>iigtn 構築日誌 — フリーランスがゼロから AWS サーバレスポートフォリオを作るまで →</h3>
-          <p class="work-summary">
-            上記 iigtn-platform をどう設計し、どこでハマり、どう乗り越えたかの全記録。
-            設計レビュー → IaC → CI/CD → 監視 → ドキュメンテーションまでを 21 記事に分け、
-            各記事 3,500〜5,000 字 + 用語集付きで解説しています。
-          </p>
-          <ul class="skill-tags">
-            <li class="skill-tag">構築日誌</li>
-            <li class="skill-tag">21 記事</li>
-            <li class="skill-tag">設計判断 (ADR)</li>
-            <li class="skill-tag">用語集</li>
-          </ul>
-        </article>
-      </a>
-
-    </div>
-  </section>
-
-  <section class="page-section reveal">
-    <h2>Coming Soon</h2>
-
-    <div class="works-list">
-
-      <article class="work-card">
-        <div class="work-meta">準備中</div>
-        <h3>受託・常駐案件のケーススタディ</h3>
-        <p class="work-summary">
-          受託・常駐案件の実績を順次追加予定です。匿名化したケーススタディとして、
-          要件 → 採用構成 → 技術選定の判断記録 (ADR) → 運用で起きたこと (post-mortem) → 学びを 1 セットで公開します。
-        </p>
-        <ul class="skill-tags">
-          <li class="skill-tag">Coming soon</li>
-        </ul>
-      </article>
 
     </div>
   </section>

@@ -2,323 +2,86 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://lab.iigtn.com/</loc>
-    <lastmod>2026-04-26</lastmod>
+    <lastmod>2026-07-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://lab.iigtn.com/about.html</loc>
-    <lastmod>2026-04-26</lastmod>
+    <lastmod>2026-07-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://lab.iigtn.com/skills.html</loc>
-    <lastmod>2026-04-26</lastmod>
+    <lastmod>2026-07-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://lab.iigtn.com/works.html</loc>
-    <lastmod>2026-04-26</lastmod>
+    <lastmod>2026-07-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
+    <loc>https://lab.iigtn.com/learn.html</loc>
+    <lastmod>2026-07-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://lab.iigtn.com/contact.html</loc>
-    <lastmod>2026-04-26</lastmod>
+    <lastmod>2026-07-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://lab.iigtn.com/projects/hojokin-db.html</loc>
-    <lastmod>2026-04-26</lastmod>
+    <lastmod>2026-07-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://lab.iigtn.com/projects/ai-erabikata.html</loc>
+    <lastmod>2026-07-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://lab.iigtn.com/projects/hcl-guide.html</loc>
+    <lastmod>2026-07-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://lab.iigtn.com/projects/hojinka.html</loc>
+    <lastmod>2026-07-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://lab.iigtn.com/projects/docchain.html</loc>
+    <lastmod>2026-07-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://lab.iigtn.com/projects/glamping-map.html</loc>
+    <lastmod>2026-07-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://lab.iigtn.com/projects/kosodate-map.html</loc>
+    <lastmod>2026-07-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://lab.iigtn.com/privacy.html</loc>
-    <lastmod>2026-04-26</lastmod>
+    <lastmod>2026-07-21</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/learn.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/ref/</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/aws-basics/</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url><loc>https://lab.iigtn.com/blog/aws-basics/01-s3.html</loc><lastmod>2026-04-26</lastmod><changefreq>yearly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lab.iigtn.com/blog/aws-basics/02-dynamodb.html</loc><lastmod>2026-04-26</lastmod><changefreq>yearly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lab.iigtn.com/blog/aws-basics/03-rds.html</loc><lastmod>2026-04-26</lastmod><changefreq>yearly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lab.iigtn.com/blog/aws-basics/04-ec2.html</loc><lastmod>2026-04-26</lastmod><changefreq>yearly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lab.iigtn.com/blog/aws-basics/05-lambda.html</loc><lastmod>2026-04-26</lastmod><changefreq>yearly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lab.iigtn.com/blog/aws-basics/06-ecs-fargate.html</loc><lastmod>2026-04-26</lastmod><changefreq>yearly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lab.iigtn.com/blog/aws-basics/07-vpc.html</loc><lastmod>2026-04-26</lastmod><changefreq>yearly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lab.iigtn.com/blog/aws-basics/08-cloudfront.html</loc><lastmod>2026-04-26</lastmod><changefreq>yearly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lab.iigtn.com/blog/aws-basics/09-route53.html</loc><lastmod>2026-04-26</lastmod><changefreq>yearly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lab.iigtn.com/blog/aws-basics/10-api-gateway.html</loc><lastmod>2026-04-26</lastmod><changefreq>yearly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lab.iigtn.com/blog/aws-basics/11-iam-sts.html</loc><lastmod>2026-04-26</lastmod><changefreq>yearly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lab.iigtn.com/blog/aws-basics/12-acm.html</loc><lastmod>2026-04-26</lastmod><changefreq>yearly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lab.iigtn.com/blog/aws-basics/13-cloudwatch.html</loc><lastmod>2026-04-26</lastmod><changefreq>yearly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lab.iigtn.com/blog/aws-basics/14-sns-sqs.html</loc><lastmod>2026-04-26</lastmod><changefreq>yearly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lab.iigtn.com/blog/aws-basics/15-budgets.html</loc><lastmod>2026-04-26</lastmod><changefreq>yearly</changefreq><priority>0.7</priority></url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/ref/01-linux-files.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/ref/02-text-processing.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/ref/03-network.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/ref/04-process-resource.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/ref/05-systemd.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/ref/06-ssh-rsync.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/ref/07-jq.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/ref/08-yq.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/ref/09-git-advanced.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/ref/10-gh-cli.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/ref/11-aws-cli-basics.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/ref/12-aws-s3.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/ref/13-aws-ec2-vpc.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/ref/14-aws-iam-sts.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/ref/15-aws-lambda-apigw-ddb.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/ref/16-cloudwatch.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/ref/17-docker.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/ref/18-kubectl.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/ref/19-terraform-advanced.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/01-intro.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/02-design-review.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/03-aws-accounts.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/04-dev-env.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/05-terraform-bootstrap.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/06-terraform-tls.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/07-terraform-modules.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/08-acm-cert.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/09-squarespace-dns.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/10-cloudfront-s3-oac.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/11-cloudfront-cache-spa.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/12-github-oidc.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/13-cicd-workflow.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/14-api-gateway-lambda.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/15-dynamodb.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/16-cloudfront-api-routing.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/17-cloudwatch-sns.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/18-cross-region-sns.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/19-drawio.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/20-portfolio-ses.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://lab.iigtn.com/blog/21-command-cheatsheet.html</loc>
-    <lastmod>2026-04-26</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
   </url>
 </urlset>

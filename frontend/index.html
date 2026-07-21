@@ -19,9 +19,10 @@
   <meta name="twitter:title" content="iigtn — Serverless Infrastructure Engineer">
   <meta name="twitter:description" content="AWS / Linux / Terraform 軸のフリーランス・インフラエンジニア iigtn のポートフォリオ。">
   <meta name="twitter:image" content="https://lab.iigtn.com/assets/icon.svg">
+  <meta name="theme-color" content="#0d1321">
   <link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
   <link rel="apple-touch-icon" href="/assets/icon.svg">
-  <link rel="stylesheet" href="/site.css?v=20260506-rwd">
+  <link rel="stylesheet" href="/site.css?v=20260721-dark">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -71,7 +72,7 @@
       <li><a href="/about.html">About</a></li>
       <li><a href="/skills.html">Skills</a></li>
       <li><a href="/works.html">Works</a></li>
-      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/learn.html">解説書</a></li>
       <li><a href="/contact.html">Contact</a></li>
     </ul>
   </nav>
@@ -85,16 +86,37 @@
       <span class="dot" aria-hidden="true"></span>
       iigtn.com / lab.iigtn.com — Live
     </span>
-    <div class="hero-monogram">i</div>
-    <h1>サーバレス × IaC で<br>動かし続ける <span class="accent">インフラ</span> を。</h1>
+
+    <p class="hero-prompt">
+      <span class="prompt-user">iigtn</span><span class="prompt-host">@freelance</span><span class="prompt-path">:~</span><span class="prompt-sigil">$</span><span class="prompt-cmd">whoami</span>
+    </p>
+
+    <div class="wordmark" aria-label="iigtn">
+      iigtn<span class="cursor" aria-hidden="true"></span>
+    </div>
+
+    <h1>Serverless × IaC で<span class="accent">動かし続ける</span>インフラを。</h1>
+
     <p class="tagline">
       AWS / Linux / Terraform を軸に、フリーランス・インフラエンジニアとして個人・中小企業向けの
       サーバレス基盤の設計・構築・運用を担当しています。本サイトもすべて IaC + CI/CD で自動運用中。
     </p>
+
     <div class="hero-cta">
-      <a href="/works.html" class="btn btn-primary">実績を見る</a>
-      <a href="/contact.html" class="btn btn-ghost">お問い合わせ</a>
-      <a href="/learn.html" class="btn btn-ghost">解説書を読む →</a>
+      <a href="/works.html" class="btn btn-primary">./works.sh --list</a>
+      <a href="/contact.html" class="btn btn-ghost">./contact.sh</a>
+      <a href="/learn.html" class="btn btn-ghost">./learn.sh →</a>
+    </div>
+
+    <div class="term-window" aria-hidden="true">
+      <div class="term-bar"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+      <div class="term-body">
+        <div><span class="p-user">$</span> <span class="p-cmd">terraform apply</span></div>
+        <div class="p-out">+ 3 to add</div>
+        <div><span class="p-user">$</span> <span class="p-cmd">aws s3 sync ./out</span></div>
+        <div class="p-out">done. deployed</div>
+        <div><span class="p-user">$</span> <span class="p-sigil">_</span></div>
+      </div>
     </div>
   </section>
 
@@ -107,47 +129,39 @@
 
       <a href="/about.html" class="summary-card-link">
         <article class="summary-card">
-          <h3>👤 About</h3>
-          <p>プロフィール、設計思想 4 本柱、仕事をするうえで大事にしていること。</p>
+          <h3>About</h3>
+          <p>プロフィール、経歴、所有資格。フリーランス・インフラエンジニアとしての立ち位置。</p>
           <span class="more">プロフィールを見る →</span>
         </article>
       </a>
 
       <a href="/skills.html" class="summary-card-link">
         <article class="summary-card">
-          <h3>🛠 Skills</h3>
-          <p>AWS / Terraform / Linux / CI/CD / セキュリティ / 観測など、業務で使う技術スタック 6 カテゴリ・40+ 項目。</p>
+          <h3>Skills</h3>
+          <p>AWS / Terraform / Linux / CI/CD / セキュリティ / 観測など、業務で使う技術スタック。</p>
           <span class="more">スキル一覧へ →</span>
         </article>
       </a>
 
       <a href="/works.html" class="summary-card-link">
         <article class="summary-card">
-          <h3>📦 Works</h3>
-          <p>これまでの主な制作・構築実績。匿名化したケーススタディも順次追加予定。</p>
+          <h3>Works</h3>
+          <p>公開稼働中の運営サイト・案件を中心にまとめた制作・構築実績。</p>
           <span class="more">実績を見る →</span>
-        </article>
-      </a>
-
-      <a href="/blog/" class="summary-card-link">
-        <article class="summary-card">
-          <h3>📝 Blog</h3>
-          <p>iigtn-platform をゼロから AWS サーバレスで構築するまでの記録 — 全 21 記事シリーズ。</p>
-          <span class="more">構築日誌を読む →</span>
         </article>
       </a>
 
       <a href="/learn.html" class="summary-card-link">
         <article class="summary-card">
-          <h3>📖 解説書</h3>
-          <p>このサイトの AWS サーバレス構成をモジュール単位で詳解。技術検討・案件相談向け。</p>
+          <h3>解説書</h3>
+          <p>本サイトの AWS サーバレス構成をモジュール単位で詳解。技術検討・案件相談向け。</p>
           <span class="more">解説書を読む →</span>
         </article>
       </a>
 
       <a href="/contact.html" class="summary-card-link">
         <article class="summary-card">
-          <h3>✉️ Contact</h3>
+          <h3>Contact</h3>
           <p>お仕事のご相談、技術相談、コードレビュー依頼など、お気軽にどうぞ。</p>
           <span class="more">お問い合わせへ →</span>
         </article>
@@ -164,64 +178,26 @@
     <div class="summary-grid">
 
       <div class="summary-card">
-        <h3>☁️ AWS サーバレス</h3>
+        <h3>AWS サーバレス</h3>
         <p>S3 + CloudFront (OAC) + Lambda + API Gateway + DynamoDB + SES + CloudWatch + SNS + Budgets。</p>
       </div>
 
       <div class="summary-card">
-        <h3>🛠 Terraform IaC</h3>
+        <h3>Terraform IaC</h3>
         <p>5 モジュール (network_dns / frontend_cdn / backend_api / ci_oidc / observability) + S3 backend + DDB Lock。</p>
       </div>
 
       <div class="summary-card">
-        <h3>🔁 静的キーレス CI/CD</h3>
+        <h3>静的キーレス CI/CD</h3>
         <p>GitHub Actions OIDC で IAM Role を一時 AssumeRole。長期アクセスキーを GitHub Secrets に置かない設計。</p>
       </div>
 
       <div class="summary-card">
-        <h3>🔐 最小権限 + 観測</h3>
+        <h3>最小権限 + 観測</h3>
         <p>OAC で S3 を非公開維持、Public Access Block で構造的に公開不能化。CloudWatch Alarms + SNS Email + Budgets で異常検知。</p>
       </div>
 
     </div>
-  </section>
-
-  <!-- ─── 注目記事 ──────────────── -->
-  <section class="page-section reveal">
-    <h2>注目記事</h2>
-    <p class="lead">構築日誌 22 本から、技術検討・案件相談で特に深掘りしている回をピックアップ。</p>
-
-    <div class="summary-grid">
-
-      <a href="/blog/22-docchain-launch.html" class="summary-card-link">
-        <article class="summary-card">
-          <h3>🚀 個人開発 SaaS『DocChain』を作って公開した話</h3>
-          <p>SI 業界向け設計書連鎖生成 SaaS を AWS + Vercel ハイブリッドで本番公開。アーキ判断・コスト最適化・ベータ告知設計まで全公開。</p>
-          <span class="more">記事を読む →</span>
-        </article>
-      </a>
-
-      <a href="/blog/12-github-oidc.html" class="summary-card-link">
-        <article class="summary-card">
-          <h3>🔁 GitHub Actions OIDC の仕組み</h3>
-          <p>JWT で AWS を静的キーレス操作する CI/CD 設計。長期アクセスキーを Secrets に置かない実装と、IAM Role の trust policy 設計。</p>
-          <span class="more">記事を読む →</span>
-        </article>
-      </a>
-
-      <a href="/blog/17-cloudwatch-sns.html" class="summary-card-link">
-        <article class="summary-card">
-          <h3>🔔 CloudWatch Alarms + SNS でアラート構築</h3>
-          <p>サーバレス構成で「壊れたら気付ける」運用を組むための、Alarms / Metric Filter / SNS Email 通知の設計パターン。</p>
-          <span class="more">記事を読む →</span>
-        </article>
-      </a>
-
-    </div>
-
-    <p style="margin-top:1.5em;text-align:center;">
-      <a href="/blog/" class="btn btn-ghost">構築日誌 22 本の一覧を見る →</a>
-    </p>
   </section>
 
 </main>
@@ -238,8 +214,6 @@
 </footer>
 
 <script>
-  // Scroll-reveal: fade-in sections as they enter the viewport.
-  // No-op when prefers-reduced-motion is set.
   if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && 'IntersectionObserver' in window) {
     const io = new IntersectionObserver((entries) => {
       entries.forEach((e) => {
