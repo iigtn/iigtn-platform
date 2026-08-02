@@ -75,7 +75,7 @@ API Gateway HTTP API + Lambda + DynamoDB + SES で問い合わせフォームを
 verify する手順 (AWS コンソール):
 1. SES → Identities → Create identity
 2. Identity type: Email address
-3. Email address: `aws-dev@iigtn.com` 等
+3. Email address: `aws-prod@iigtn.com` 等
 4. Create → 当該アドレスに確認メールが届く → リンククリック
 
 本番化 (production access) は AWS に申請:

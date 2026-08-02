@@ -49,7 +49,7 @@ variable "ses_from" {
 }
 
 variable "ses_to" {
-  description = "SES 送信先アドレス (sandbox では検証済必須)。例: aws-dev@iigtn.com / 空なら無効"
+  description = "SES 送信先アドレス (sandbox では検証済必須)。例: aws-prod@iigtn.com / 空なら無効"
   type        = string
   default     = ""
 }
